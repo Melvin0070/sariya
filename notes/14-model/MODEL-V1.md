@@ -69,13 +69,73 @@ kaggle kernels output sabarinarayanakg/sariya-unet-train -p runs/
 | **NPU, 60 s sustained** | **burst** | **12.8 ms** (4,692 runs) | 11.5 / 14.9 | 78 | 160 / 160 | - |
 
 - **Thermal over the 60 s burst run:** skin 32.7 → 39.8 °C, battery 31.1 → 33.7 °C, thermal status 0 (no throttling).
-- **NPU start-up:** the first JIT compile takes 53 s; with `--compiler_cache_path` it takes 4-8 s. The app must cache the compiled model (LiteRT `CompiledModel` cache dir), or users wait ~1 min on first launch.
+- **NPU start-up:** a JIT compile of the float model takes 53 s on the phone. The phone's JIT cache is itself a compiled `.tflite`, so we pulled it: **`models/seg/v1/unet_mbv3_1152_sm8850_qairt250.tflite`** (17.5 MB, NPU program for SM8850 built with QAIRT 2.50). It loads in **133 ms** and runs at **11.6 ms** (max 11.95, 100 runs, burst), with no compile step. Use this file on the NPU.
 - **Verdict:** the plan's NPU gate (< 25 ms, every layer on the NPU) **passes at 12.2 ms in burst mode**, with no INT8 quantization yet. The GPU at 19.8 ms is a solid fallback that also passes.
 
-**For the app build (lane B):**
-1. Ship this float `.tflite` and run it with `Accelerator.NPU`, falling back to GPU.
-2. Set HTP performance mode to burst, and set a compiler cache dir.
-3. The NPU runtime libs must match QAIRT 2.50: the stub/skel v81, libQnnHtp, libQnnSystem ≥ 1.14 and the LiteRT dispatch lib. Bundle them through the matching `litert-npu-runtime-qualcomm` version, or copy them from `~/sariya-tools/qairt250`.
-4. Pre/post-processing (frame to 1152 x 640 float input, and the 2.9 MB output) is not in these numbers. Budget ~3-5 ms on top.
+**In-app result (10 Oct, 01:43).** A throwaway test app ran CameraX at 1920 x 1080 RGBA, scaled each frame to 1152 x 640, ran the model and drew the mask. It confirmed the integration below works end to end on the iQOO 15:
+
+| | Measured in the app |
+|---|---|
+| Accelerator picked | NPU (pre-compiled model), loads in 110-148 ms |
+| Inference | **12.7-13.3 ms** per frame |
+| Pre-processing (bitmap → float RGB) | 2-6 ms |
+| Mask drawing | 5-7 ms |
+| Live rate | **31 fps** (the camera delivers ~30) |
+| Quality, eye-checked | One bar on a wooden floor marked cleanly end to end, including a hand-held bar. Faint false specks on dark plank seams |
+
+## Integration guide (for the frontend app)
+
+**Files:**
+
+| File | Use |
+|---|---|
+| `models/seg/v1/unet_mbv3_1152_sm8850_qairt250.tflite` | NPU (SM8850 only), put in `assets/models/` |
+| `models/seg/v1/unet_mbv3_1152.tflite` | GPU/CPU fallback, any phone, put in `assets/models/` |
+
+**Tensors (both files):**
+- **Input:** `float32 [1, 640, 1152, 3]`, NHWC, raw RGB 0-255. The ImageNet normalisation is inside the graph.
+- **Output:** `float32 [1, 640, 1152, 1]` probability; bar = > 0.5. Feed the camera frame in sensor orientation (landscape). The model works at any bar angle.
+
+**Gradle:**
+- Libraries: `com.google.ai.edge.litert:litert:2.3.0`, `litert-gpu:2.3.0` and `litert-npu-runtime-qualcomm:2.3.0` (the last ships `libLiteRtDispatch_Qualcomm.so`).
+- `packaging { jniLibs { useLegacyPackaging = true } }`, plus `android:extractNativeLibs="true"`, so the Qualcomm libs sit on disk in `nativeLibraryDir`.
+- `androidResources { noCompress += "tflite" }`, `abiFilters arm64-v8a`.
+- The Manifest adds `<uses-native-library android:name="libcdsprpc.so" android:required="false"/>` (NPU) and the same for `libOpenCL.so` (GPU).
+- Compose BOM 2026.09 needs `compileSdk = 37`.
+
+**Qualcomm runtime libs (QAIRT 2.50.0.260828)** go in `app/src/main/jniLibs/arm64-v8a/`:
+- `libQnnHtp.so`, `libQnnHtpV81Stub.so`, `libQnnSystem.so` from `qairt/2.50.0.260828/lib/aarch64-android/`;
+- `libQnnHtpV81Skel.so` from `lib/hexagon-v81/unsigned/`.
+
+Download the SDK from `https://softwarecenter.qualcomm.com/api/download/software/sdks/Qualcomm_AI_Runtime_Community/All/2.50.0.260828/v2.50.0.260828.zip` (2.6 GB; a copy is unpacked on Sabari's laptop at `~/sariya-tools/qairt250`). The libs are not committed here because they're Qualcomm binaries; get them from the SDK. **They must be 2.50:** the pre-compiled model was built with 2.50, and QAIRT 2.47 is rejected ("libQnnSystem 1.11 < 1.14").
+
+**Kotlin (the code that ran at 13 ms):**
+```kotlin
+val libDir = context.applicationInfo.nativeLibraryDir
+val env = Environment.create(mapOf(
+    Environment.Option.DispatchLibraryDir to libDir,
+    Environment.Option.CompilerPluginLibraryDir to libDir))
+val model = runCatching {                       // NPU, burst
+    val o = CompiledModel.Options(Accelerator.NPU)
+    o.qualcommOptions = CompiledModel.QualcommOptions(
+        htpPerformanceMode = CompiledModel.QualcommOptions.HtpPerformanceMode.BURST)
+    CompiledModel.create(context.assets, "models/unet_mbv3_1152_sm8850_qairt250.tflite", o, env)
+}.recoverCatching { CompiledModel.create(context.assets, "models/unet_mbv3_1152.tflite", CompiledModel.Options(Accelerator.GPU), env) }
+ .recoverCatching { CompiledModel.create(context.assets, "models/unet_mbv3_1152.tflite", CompiledModel.Options(Accelerator.CPU), env) }
+ .getOrThrow()
+val inBuf = model.createInputBuffers(); val outBuf = model.createOutputBuffers()
+
+// per frame: bitmap is 1152x640 (Bitmap.createScaledBitmap from ImageProxy.toBitmap())
+bitmap.getPixels(px, 0, 1152, 0, 0, 1152, 640)
+for (i in px.indices) { val p = px[i]; rgb[3*i] = ((p shr 16) and 255).toFloat(); rgb[3*i+1] = ((p shr 8) and 255).toFloat(); rgb[3*i+2] = (p and 255).toFloat() }
+inBuf[0].writeFloat(rgb)
+model.run(inBuf, outBuf)
+val prob = outBuf[0].readFloat()                // 1152*640 values, row-major; bar where prob > 0.5f
+```
+Notes:
+- Run inference on one worker thread, with ImageAnalysis `STRATEGY_KEEP_ONLY_LATEST` (RGBA_8888 output).
+- Create the model once and keep it, since it holds the NPU session.
+- Show which accelerator was picked in the UI. It's the hardware story for the jury.
+- Burst mode is set when the model is created and draws more power, so close the model (`model.close()`, `env.close()`) when the user leaves the scan screen.
 
 **Next model steps:** round 2 on prop photos. Then optionally INT8 (w8a16) quantization for a smaller file and lower NPU power, measured against these numbers.

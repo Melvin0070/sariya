@@ -7,7 +7,9 @@
 - **Speeds:** M5 trains at 6 img/s at batch 2 max (16 GB RAM, swap full); the T4 at ~12 img/s, CPU-augmentation bound.
 - **Kaggle:** GPU and internet came only after phone verification; before that, jobs ran CPU-only without a warning. The Colab CLI (`google-colab-cli`) is installed but not signed in.
 - **Export and benchmark (10 Oct, 01:15):** `models/seg/v1/unet_mbv3_1152.tflite` (float, exact parity with PyTorch). On the iQOO 15: **NPU 12.2 ms in burst mode** (all 160 layers on the HTP; 12.8 ms sustained over 60 s, no throttling), GPU 19.8 ms, CPU 235 ms. **Gate G0 (< 25 ms on the NPU) passes.** The NPU needs QAIRT 2.50 libs (the CLI's pinned 2.47 is rejected), burst mode and a JIT cache (first compile 53 s, cached 4-8 s). SM8850 AOT failed for the same QAIRT reason; JIT makes it optional. Full report: `notes/14-model/MODEL-V1.md`.
-- **Next:** prop photos for round 2; lane B wires `Accelerator.NPU` + burst + cache into P1/P4.
+- **Pre-compiled NPU model** `models/seg/v1/unet_mbv3_1152_sm8850_qairt250.tflite` (pulled from the phone's JIT cache): loads in 133 ms, 11.6 ms per frame. A test app (local only, `~/Developer/narayana/sariya-app`, not pushed) ran it live: **NPU 13 ms, 31 fps**. The frontend teammate integrates the model into their app using `notes/14-model/MODEL-V1.md` § Integration guide.
+- **Open:** the prep repo `Melvin0070/sariya` is public and now holds the v1 weights plus two ROI-1555 photo sheets (`models/seg/v1/*_sheet.jpg`; the dataset declares no licence). Decide whether to keep them public.
+- **Next:** prop photos for round 2.
 
 ## Status (9 Oct 2026, 20:05): v4, the team's live AR camera vision
 - **IDEA.md is now v4.** A camera app that draws a live line on every bar, with the mm between them from the card, and a Lock step for the verdict. Comparison and design: `notes/13-ar-vision/AR-VISION.md`.
