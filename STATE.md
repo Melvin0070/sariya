@@ -1,5 +1,13 @@
 # Sariya session state
 
+## Status (9 Oct 2026, 23:55): base segmentation model v1 trained
+- **Data:** ROI-1555 downloaded and verified (1,555 images, 10,481 bar instances, 0 errors; `prep/train/verify_labelme.py`), tiled by `prep_data.py`: train 853 / val 271 (scen1) / test 427 (scen2+3). Not used: ConRebSeg (22.6 GB, demolition scenes; index checked: 41,237 ExposedBars masks), Roboflow (needs a key), whiesty (Baidu only).
+- **Training:** Kaggle T4, private kernel `sabarinarayanakg/sariya-unet-train` v4, pushed by `prep/train/kaggle/push_train.sh` (offline: wheels + timm `mobilenetv3_large_100.ra_in1k` in the private dataset `sariya-train-deps`). 50 epochs, 17:17-18:17 UTC, git `b5df62c`, ~70 s per epoch.
+- **Result:** best val IoU 0.871 / F1 0.931 (epoch 48); **held-out test IoU 0.847 / F1 0.917**. Weights at `~/sariya-data/runs/base_v1/unet_mbv3_1152.pt` (27 MB, sha256 203ef1f8…). Misses: thin or distant stirrup legs; false positives: shiny aluminium rails. Keep bare metal out of the demo frame.
+- **Speeds:** M5 trains at 6 img/s at batch 2 max (16 GB RAM, swap full); the T4 at ~12 img/s, CPU-augmentation bound.
+- **Kaggle:** GPU and internet came only after phone verification; before that, jobs ran CPU-only without a warning. The Colab CLI (`google-colab-cli`) is installed but not signed in.
+- **Next:** export to .tflite + SM8850 AOT on Kaggle (Linux-only SDK), NPU latency on the loaner or AI Hub, prop photos for round 2.
+
 ## Status (9 Oct 2026, 20:05): v4, the team's live AR camera vision
 - **IDEA.md is now v4.** A camera app that draws a live line on every bar, with the mm between them from the card, and a Lock step for the verdict. Comparison and design: `notes/13-ar-vision/AR-VISION.md`.
 - **ARCore, checked on the loaner over ADB:** Google's web list omits the iQOO 15 (I2501), but Play installed ARCore 1.56 after sign-in, so it is certified. Session and Depth API are untested (gate G0c).
