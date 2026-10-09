@@ -1,0 +1,17 @@
+The steel inside an Indian house is visible for a day or two, then concrete hides it. On most self-built homes nobody measures it. Sariya lets the site engineer check it the evening before the pour with one iQOO phone and a printed marker card, offline.
+
+How it works: the engineer speaks the drawing's numbers, lays the card on the steel and scans. An open segmentation model on the Snapdragon NPU finds every bar live; the card gives true scale. The phone reports bar count, bar spacing and stirrup spacing near beam ends, each with its error band, and checks them against the drawing and IS 456. Near a limit it says "re-scan" instead of guessing. For what a camera cannot see (cover, diameter, hooks) it asks for a tape reading or the weight of a 1 m offcut (10 mm is 0.62 kg/m, 12 mm is 0.89) and records it. It speaks the fix to the mason in Hindi or Kannada: "Beam B2, left end: stirrups at 180, drawing says 100. Add four."
+
+Japan's construction ministry has accepted camera-based rebar measurement since July 2023, with a 5 mm guide on spacing. We found no phone tool for it in India, where housing is 55-57% of cement demand (CRISIL, FY25).
+
+48-hour build, all code written at the event:
+1. Bar count and spacing on a slab mesh.
+2. Stirrup spacing by zone on a beam.
+3. Voice in, spoken fix out.
+4. A signed record the engineer countersigns on the laptop over Office Kit; replays are rejected.
+
+Open models, attributed; a short fine-tune on public rebar images, with classical line detection as the fallback. Segmentation on the NPU with timings on screen; Gemma 4 E2B on the GPU for voice; geometry and rules are plain code, so every verdict is auditable. Airplane mode throughout.
+
+Demo: a judge moves or removes a bar on a steel mesh we bring. The phone finds it and draws the measurement; the judge checks it with a tape. From too far away, the phone says "re-scan".
+
+Sariya measures and records. The engineer certifies. It never says "safe".

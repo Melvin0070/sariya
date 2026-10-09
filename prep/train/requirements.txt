@@ -1,0 +1,38 @@
+# Sariya pre-event tooling. Versions read from PyPI JSON on 7 Oct 2026 (latest release that day unless
+# a pin is explained). Python 3.12 on Linux for the full set; the ref pipeline and prep_data also run on
+# macOS / Python 3.14 with just the first block (that is what prep/.venv holds).
+
+# ---- reference pipeline + data prep (macOS or Linux) ----------------------------------------------
+numpy==2.5.3
+opencv-contrib-python-headless==4.13.0.92   # 5.0.0.93 exists and also works; 4.13 matches the Android AAR pin
+scikit-image==0.26.0
+pillow==12.3.0
+pycocotools==2.0.11
+tqdm==4.70.1
+pytest==9.1.1
+
+# ---- training (Linux GPU box / Colab / Kaggle) ---------------------------------------------------
+torch==2.13.0                               # litert-torch 0.9.4 requires torch<2.14 (2.14.1 is current; do not bump)
+torchvision==0.28.0                         # pairs with torch 2.13.0
+segmentation-models-pytorch==0.5.0
+timm==1.0.30
+albumentations==2.0.8
+
+# ---- export: PyTorch -> .tflite -> LiteRT AOT (Linux only; the Qualcomm SDK wheel builds ~5 min) ----
+litert-torch==0.9.4                         # pulls ai-edge-litert>=2.2,<2.3, ai-edge-quantizer 0.9.*, litert-converter 0.4.*
+ai-edge-litert==2.2.0
+ai-edge-litert-sdk-qualcomm==2.2.0 ; sys_platform == "linux"
+ai-edge-quantizer==0.9.0
+
+# ---- export fallback: ONNX -> onnx2tf -> .tflite (needs TensorFlow; heavy) --------------------------
+onnx==1.23.2
+onnxsim==0.7.3
+onnxruntime==1.30.0
+onnx2tf==2.6.9                              # requires Python>=3.12
+tensorflow==2.21.0 ; sys_platform == "linux"
+onnx-graphsurgeon==0.6.1
+sng4onnx==2.0.1
+
+# ---- Qualcomm AI Hub profiling -------------------------------------------------------------------
+qai-hub==0.56.0                             # classifiers list 3.10/3.11; pure-python wheel, installs on 3.12
+# qai-hub-models==0.63.0                    # only for the DeepLabV3+/YOLO recipes in P3/P7; requires Python<3.14

@@ -1,0 +1,13 @@
+WHAT: Sariya checks the steel in a house before concrete hides it for good. One iQOO phone and a printed marker card, offline, measure bar count, bar spacing and stirrup spacing by zone against the drawing and IS 456, each with an error band, and speak the fix to the mason in Hindi or Kannada.
+
+FOR WHOM: whoever is paid to check the steel the evening before a pour: the owner's site engineer, builder QC, or a steel or cement brand's technical engineer. Today that is a tape, a checklist and WhatsApp photos; nothing is measured or recorded, and a missing bar or wide stirrups at a beam end are invisible once poured. Housing is 55-57% of India's cement demand (CRISIL, FY25).
+
+HOW: the engineer speaks the drawing's numbers; Gemma 4 E2B on the GPU turns them into five typed fields, each confirmed. Lay the card on the steel and scan. An open segmentation model on the Snapdragon NPU finds every bar live, the card gives true scale, and the geometry and rules are plain code, so every verdict is auditable. Near a limit it says "re-scan" instead of guessing. What a camera cannot see, it asks for: a tape reading, or the weight of a 1 m offcut. It speaks: "Beam B2, left end: stirrups at 180, drawing says 100. Add four." The signed record goes to the engineer's laptop over Office Kit for countersigning.
+
+WHY NOW: Japan's ministry has accepted camera rebar checks since July 2023 (5 mm guide on spacing). India's site-QC apps only store photos; cover meters work after the pour.
+
+BUILD, all code at the event, full loop by hour 30: every model is open and ready-made; we fine-tune one and write the glue and rules. 1. count and spacing on a slab mesh; 2. stirrup zones on a beam; 3. voice in, fix out; 4. signed record over Office Kit. Each has a fallback.
+
+DEMO: a judge moves or removes a bar on our steel mesh; the phone finds it and the judge checks with a tape. Too far away, it says "re-scan".
+
+Sariya measures and records. The engineer certifies. It never says "safe".

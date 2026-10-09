@@ -1,0 +1,10 @@
+check,member,rule,source,counts_as_violation_if
+slab_main_spacing,slab,c/c spacing > drawing + 25 mm, or > min(3d,300) when no drawing,IS 456 cl 26.3.3(b); tolerance is ours (no code tolerance exists),any span of 5 gaps averages above the limit
+slab_secondary_spacing,slab,c/c spacing > drawing + 25 mm, or > min(5d,300),IS 456 cl 26.3.3(b) Amd 3,same
+missing_bar,slab/beam,count lower than drawing,drawing,any member
+stirrup_endzone_spacing,beam,spacing in first 2d from support > drawing; if drawing silent and zone II: note only,drawing; IS 13920 cl 6.3.5 advisory in zone II,any end zone
+stirrup_midspan_spacing,beam,spacing > drawing or > 0.75d / 300 mm,IS 456 cl 26.5.1.5,any
+cover_blocks,slab/beam,no cover blocks under bottom steel over more than 1 m run,IS 456 cl 26.4,any member
+top_steel,slab/cantilever,top bars trampled to the bottom layer or missing over support,drawing,any cantilever/support
+hook_type,beam stirrups,90 deg where the drawing says 135,drawing only (zone II),any
+lap_length,slab/beam,lap shorter than drawing or 50d,IS 456 cl 26.2.5.1,any visible lap

@@ -1,0 +1,40 @@
+01
+Who can participate?
+
+Students and working professionals (IT and white collar) across India. Every track is open to both buckets, but teams cannot mix: a team is either all students or all working professionals. Register solo or as a team of 1–3. You attend one city battle in person after shortlisting.
+=====
+02
+What is the format?
+
+A 30-hour phone-first battle: Saturday 10:00 to Sunday around 17:00. Active hacking from 11:00 with Green Light (both devices) and Red Light (iQOO phone only via Office Kit). Two evaluation rounds feed a Top 10 pitch, then awards.
+=====
+03
+How do city battles and the finale connect?
+
+Top six teams from each city advance to the Grand Finale in Bengaluru on Oct 9–11, 2026: three student teams and three working-professional teams. The Finale runs 48 hours, Friday evening to Sunday evening — longer than the 30-hour city weekend. Standout teams beyond the Top 6 can also earn Finale slots, and you can register directly for the Grand Finale without going through a city battle. Four city battles, one national title.
+=====
+04
+Can I enter the Grand Finale without doing a city battle?
+
+Yes. Registrations open directly for the Grand Finale, so winning or even entering a city battle is not a prerequisite. The city route stays the larger one: the top six teams from each city, three student and three working professional, advance automatically, and standout teams beyond the Top 6 can also earn slots. Direct entries are screened the same way city entries are.
+=====
+05
+What can I build?
+
+City battles run seven tracks: FinTech and Commerce, Smart Education, HealthTech, Productivity, Smart Living, Developer Tools and Open Innovation. The Grand Finale runs six: Mobility, Community App, Smart Living, Productivity, Developer Tools and Open Innovation. Tracks are broad domains, not fixed briefs. A local or open-source model at the core earns brownie points; keep the phone in the loop via Office Kit. Open Innovation is the wildcard everywhere.
+=====
+06
+What is the prize pool?
+
+The total pool is ₹40,00,000 across the four city battles and the Grand Finale. Each city targets ₹6L split across working professionals (₹3.2L) and students (₹2.8L). Final numbers are set by iQOO.
+=====
+07
+What stack can I use?
+
+Anything that runs on the phone: native Android, Flutter, React Native, or PWA. You demo on the iQOO device, and a local or open-source model at the core earns brownie points. On-device inference targets the Snapdragon NPU (Sarvam, Gemma, Phi class models). Office Kit bridges to the laptop when you need deeper compute.
+=====
+08
+How does shortlisting work?
+
+Registration is open to anyone, and every entry goes through idea screening to shortlist builders for the on-ground battle. Scoring weights novelty, tech impact, problem choice, idea/scope fit for 30 hours, and phone-first fit. Registration is free.
+=====

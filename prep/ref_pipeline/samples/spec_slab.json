@@ -1,0 +1,43 @@
+{
+ "member": "slab",
+ "fiducial": "card",
+ "zone_mm": [
+  [
+   -880.0,
+   -320.0
+  ],
+  [
+   -40.0,
+   -320.0
+  ],
+  [
+   -40.0,
+   200.0
+  ],
+  [
+   -880.0,
+   200.0
+  ]
+ ],
+ "bar_dia_mm": 10,
+ "polarity": "auto",
+ "main_axis": "y",
+ "n_spec": {
+  "main": 6,
+  "dist": 4
+ },
+ "s_spec": {
+  "main": 150,
+  "dist": 120
+ },
+ "d": 101,
+ "D": 125,
+ "dia": {
+  "main": 10,
+  "dist": 10
+ },
+ "hysd": true,
+ "zone": "II",
+ "apply_13920": false,
+ "_doc": "zone_mm is in CARD mm (origin = top-left chess corner, x right, y down on the print)"
+}

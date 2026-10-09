@@ -1,0 +1,19 @@
+{
+ "member": "beam",
+ "fiducial": "strip",
+ "bar_dia_mm": 8,
+ "polarity": "auto",
+ "min_len_mm": 120,
+ "s_spec_end": 100,
+ "s_spec_mid": 150,
+ "d": 409,
+ "dia_long_min": 16,
+ "L_end_spec": 600,
+ "faces_mm": [
+  0,
+  1800
+ ],
+ "zone": "II",
+ "apply_13920": false,
+ "_doc": "faces_mm = column faces in STRIP mm (strip origin at its left end); links are the family crossing the strip"
+}

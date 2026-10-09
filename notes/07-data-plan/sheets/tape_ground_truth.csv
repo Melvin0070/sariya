@@ -1,0 +1,2 @@
+site_id,member_id,member_type,layer,check,span_from_bar,span_to_bar,n_bars_in_span,tape_mm,tape_reader,photo_ids,note
+S01,SL1,slab,top,spacing_x,1,6,6,,,,"c/c over 5 gaps; divide by 5"

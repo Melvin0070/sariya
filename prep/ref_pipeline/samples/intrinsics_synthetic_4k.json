@@ -1,0 +1,33 @@
+{
+ "capture_mode": "synthetic_4k",
+ "image_size": [
+  3840,
+  2160
+ ],
+ "K": [
+  [
+   2662.0,
+   0.0,
+   1919.5
+  ],
+  [
+   0.0,
+   2662.0,
+   1079.5
+  ],
+  [
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "dist": [
+  0,
+  0,
+  0,
+  0,
+  0
+ ],
+ "rms_px": 0.0,
+ "note": "synthetic pinhole, f=2662 px (iQOO 15 main camera estimate); replace with calibrate.py output"
+}

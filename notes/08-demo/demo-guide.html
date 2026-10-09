@@ -1,0 +1,278 @@
+<title>Sariya Demo Guide</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column with full-width diagram panels; site palette of concrete grey, rebar oxide and hi-vis yellow */
+:root{
+  --bg:#eceeeb; --panel:#f8f9f7; --fg:#1c2220; --muted:#5b6461; --line:#c9cec9;
+  --steel:#5a3a2a; --steel-2:#a07a62; --hi:#e3ad00; --hi-ink:#1c2220; --ok:#2f7d4f; --bad:#b63a2a;
+  --card-a:#1c2220; --card-b:#f8f9f7;
+  --display:"Oswald","Arial Narrow",Arial,sans-serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141716; --panel:#1c201e; --fg:#e4e7e3; --muted:#9aa39e; --line:#333a37;
+  --steel:#d0a183; --steel-2:#8b6a56; --hi:#f0bd1a; --hi-ink:#141716; --ok:#5fbf86; --bad:#ef7a66;
+  --card-a:#e4e7e3; --card-b:#1c201e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141716; --panel:#1c201e; --fg:#e4e7e3; --muted:#9aa39e; --line:#333a37;
+  --steel:#d0a183; --steel-2:#8b6a56; --hi:#f0bd1a; --hi-ink:#141716; --ok:#5fbf86; --bad:#ef7a66;
+  --card-a:#e4e7e3; --card-b:#1c201e; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.6 var(--body);padding:0 16px}
+main{max-width:1000px;margin:0 auto;padding-block:40px 80px;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);font-weight:600;line-height:1.1;text-wrap:balance;margin:0;letter-spacing:.01em}
+h1{font-size:clamp(2.2rem,6vw,3.6rem);text-transform:uppercase}
+h2{font-size:1.9rem;text-transform:uppercase}
+h3{font-size:1.2rem}
+p{margin:0;max-width:68ch}
+.eyebrow{font:500 .78rem var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.tape{height:10px;background:repeating-linear-gradient(135deg,var(--hi) 0 14px,var(--fg) 14px 28px);border-radius:2px}
+section{display:flex;flex-direction:column;gap:20px}
+.lead{font-size:1.15rem;max-width:62ch}
+.mono{font-family:var(--mono)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:20px}
+.scroll{overflow-x:auto}
+.chip{display:inline-block;font:500 .72rem var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:3px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.chip.npu{background:var(--hi);color:var(--hi-ink);border-color:var(--hi)}
+.chip.code{border-color:var(--fg);color:var(--fg)}
+.chip.key{border-color:var(--steel);color:var(--steel)}
+
+/* the loop */
+.loop{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;counter-reset:s}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.step .n{font:600 2rem/1 var(--display);color:var(--steel)}
+.step .row{display:flex;gap:10px;align-items:baseline;justify-content:space-between}
+.step p{font-size:.95rem}
+.step .out{font:500 .82rem var(--mono);color:var(--muted);border-top:1px dashed var(--line);padding-top:8px}
+.loop-note{font-size:.9rem;color:var(--muted)}
+
+/* pipeline */
+.pipe{display:grid;grid-template-columns:150px 1fr 120px;min-width:640px}
+.pipe>div{padding:10px 12px;border-bottom:1px solid var(--line)}
+.pipe .h{font:500 .72rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--fg)}
+.pipe .stage{font-weight:600}
+.pipe .what{font-size:.93rem}
+.pipe .what code{font:.85rem var(--mono)}
+.pipe .grp{grid-column:1/-1;font:600 1rem var(--display);text-transform:uppercase;letter-spacing:.04em;background:var(--bg);color:var(--steel)}
+
+/* props */
+.props{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.prop{display:flex;flex-direction:column;gap:12px;min-width:0}
+.prop svg{width:100%;height:auto;max-width:100%;display:block}
+.prop dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;font-size:.9rem}
+.prop dt{font:500 .8rem var(--mono);color:var(--muted)}
+.prop dd{margin:0}
+svg .board{fill:var(--panel);stroke:var(--line)}
+svg .cloth{fill:var(--fg);opacity:.85}
+svg .foam{fill:var(--muted);opacity:.55}
+svg .bar-lo{stroke:var(--steel-2);stroke-width:8;stroke-linecap:round}
+svg .bar-hi{stroke:var(--steel);stroke-width:8;stroke-linecap:round}
+svg .bar-12{stroke:var(--steel);stroke-width:12;stroke-linecap:round}
+svg .ca{fill:var(--card-a)} svg .cb{fill:var(--card-b)}
+svg .lbl{font:500 11px var(--mono);fill:var(--muted)}
+svg .lbl-b{font:600 12px var(--mono);fill:var(--fg)}
+svg .strip{fill:var(--card-b);stroke:var(--card-a);stroke-width:1}
+svg .mk{fill:var(--card-a)}
+svg .hi{fill:var(--hi)}
+svg .tick{stroke:var(--muted);stroke-width:1}
+svg .dim{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+
+/* demo timeline */
+.run{display:grid;grid-template-columns:70px 1fr;gap:0;border-top:2px solid var(--fg)}
+.run>div{padding:12px 10px;border-bottom:1px solid var(--line);min-width:0}
+.run .t{font:500 .95rem var(--mono);color:var(--steel)}
+.run .b strong{font-family:var(--display);font-weight:500;font-size:1.1rem;letter-spacing:.02em}
+.run .b p{font-size:.93rem;margin-top:2px}
+.run .b .say{font-style:italic;color:var(--muted)}
+
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:.92rem}
+th{text-align:left;font:500 .72rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--fg);padding:8px}
+td{border-bottom:1px solid var(--line);padding:8px;vertical-align:top}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.v-bad{color:var(--bad);font-weight:600}.v-ok{color:var(--ok);font-weight:600}.v-re{color:var(--steel);font-weight:600}
+
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+ul.check{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+ul.check li{padding-left:22px;position:relative}
+ul.check li::before{content:"";position:absolute;left:0;top:.5em;width:10px;height:10px;border:2px solid var(--steel);border-radius:2px}
+.callout{border-left:6px solid var(--hi);padding:14px 18px;background:var(--panel)}
+@media (prefers-reduced-motion:no-preference){.step{transition:transform .15s}.step:hover{transform:translateY(-2px)}}
+</style>
+
+<main>
+  <header style="display:flex;flex-direction:column;gap:16px">
+    <div class="tape" aria-hidden="true"></div>
+    <span class="eyebrow">iQOO Hackathon Grand Finale · Bengaluru · 9–11 Oct 2026</span>
+    <h1>Sariya demo guide</h1>
+    <p class="lead">The steel inside an Indian house is visible for a day, then the concrete hides it for good. Sariya checks it with one phone and a printed card, offline: it counts the bars, measures the spacing with an error band, tells the mason the fix in Hindi, and the engineer signs the record.</p>
+  </header>
+
+  <section>
+    <span class="eyebrow">High level</span>
+    <h2>The loop, step by step</h2>
+    <div class="loop">
+      <div class="step"><div class="row"><span class="n">1</span><span class="chip">voice · form</span></div><h3>Spec in</h3><p>Five numbers per member from the drawing: bar size, bar count or spacing, ring size, ring spacing at the end and middle, end-zone length. Each is read back and confirmed.</p><div class="out">→ Slab S1: 8 mm @ 50, 5 × 5</div></div>
+      <div class="step"><div class="row"><span class="n">2</span><span class="chip">camera</span></div><h3>Scan</h3><p>Card on the slab bars, strip along the beam. Hold the phone over the steel for 2–3 s, torch on. The app grabs sharp frames by itself.</p><div class="out">→ sharp 4K frames with the card in view</div></div>
+      <div class="step"><div class="row"><span class="n">3</span><span class="chip npu">NPU</span></div><h3>Measure</h3><p>Finds the steel pixels, turns each bar into a centre line, converts to millimetres using the card. Every gap gets a ± band.</p><div class="out">→ gaps 50 · 50 · 80 ± 3 · 20</div></div>
+      <div class="step"><div class="row"><span class="n">4</span><span class="chip">tape · scale</span></div><h3>Manual checks</h3><p>What a camera can't see: cover by tape (spoken), bar size by weighing a 20 cm offcut, hooks by template.</p><div class="out">→ 123 g over 200 mm = 10 mm class</div></div>
+      <div class="step"><div class="row"><span class="n">5</span><span class="chip code">plain code</span></div><h3>Decide</h3><p>Fixed rules, no AI. Drawing first, then IS 456 and IS 13920. Each check: within, outside, re-scan, needs a tape reading, or not seen.</p><div class="out">→ gap 3 outside limits (80 vs 65)</div></div>
+      <div class="step"><div class="row"><span class="n">6</span><span class="chip">voice out</span></div><h3>Tell the mason</h3><p>One short sentence per problem, in Hindi or Kannada, with subtitles. Numbers come straight from step 5.</p><div class="out">→ "Teesra gap assi millimetre hai…"</div></div>
+      <div class="step"><div class="row"><span class="n">7</span><span class="chip key">keys</span></div><h3>Sign</h3><p>The record is signed on the operator's phone, reviewed on the laptop over Office Kit, and signed by the engineer with their own fingerprint.</p><div class="out">→ QR the mason's phone verifies offline</div></div>
+    </div>
+    <p class="loop-note">Steps 2 and 3 happen together: the measuring runs live while the phone is held over the steel.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">Technical</span>
+    <h2>What runs where</h2>
+    <div class="panel scroll">
+      <div class="pipe" role="table">
+        <div class="h">Stage</div><div class="h">How it works</div><div class="h">Runs on</div>
+        <div class="grp">Phone 1 · operator</div>
+        <div class="stage">Spec by voice</div><div class="what">IndicConformer turns Hindi or English speech into text; Gemma 4 E2B fills the five fields; a validator rejects any number that was not spoken; read-back to confirm.</div><div><span class="chip">CPU</span> <span class="chip">GPU</span></div>
+        <div class="stage">Frame pick</div><div class="what">Gyroscope says the hand is still; a sharpness check confirms; only those frames go on.</div><div><span class="chip code">plain code</span></div>
+        <div class="stage">Card / strip</div><div class="what">OpenCV finds the ChArUco card (or the strip's markers) and builds the image-to-millimetre mapping, plus the phone's distance and tilt.</div><div><span class="chip code">plain code</span></div>
+        <div class="stage">Bar pixels</div><div class="what">Segmentation model (U-Net, DeepLabV3+ fallback) marks every steel pixel; this is the live overlay at about 30 frames a second. LiteRT on the Qualcomm NPU.</div><div><span class="chip npu">NPU</span></div>
+        <div class="stage">Lines and gaps</div><div class="what">Thin each bar to a centre line, sort lines into two directions, convert to mm, measure centre-to-centre gaps. Lower layer corrected for sitting below the card.</div><div><span class="chip code">plain code</span></div>
+        <div class="stage">Error band</div><div class="what">Six known error terms (pixels, rib edges, card print, height off the card, tilt, lens) combine into the ±. At least ±5 mm until the bench table is measured.</div><div><span class="chip code">plain code</span></div>
+        <div class="stage">Weigh test</div><div class="what">The phone reads the scale's display (or the number is spoken); weight ÷ length is compared with IS 1786 mass bands.</div><div><span class="chip code">plain code</span></div>
+        <div class="stage">Rules</div><div class="what">A versioned JSON rulebook; one evaluator turns value ± band against the limit into a verdict and a fix.</div><div><span class="chip code">plain code</span></div>
+        <div class="stage">Speak</div><div class="what">Sentence templates filled from the findings; Piper Hindi voice offline; pre-recorded clips as backup; subtitles always.</div><div><span class="chip">CPU</span></div>
+        <div class="stage">Capture signature</div><div class="what">Record (frames, numbers, readings) hashed and signed with a hardware-backed key.</div><div><span class="chip key">Keystore</span></div>
+        <div class="grp">Laptop over Office Kit · engineer's desk</div>
+        <div class="stage">Review</div><div class="what">Record opens on the laptop: the frame with the drawn gap, the readings, the verdicts.</div><div><span class="chip">laptop</span></div>
+        <div class="grp">Phone 2 · engineer &nbsp;·&nbsp; Phone 3 · mason</div>
+        <div class="stage">Approve</div><div class="what">Engineer signs with their own key behind a fingerprint; a QR appears.</div><div><span class="chip key">Keystore</span></div>
+        <div class="stage">Verify</div><div class="what">Mason's phone scans the QR offline: valid, who signed, when. A re-sent old record is rejected by its hash.</div><div><span class="chip code">plain code</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">What we bring</span>
+    <h2>The props, half scale</h2>
+    <p>Every distance is half a real house; the steel is real 8 and 12 mm TMT. The app checks against whatever spec is entered, so it treats this mesh exactly like a real one. Largest piece: 30 cm.</p>
+    <div class="props">
+      <div class="prop panel">
+        <h3>Slab · 5 × 5 mesh</h3>
+        <svg viewBox="0 0 320 330" role="img" aria-label="Top view of the slab prop: a 280 mm board with five bottom bars and five top bars at 50 mm, foam on the edges and the card at front left">
+          <rect class="board" x="20" y="10" width="280" height="280" rx="3"/>
+          <rect class="cloth" x="20" y="10" width="280" height="280" rx="3"/>
+          <rect class="foam" x="20" y="10" width="280" height="20"/>
+          <rect class="foam" x="20" y="270" width="280" height="20"/>
+          <rect class="foam" x="20" y="10" width="20" height="280"/>
+          <rect class="foam" x="280" y="10" width="20" height="280"/>
+          <g><line class="bar-lo" x1="28" y1="50" x2="292" y2="50"/><line class="bar-lo" x1="28" y1="100" x2="292" y2="100"/><line class="bar-lo" x1="28" y1="150" x2="292" y2="150"/><line class="bar-lo" x1="28" y1="200" x2="292" y2="200"/><line class="bar-lo" x1="28" y1="250" x2="292" y2="250"/></g>
+          <g><line class="bar-hi" x1="60" y1="18" x2="60" y2="282"/><line class="bar-hi" x1="110" y1="18" x2="110" y2="282"/><line class="bar-hi" x1="160" y1="18" x2="160" y2="282"/><line class="bar-hi" x1="210" y1="18" x2="210" y2="282"/><line class="bar-hi" x1="260" y1="18" x2="260" y2="282"/></g>
+          <g transform="translate(35 165)">
+            <rect class="cb" width="100" height="100"/>
+            <g class="ca"><rect x="5" y="5" width="15" height="15"/><rect x="35" y="5" width="15" height="15"/><rect x="65" y="5" width="15" height="15"/><rect x="20" y="20" width="15" height="15"/><rect x="50" y="20" width="15" height="15"/><rect x="80" y="20" width="15" height="15"/><rect x="5" y="35" width="15" height="15"/><rect x="35" y="35" width="15" height="15"/><rect x="65" y="35" width="15" height="15"/><rect x="20" y="50" width="15" height="15"/><rect x="50" y="50" width="15" height="15"/><rect x="80" y="50" width="15" height="15"/><rect x="5" y="65" width="15" height="15"/><rect x="35" y="65" width="15" height="15"/><rect x="65" y="65" width="15" height="15"/><rect x="20" y="80" width="15" height="15"/><rect x="50" y="80" width="15" height="15"/><rect x="80" y="80" width="15" height="15"/></g>
+          </g>
+          <text class="lbl" x="60" y="306" text-anchor="middle">T1</text><text class="lbl" x="110" y="306" text-anchor="middle">T2</text><text class="lbl" x="160" y="306" text-anchor="middle">T3</text><text class="lbl" x="210" y="306" text-anchor="middle">T4</text><text class="lbl" x="260" y="306" text-anchor="middle">T5</text>
+          <text class="lbl" x="160" y="324" text-anchor="middle">280 mm · bars at 50 mm both ways · jury side</text>
+          <text class="lbl" x="8" y="54">B1</text><text class="lbl" x="8" y="104">B2</text><text class="lbl" x="8" y="154">B3</text><text class="lbl" x="8" y="204">B4</text><text class="lbl" x="8" y="254">B5</text>
+        </svg>
+        <dl><dt>Bars</dt><dd>10 × 8 mm, 280 mm long, plus 1 spare; all movable</dd><dt>Holds</dt><dd>EVA foam strips on all four edges</dd><dt>Card</dt><dd>Card S, 10 cm, on T1 and T2</dd><dt>Spec</dt><dd>8 mm @ 50 both ways; single gap limit 65</dd></dl>
+      </div>
+
+      <div class="prop panel">
+        <h3>Beam · top face</h3>
+        <svg viewBox="0 0 340 200" role="img" aria-label="Top view of the beam prop: two 12 mm bars 300 mm long, five cross pieces closer at the left end, the strip along the centre">
+          <line class="bar-12" x1="20" y1="60" x2="320" y2="60"/>
+          <line class="bar-12" x1="20" y1="135" x2="320" y2="135"/>
+          <g class="bar-hi"><line x1="45" y1="35" x2="45" y2="160"/><line x1="95" y1="35" x2="95" y2="160"/><line x1="145" y1="35" x2="145" y2="160"/><line x1="220" y1="35" x2="220" y2="160"/><line x1="295" y1="35" x2="295" y2="160"/></g>
+          <rect class="strip" x="20" y="85" width="300" height="25"/>
+          <g class="mk"><rect x="24" y="89" width="17" height="17"/><rect x="49" y="89" width="17" height="17"/><rect x="74" y="89" width="17" height="17"/><rect x="99" y="89" width="17" height="17"/><rect x="124" y="89" width="17" height="17"/><rect x="149" y="89" width="17" height="17"/><rect x="174" y="89" width="17" height="17"/><rect x="199" y="89" width="17" height="17"/><rect x="224" y="89" width="17" height="17"/><rect x="249" y="89" width="17" height="17"/><rect x="274" y="89" width="17" height="17"/><rect x="299" y="89" width="17" height="17"/></g>
+          <line class="dim" x1="20" y1="20" x2="170" y2="20"/><text class="lbl" x="95" y="15" text-anchor="middle">end zone 150 · rings @ 50</text>
+          <line class="dim" x1="170" y1="20" x2="320" y2="20"/><text class="lbl" x="245" y="15" text-anchor="middle">middle · @ 75</text>
+          <text class="lbl" x="45" y="180" text-anchor="middle">25</text><text class="lbl" x="95" y="180" text-anchor="middle">75</text><text class="lbl" x="145" y="180" text-anchor="middle">125</text><text class="lbl" x="220" y="180" text-anchor="middle">200</text><text class="lbl" x="295" y="180" text-anchor="middle">275</text>
+          <text class="lbl" x="170" y="196" text-anchor="middle">mm from the left end (the "column face")</text>
+        </svg>
+        <dl><dt>Bars</dt><dd>2 × 12 mm, 300 mm, 75 mm apart</dd><dt>Rings</dt><dd>5 × 8 mm pieces, 125 mm, on Blu-Tack</dd><dt>Strip</dt><dd>strip_300 on the centre line, 0 end at the left</dd><dt>Spec</dt><dd>rings @ 50 for 150 mm, @ 75 middle</dd></dl>
+      </div>
+
+      <div class="prop panel">
+        <h3>Weigh test</h3>
+        <svg viewBox="0 0 320 170" role="img" aria-label="A kitchen scale reading 123 grams with a 20 cm offcut on it, and a second offcut beside it">
+          <rect x="40" y="95" width="200" height="50" rx="8" class="board"/>
+          <rect x="60" y="105" width="70" height="28" rx="3" class="ca"/>
+          <text x="95" y="125" text-anchor="middle" style="font:600 16px var(--mono);fill:var(--hi)">123 g</text>
+          <line class="bar-hi" x1="55" y1="85" x2="225" y2="85" style="stroke-width:10"/>
+          <rect x="200" y="78" width="26" height="14" class="hi"/><text class="lbl-b" x="213" y="89" text-anchor="middle" style="font-size:9px">"12"</text>
+          <line class="bar-12" x1="60" y1="35" x2="230" y2="35"/>
+          <rect x="205" y="27" width="26" height="16" class="hi"/><text class="lbl-b" x="218" y="39" text-anchor="middle" style="font-size:9px">12</text>
+          <text class="lbl" x="250" y="40">real 12: 178 g</text>
+          <text class="lbl" x="250" y="90">fake: 123 g</text>
+          <text class="lbl" x="140" y="164" text-anchor="middle">two 20 cm offcuts · kitchen scale, 1 g</text>
+        </svg>
+        <dl><dt>Fake</dt><dd>10 mm offcut taped "12" → 123 g → 10 mm class</dd><dt>Real</dt><dd>12 mm offcut → 178 g</dd><dt>Why</dt><dd>A camera can't separate 10 from 12; a scale can</dd></dl>
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+        <h3>On the table</h3>
+        <ul class="check">
+          <li>Slab mesh and beam top face on black cloth</li>
+          <li>Card S (10 cm) and strip_300 (30 cm), measured and labelled</li>
+          <li>Two 20 cm offcuts, kitchen scale, steel tape</li>
+          <li>Fault cards F1, F2, F3, F12 face down; gloves for the judge</li>
+          <li>One-page spec sheet ("the drawing")</li>
+        </ul>
+      </div>
+      <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+        <h3>Devices</h3>
+        <ul class="check">
+          <li>Phone 1, operator: scans, measures, speaks</li>
+          <li>Phone 2, engineer: fingerprint sign-off, mirrored on the laptop</li>
+          <li>Phone 3, mason: verifies the QR; hot spare</li>
+          <li>Laptop with Office Kit; Windows laptop as backup</li>
+          <li>Chargers, hub, HDMI adapter, USB stick with the build and voice clips</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">On stage · 3 min 30 s · airplane mode</span>
+    <h2>The demo run</h2>
+    <div class="run">
+      <div class="t">0:00</div><div class="b"><strong>The one-day window</strong><p class="say">"This steel is visible for a day, then concrete covers it. Japan has accepted camera checks since 2023; we built it for India, on one phone. Half-scale props; the app checks whatever the drawing says."</p></div>
+      <div class="t">0:30</div><div class="b"><strong>The judge sabotages</strong><p>A judge draws a fault card and does it without telling us: pulls a bar, opens a gap to about 80 mm, or moves a beam ring.</p></div>
+      <div class="t">0:45</div><div class="b"><strong>Scan</strong><p>Phone 1 at about 30 cm, torch on. Live overlay on the bars, coverage ticking.</p></div>
+      <div class="t">0:55</div><div class="b"><strong>Verdict, spoken</strong><p>"Gap 3: 80 ± 3 mm. Drawing 50. Outside limits." Hindi voice, Hindi and English subtitles.</p></div>
+      <div class="t">1:05</div><div class="b"><strong>The judge tapes it</strong><p>The phone highlights the gap it measured; the judge tapes it centre to centre and reads about 80.</p></div>
+      <div class="t">1:25</div><div class="b"><strong>Honesty</strong><p>Gap opened to 72 (limit 65). From 0.8 m: "Re-scan, too far to be sure." From 0.3 m: "72 ± 3, outside."</p></div>
+      <div class="t">1:50</div><div class="b"><strong>Both directions</strong><p>A lower-layer bar is moved. The app sees it through the gaps: "Lower bars, gap 2 is 80 ± 4, outside."</p></div>
+      <div class="t">2:10</div><div class="b"><strong>Weigh test</strong><p>The offcut taped "12" weighs 123 g. "It's a 10. A 12 weighs 178."</p></div>
+      <div class="t">2:30</div><div class="b"><strong>The engineer signs</strong><p>Record lands on the laptop over Office Kit; the engineer reviews the frame and signs on Phone 2 with a fingerprint.</p></div>
+      <div class="t">2:48</div><div class="b"><strong>Verify and replay</strong><p>Phone 3 scans the QR offline: valid. Yesterday's record is re-sent: rejected.</p></div>
+      <div class="t">3:00</div><div class="b"><strong>Numbers and the ask</strong><p>NPU vs GPU vs CPU timings, scans, battery, bench accuracy. Who pays: steel and cement brands. The ask: one brand, 20 sites, 30 days.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">Fault cards</span>
+    <h2>What the judge can do</h2>
+    <div class="panel scroll">
+      <table>
+        <thead><tr><th>Card</th><th>Judge does</th><th>App says</th><th>Verdict</th></tr></thead>
+        <tbody>
+          <tr><td class="num">CONTROL</td><td>Nothing</td><td>5 × 5, gaps 50 ± 2</td><td class="v-ok">Within</td></tr>
+          <tr><td class="num">F1</td><td>Lifts top bar 3</td><td>4 of 5 bars, slot 3 empty</td><td class="v-bad">Outside</td></tr>
+          <tr><td class="num">F2</td><td>Slides top bar 4 to the 220 tick</td><td>Gap 3: 80 ± 3, limit 65</td><td class="v-bad">Outside</td></tr>
+          <tr><td class="num">F3</td><td>Slides the 2nd beam ring into the middle</td><td>End-zone gap 100, drawing 50; add 1</td><td class="v-bad">Outside</td></tr>
+          <tr><td class="num">F4</td><td>Slides top bar 4 to the 212 tick</td><td>0.8 m: too far. 0.3 m: 72 ± 3</td><td class="v-re">Re-scan → Outside</td></tr>
+          <tr><td class="num">F12</td><td>Slides bottom bar 2 back 30 mm</td><td>Lower bars, gap 2: 80 ± 4</td><td class="v-bad">Outside</td></tr>
+          <tr><td class="num">F7</td><td>Skips the cover reading</td><td>Cover can't be seen by camera</td><td class="v-re">Needs a tape reading</td></tr>
+          <tr><td class="num">F10</td><td>Re-sends yesterday's record</td><td>Already signed (same hash)</td><td class="v-bad">Rejected</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">Trade-off</span>
+    <h2>What half scale costs</h2>
+    <div class="callout"><p><strong>Only the real-world look.</strong> Every check, voice line, tape check and signing step works the same. Say "half-scale props" first, before a judge asks. If asked "does it work at real scale?": the bars are a real 8 mm thick but the gaps are half size, so this is the harder test. The re-scan beat triggers on the small card being too far rather than on the band straddling the limit, and bench accuracy is quoted at 50 mm spacing.</p></div>
+  </section>
+</main>
