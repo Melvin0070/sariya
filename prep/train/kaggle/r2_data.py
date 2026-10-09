@@ -33,7 +33,7 @@ def prepare(roi_dir: str) -> str:
     pairs = []
     wires = _root("train/train/imgs")
     if wires:
-        pairs.append(_neg(wires, "wires", "--include", "/imgs/"))
+        pairs.append(_neg(wires, "wires", "--include", "/imgs/", "--n", "400"))   # 28,646 in the set
     coco = _root("coco2017/annotations/instances_val2017.json")
     if coco:
         pairs.append(_neg(f"{coco}/coco2017/val2017", "coco", "--coco-ann", f"{coco}/coco2017/annotations/instances_val2017.json",
