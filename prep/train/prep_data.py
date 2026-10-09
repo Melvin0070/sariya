@@ -137,7 +137,8 @@ def process(coco_path, img_dir, out, classes, tiles, site_regex, site_table, for
         site = site_of(im["file_name"], site_regex, site_table)
         split = split_of(site, force=force)
         stats["sites"].setdefault(split, set()).add(site)
-        base = os.path.splitext(os.path.basename(im["file_name"]))[0]
+        # Keep sub-folders in the name: ROI-1555 restarts at 000000000001.jpg in every folder.
+        base = os.path.splitext(im["file_name"])[0].replace("\\", "/").replace("/", "_")
         for n in tiles:
             for tag, (x0, y0, x1, y1) in tiles_of(img, n):
                 mt = mask[y0:y1, x0:x1]
