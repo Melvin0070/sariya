@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Export the trained U-Net to .tflite (+ LiteRT AOT for SM8850) on a Kaggle CPU kernel (the Qualcomm SDK is Linux-only).
 #   prep/train/kaggle/push_export.sh            then: kaggle kernels output $KERNEL -p export/
-# Input: the latest output of sabarinarayanakg/sariya-unet-train (unet_mbv3_1152.pt). Needs internet (phone-verified).
+# Input: the latest output of sabarinarayanakg/${SRC_KERNEL:-sariya-unet-train} (unet_mbv3_1152.pt). Needs internet (phone-verified).
 set -euo pipefail
 USER_SLUG=sabarinarayanakg
 KERNEL=$USER_SLUG/sariya-unet-export
@@ -45,7 +45,7 @@ EOF
 cat > "$OUT/kernel-metadata.json" <<EOF
 {"id": "$KERNEL", "title": "sariya-unet-export", "code_file": "export.py", "language": "python",
  "kernel_type": "script", "is_private": "true", "enable_gpu": "false", "enable_internet": "true",
- "kernel_sources": ["$USER_SLUG/sariya-unet-train"]}
+ "kernel_sources": ["$USER_SLUG/${SRC_KERNEL:-sariya-unet-train}"]}
 EOF
 python3 -m py_compile "$OUT/export.py"
 kaggle kernels push -p "$OUT"
