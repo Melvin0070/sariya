@@ -24,6 +24,10 @@ if [ -n "${NEG:-}" ]; then
   NEG_SOURCES=', "zanellar/electric-wires-image-segmentation", "awsaf49/coco-2017-dataset", "itsahmad/indoor-scenes-cvpr-2019"'
   [ -n "${VENUE_DATASET:-}" ] && NEG_SOURCES="$NEG_SOURCES, \"$USER_SLUG/$VENUE_DATASET\""
 fi
+# Round 3: R_STIRRUP=<n> pulls n synthetic stirrup scenes + 233 real photos from Hugging Face (internet on);
+# R_WIRES / R_COCO / R_INDOOR set the negative counts (defaults 400 / 400 / 300).
+INTERNET=false; [ -n "${R_STIRRUP:-}" ] && INTERNET=true
+R_ENV="R_WIRES=${R_WIRES:-400} R_COCO=${R_COCO:-400} R_INDOOR=${R_INDOOR:-300} R_STIRRUP=${R_STIRRUP:-0}"
 INIT_ARGS=""; KERNEL_SOURCES="[]"
 if [ -n "${INIT_FROM:-}" ]; then
   INIT_ARGS=', "--init", glob.glob("/kaggle/input/**/unet_mbv3_1152.pt", recursive=True)[0]'
@@ -50,6 +54,8 @@ EOF
     for f in "$HERE/../make_negatives.py" "$HERE/../prep_data.py" "$HERE/r2_data.py"; do
       echo "open('/kaggle/temp/r2/$(basename "$f")', 'wb').write(base64.b64decode('$(base64 < "$f" | tr -d '\n')'))"
     done
+    for kv in $R_ENV; do echo "os.environ['${kv%%=*}'] = '${kv#*=}'"; done
+    [ "$INTERNET" = true ] && echo 'subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "huggingface_hub", "pycocotools"])'
     echo 'sys.path.insert(0, "/kaggle/temp/r2"); import r2_data; ROI = DATA; DATA = r2_data.prepare(ROI)'
   fi
   sed -e '/^from __future__/d' -e '/^if __name__ == "__main__":/,$d' "$HERE/../train_unet.py"
@@ -79,6 +85,8 @@ for tag, w in (("before", log.get("init")), ("after", "/kaggle/working/unet_mbv3
     m = build_model(None).cuda().eval(); m.load_state_dict(torch.load(w, map_location="cuda"))
     roi = evaluate(m, DataLoader(Tiles(ROI, "test", build_augment({}, False)), 8), torch.device("cuda"))
     cmp[tag] = {"roi_test": roi, "false_alarm_test": r2_data.false_alarm(w, DATA, build_model)}
+    if os.path.isdir(r2_data.REAL_DIR):
+        cmp[tag]["stirrup_real_recall"] = r2_data.recall(w, r2_data.REAL_DIR, build_model)
 log["round2_compare"] = cmp; json.dump(log, open(p, "w"), indent=1); print("round2_compare:", json.dumps(cmp))
 EOF
   fi
@@ -86,7 +94,7 @@ EOF
 
 cat > "$OUT/kernel-metadata.json" <<EOF
 {"id": "$KERNEL", "title": "$KERNEL_NAME", "code_file": "train.py", "language": "python",
- "kernel_type": "script", "is_private": "true", "enable_gpu": "true", "enable_internet": "false",
+ "kernel_type": "script", "is_private": "true", "enable_gpu": "true", "enable_internet": "$INTERNET",
  "machine_shape": "NvidiaTeslaT4", "dataset_sources": ["$DATASET", "$DEPS"$NEG_SOURCES], "kernel_sources": $KERNEL_SOURCES}
 EOF
 python3 -m py_compile "$OUT/train.py"
