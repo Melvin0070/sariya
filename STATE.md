@@ -6,7 +6,8 @@
 - **Result:** best val IoU 0.871 / F1 0.931 (epoch 48); **held-out test IoU 0.847 / F1 0.917**. Weights at `~/sariya-data/runs/base_v1/unet_mbv3_1152.pt` (27 MB, sha256 203ef1f8…). Misses: thin or distant stirrup legs; false positives: shiny aluminium rails. Keep bare metal out of the demo frame.
 - **Speeds:** M5 trains at 6 img/s at batch 2 max (16 GB RAM, swap full); the T4 at ~12 img/s, CPU-augmentation bound.
 - **Kaggle:** GPU and internet came only after phone verification; before that, jobs ran CPU-only without a warning. The Colab CLI (`google-colab-cli`) is installed but not signed in.
-- **Next:** export to .tflite + SM8850 AOT on Kaggle (Linux-only SDK), NPU latency on the loaner or AI Hub, prop photos for round 2.
+- **Export and benchmark (10 Oct, 01:15):** `models/seg/v1/unet_mbv3_1152.tflite` (float, exact parity with PyTorch). On the iQOO 15: **NPU 12.2 ms in burst mode** (all 160 layers on the HTP; 12.8 ms sustained over 60 s, no throttling), GPU 19.8 ms, CPU 235 ms. **Gate G0 (< 25 ms on the NPU) passes.** The NPU needs QAIRT 2.50 libs (the CLI's pinned 2.47 is rejected), burst mode and a JIT cache (first compile 53 s, cached 4-8 s). SM8850 AOT failed for the same QAIRT reason; JIT makes it optional. Full report: `notes/14-model/MODEL-V1.md`.
+- **Next:** prop photos for round 2; lane B wires `Accelerator.NPU` + burst + cache into P1/P4.
 
 ## Status (9 Oct 2026, 20:05): v4, the team's live AR camera vision
 - **IDEA.md is now v4.** A camera app that draws a live line on every bar, with the mm between them from the card, and a Lock step for the verdict. Comparison and design: `notes/13-ar-vision/AR-VISION.md`.
