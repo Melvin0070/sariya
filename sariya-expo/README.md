@@ -1,5 +1,30 @@
 # Welcome to your Expo app 👋
 
+## Run Sariya on the connected iQOO (macOS)
+
+This app uses native AR modules and requires its own development build.
+
+```bash
+npm ci
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+npx expo run:android --device I2501
+```
+
+For subsequent JavaScript/TypeScript work, keep the phone connected over USB:
+
+```bash
+adb reverse tcp:8081 tcp:8081
+npx expo start --dev-client --localhost
+```
+
+Press `a` to open the installed app. Fast Refresh applies saved source changes.
+Rebuild after changing native modules or native configuration. Use Java 17 on
+this Mac: Android Studio's bundled Java 25 failed the native CMake configuration.
+
+The current scan readings come from `src/lib/mock-measure.ts`; they are simulated,
+not measurements from the segmentation model.
+
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
 ## Get started
