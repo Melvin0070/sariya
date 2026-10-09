@@ -92,7 +92,7 @@ Download and verify (sha256 noted in `MANIFEST.txt`):
 5. `tts/kn/fastpitch-kn.int8.onnx`, `hifigan-kn.int8.onnx`, `fastpitch-kn.tokens.json`, `sample-kn.wav` from https://huggingface.co/RaunakSaha/echobharat-models/tree/main/kn ; same for `hi/` as a Piper backup.
 6. `llm/gemma-4-E2B-it-gpu.litertlm` (2.01 GB) and `gemma-4-E2B-it.litertlm` (2.59 GB, CPU) from https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm .
 7. `llm-fallback/Qwen3-0.6B-Q4_0.gguf` and `Qwen3-1.7B-Q4_0.gguf` (from the Qwen or a GGUF mirror on HF; or the `qualcomm/Qwen3-0.6B` GENIEX export, which is the same GGUF).
-8. Pre-rendered demo audio: the ten demo fix sentences in hi and kn as WAV (render on the laptop with Indic-TTS or Indic Parler-TTS), plus number clips 0-9, 10-100 by tens, 100-1000 by hundreds in both languages for slot concatenation. This is the stage fallback if every on-device TTS fails.
+8. Pre-rendered demo audio: the ten demo fix sentences in hi and kn as WAV (render on the laptop with Indic-TTS or Indic Parler-TTS), plus number clips for every integer 0-100 (Hindi 11-99 are irregular) and 100-1000 by hundreds in both languages for slot concatenation. This is the stage fallback if every on-device TTS fails.
 9. Gradle cache warm: `com.k2fsa.sherpa.onnx:sherpa-onnx-android` (latest on Maven Central), `com.google.ai.edge.litertlm:litertlm-android`, `com.google.mlkit:text-recognition:16.0.1`, `com.google.mlkit:text-recognition-devanagari:16.0.1`, `com.microsoft.onnxruntime:onnxruntime-android`, OpenCV Android AAR. Also clone llama.cpp and the sherpa-onnx `android` examples; build both once so the NDK and CMake are cached.
 10. Test wavs: 20 utterances per language of the five-field sentence recorded by two speakers on a phone in a noisy room (fan, TV, street), 16 kHz. Ground truth in a CSV. This is the hour-1 regression set.
 
@@ -101,14 +101,14 @@ Test on a spare Android phone (any arm64, 8 GB+):
 - Piper hi and Indic-TTS kn synthesis of three fix sentences; listen with a native speaker; check number pronunciation ("150" as "एक सौ पचास", "ನೂರ ಐವತ್ತು").
 - LiteRT-LM Gemma 4 E2B GPU load time, memory, and the extraction prompt on 20 transcripts; measure JSON validity rate. If a constrained-decoding API exists in v0.18, use it; else keep the validator.
 - llama.cpp Android with Qwen3-0.6B Q4_0 and the JSON-schema grammar: speed and validity.
-- ML Kit on three photographed BBS tables; classical 7-segment reader on 30 photos of the kitchen scale at 0.6, 0.9 and 1.2 kg, with and without reflections.
+- ML Kit on three photographed BBS tables; classical 7-segment reader on 30 photos of the kitchen scale at about 110, 125 and 180 g (the stage offcuts), with and without reflections.
 - Android TTS: `isLanguageAvailable(kn-IN)` and `voices` on the spare phone and on any vivo/iQOO you can borrow.
 
 ## 5. Robust number capture
 
 Three layers, cheapest first:
 1. **Parser** (Kotlin, no model): tokenise the transcript; map number words in hi (एक…सौ, डेढ़ सौ = 150), kn (ಒಂದು…ನೂರು), en and Hinglish ("barah", "ek sau pachas", "one fifty") to integers; handle "at 100 and 150", "100/150", "100 to 150", "@". Attach each integer to the nearest field keyword (dia/डाया/ವ್ಯಾಸ, spacing/गैप/ಅಂತರ, stirrup/रिंग/ಸ್ಟಿರಪ್, end/end zone/छोर) by order of appearance; default order is the sentence template (dia, spacing, stirrup dia, stirrup spacing end, stirrup spacing mid, end-zone length).
-2. **Snap to the valid set** with a confidence: dia ∈ {6, 8, 10, 12, 16, 20, 25, 32}; stirrup dia ∈ {6, 8, 10}; spacings 50-400 in steps of 5; end-zone 300-1500 in steps of 50. A value that snaps by more than one step, or a field with two candidates, is flagged "ask".
+2. **Snap to the valid set** with a confidence: dia ∈ {6, 8, 10, 12, 16, 20, 25, 32}; stirrup dia ∈ {6, 8, 10}; spacings 25-400 in steps of 5; end-zone 100-1500 in steps of 25 (half-scale demo: "end zone 150", BUILD-PLAN §7). A value that snaps by more than one step, or a field with two candidates, is flagged "ask".
 3. **LLM extraction** (§6.1) when the parser is unsure or the sentence is free-form. Its output goes through the same snap-and-flag step.
 
 Then **confirm-by-read-back**, always.
@@ -128,11 +128,11 @@ Schema (JSON Schema, also the GBNF source for llama.cpp):
   "properties": {
     "bar_dia_mm":             {"type": ["integer", "null"], "enum": [6, 8, 10, 12, 16, 20, 25, 32, null]},
     "bar_count":              {"type": ["integer", "null"], "minimum": 2, "maximum": 20},
-    "bar_spacing_mm":         {"type": ["integer", "null"], "minimum": 50, "maximum": 400},
+    "bar_spacing_mm":         {"type": ["integer", "null"], "minimum": 25, "maximum": 400},
     "stirrup_dia_mm":         {"type": ["integer", "null"], "enum": [6, 8, 10, null]},
-    "stirrup_spacing_end_mm": {"type": ["integer", "null"], "minimum": 50, "maximum": 400},
-    "stirrup_spacing_mid_mm": {"type": ["integer", "null"], "minimum": 50, "maximum": 400},
-    "end_zone_mm":            {"type": ["integer", "null"], "minimum": 300, "maximum": 1500},
+    "stirrup_spacing_end_mm": {"type": ["integer", "null"], "minimum": 25, "maximum": 400},
+    "stirrup_spacing_mid_mm": {"type": ["integer", "null"], "minimum": 25, "maximum": 400},
+    "end_zone_mm":            {"type": ["integer", "null"], "minimum": 100, "maximum": 1500},
     "language":               {"type": "string", "enum": ["hi", "kn", "en"]},
     "unsure_fields":          {"type": "array", "items": {"type": "string"}}
   },
@@ -146,9 +146,9 @@ System: "You write one short instruction for a mason, in the requested language,
 
 Input:
 ```json
-{"member":"B2","zone":"left end","check":"stirrup_spacing_end","measured_mm":180,"band_mm":12,"required_mm":100,"required_source":"drawing","zone_length_mm":600,"action":{"type":"add_stirrups","count":4},"language":"hi"}
+{"member":"B2","zone":"left end","check":"stirrup_spacing_end","measured_mm":180,"band_mm":12,"required_mm":100,"required_source":"drawing","zone_length_mm":600,"action":{"type":"add_stirrups","count":2},"language":"hi"}
 ```
-Output schema: `{"say": string, "subtitle": string, "numbers_used": integer[]}`. The validator checks `numbers_used` ⊆ numbers in the input and that `say` contains no digits outside that set. Reference output: "बीम B2, बायाँ सिरा: रिंग 180 पर हैं, ड्राइंग में पहले 600 मिमी तक 100 चाहिए। 4 रिंग और डालें।"
+Output schema: `{"say": string, "subtitle": string, "numbers_used": integer[]}`. The validator checks `numbers_used` ⊆ numbers in the input and that `say` contains no digits outside that set. Reference output: "बीम B2, बायाँ सिरा: रिंग 180 पर हैं, ड्राइंग में पहले 600 मिमी तक 100 चाहिए। 2 रिंग और डालें।"
 
 Template fallback (no LLM): per check type and language, a sentence with slots, e.g. kn: "ಬೀಮ್ {member}, {zone}: ಸ್ಟಿರಪ್ {measured} ಮಿಮೀ ಅಂತರದಲ್ಲಿವೆ, ಡ್ರಾಯಿಂಗ್ ಪ್ರಕಾರ ಮೊದಲ {zone_length} ಮಿಮೀ ವರೆಗೆ {required} ಬೇಕು. {count} ಸ್ಟಿರಪ್ ಸೇರಿಸಿ." Have a native speaker fix all templates before the event.
 

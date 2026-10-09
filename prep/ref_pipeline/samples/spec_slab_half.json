@@ -1,0 +1,5 @@
+{"member": "slab", "fiducial": "card", "card_id": 20, "square_mm": 15.0, "bar_dia_mm": 8, "polarity": "auto",
+ "main_axis": "y", "n_spec": {"main": 5, "dist": 5}, "s_spec": {"main": 50, "dist": 50}, "min_len_mm": 80,
+ "zone_mm": [[10, -130], [230, -130], [230, 90], [10, 90]],
+ "zone": "II", "apply_13920": false,
+ "_note": "Half-scale stage mesh (BUILD-PLAN §7). zone_mm is card-S frame for the card at X 15-115, Y 155-255 on the 280 mm board: the bar grid 30-250 mm, never the board edge. Replace square_mm with measured pattern width / 6."}

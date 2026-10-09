@@ -15,7 +15,7 @@ spec.json keys (all optional unless marked):
   n_spec {main,dist}, s_spec {main,dist}, d, D, dia {main,dist}, hysd       slab drawing values
   s_spec_end, s_spec_mid, d, dia_long_min, L_end_spec, faces_mm [x0,x1]    beam drawing values
   zone "II".."V", apply_13920 bool
-  gates  {min_corners:12, max_tilt_deg:25, h_min_m:0.35, h_max_m:1.3, sharpness_min:20}
+  gates  {min_corners:12, max_tilt_deg:25, h_min_m:0.2, h_max_m:1.3, min_marker_px:45, sharpness_min:20}
   band   {sigma_px, b_px, sigma_z_mm, delta_theta_deg, eps_lens, field_floor_mm}
 This file is the end-to-end order of operations the Kotlin port follows.
 """
@@ -37,7 +37,10 @@ from .centrelines import extract, Family
 from .error_band import BandInputs, error_band, band_for_mean
 from .verdict import Checker, Measurement, member_summary, spoken_fix
 
-GATES = {"min_corners": 12, "min_strip_markers": 2, "max_tilt_deg": 25.0, "h_min_m": 0.35, "h_max_m": 1.3, "sharpness_min": 20.0}
+# min_marker_px is the abstention that scales with the fiducial: card S (11 mm markers) reaches 45 px at ~0.65 m,
+# a 200 mm card (22 mm markers) at ~1.3 m, so one gate serves the half-scale props and real sites.
+GATES = {"min_corners": 12, "min_strip_markers": 2, "max_tilt_deg": 25.0, "h_min_m": 0.2, "h_max_m": 1.3,
+         "min_marker_px": 45.0, "sharpness_min": 20.0}
 
 
 def sharpness(gray: np.ndarray, width: int = 1920) -> float:
@@ -168,6 +171,18 @@ def draw_overlay(img, pose: PlanePose, zone_mm, fams: dict, summary_text: str, a
     return ov
 
 
+def _marker_px(pose, K: np.ndarray, spec: dict) -> float:
+    f_px = 0.5 * (K[0, 0] + K[1, 1])
+    if pose.kind == "card":
+        sq = spec.get("square_mm") or F.CARD_SQ_MM_BY_ID.get(pose.fid_id, F.CARD_SQ_MM)
+        mk = F.CARD_MK_MM * sq / F.CARD_SQ_MM
+    elif pose.fid_id == 300:
+        mk = F.STRIP300["mk"] * (spec.get("pitch_mm") or F.STRIP300["pitch"]) / F.STRIP300["pitch"]
+    else:
+        mk = F.STRIP_MK_MM * (spec.get("pitch_mm") or F.STRIP_PITCH_MM) / F.STRIP_PITCH_MM
+    return mk * f_px / (pose.distance_m * 1000.0)
+
+
 def run(img_bgr: np.ndarray, intr: dict, spec: dict, rules=None) -> tuple[dict, np.ndarray]:
     gates = {**GATES, **spec.get("gates", {})}
     bcfg = spec.get("band", {})
@@ -183,8 +198,8 @@ def run(img_bgr: np.ndarray, intr: dict, spec: dict, rules=None) -> tuple[dict, 
            "member": member, "fiducial": fid, "abstain": [], "pose": None, "sharpness": round(sharpness(gray), 2)}
     abstain = res["abstain"]
 
-    pose = detect_card(gray, K, spec.get("card_id"), spec.get("square_mm", F.CARD_SQ_MM)) if fid == "card" \
-        else detect_strip(gray, K, spec.get("pitch_mm", F.STRIP_PITCH_MM))
+    pose = detect_card(gray, K, spec.get("card_id"), spec.get("square_mm")) if fid == "card" \
+        else detect_strip(gray, K, spec.get("pitch_mm"))
     if pose is None:
         abstain.append("fiducial not found")
         return res, draw_overlay(img, None, None, {}, "no fiducial", abstain)
@@ -197,6 +212,10 @@ def run(img_bgr: np.ndarray, intr: dict, spec: dict, rules=None) -> tuple[dict, 
         abstain.append(f"tilt {pose.tilt_deg:.1f} deg > {gates['max_tilt_deg']}")
     if not (gates["h_min_m"] <= pose.distance_m <= gates["h_max_m"]):
         abstain.append(f"distance {pose.distance_m:.2f} m outside {gates['h_min_m']}-{gates['h_max_m']}")
+    marker_px = _marker_px(pose, K, spec)
+    res["marker_px"] = round(marker_px, 1)
+    if marker_px < gates["min_marker_px"]:
+        abstain.append(f"card too small in the frame: marker {marker_px:.0f} px < {gates['min_marker_px']:.0f}")
     if res["sharpness"] < gates["sharpness_min"]:
         abstain.append(f"sharpness {res['sharpness']:.1f} < {gates['sharpness_min']}")
     if abstain:

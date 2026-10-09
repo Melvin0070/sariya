@@ -15,7 +15,7 @@ Rules honoured: no app code before 9 Oct; open-source libraries and public pre-t
 | Bar pixels (segmentation) | **2-class semantic U-Net-lite** (segmentation_models_pytorch U-Net, MobileNetV3-Large encoder, ImageNet init), input 1152×640, full-resolution output. Exported via litert-torch → .tflite → LiteRT AOT for SM8850. | **DeepLabV3+-MobileNet** from Qualcomm AI Hub re-headed to 2 classes (path proven on this NPU: 1.6 ms w8a8 / 2.9 ms w8a16 / 4.2 ms float at 513×513 on 8 Elite Gen 5 [V]). Second fallback: **YOLO26n-seg** (2.2-2.7 ms NPU at 640 [V], AGPL). | **Classical ridge filter** (Frangi/Sato on the grey image, or a 2-class U-Net trained live at the event on 300-800 site images with a timestamped log). | U-Net-lite latency on SM8850 is unmeasured until the AI Hub profile job runs (pre-event task P6). Expect single-digit to low-tens ms [U]. | smp: MIT. AI Hub DeepLabV3+: MIT [V]. YOLO26: AGPL-3.0 [V]. |
 | Bars → centrelines, count, spacing | Classical: skeletonise mask (Zhang-Suen), prune, straight-segment RANSAC/Hough, cluster by orientation into two families, fit each bar's centreline, order along the normal, adjacent distances in card-plane mm. | Same, seeded by YOLO26n-seg instance boxes when the semantic mask merges touching bars. | Same (needs no weights). | Count = number of centrelines crossing the zone; spacing = adjacent centreline gaps. | OpenCV (Apache-2.0), scikit-image if used offline. |
 | Stirrup vs main bar | Geometry: the two orientation families relative to the beam axis given by the strip; stirrup legs are the family perpendicular to the strip. | 3-class semantic head (background / longitudinal / transverse) trained at the event if geometry alone confuses laps and chairs. | Geometry. | - | - |
-| Metric scale and plane | **ChArUco 20 cm rigid card** (OpenCV 4.13.0 objdetect `CharucoDetector`), per-phone intrinsics from a ChArUco calibration done on the loaner in hour 1, planar homography card-plane → image. | ArUco strip along beams (same detector, `ArucoDetector`, ids encode position). | Same (no ML). | Expected in-plane scale error <0.2 %, tilt ±0.2-0.5° at 0.4-1.2 m with 36 corners [U, consistent with S sources below]. | OpenCV Apache-2.0. |
+| Metric scale and plane | **ChArUco 20 cm rigid card** (OpenCV 4.14.0 objdetect `CharucoDetector`), per-phone intrinsics from a ChArUco calibration done on the loaner in hour 1, planar homography card-plane → image. | ArUco strip along beams (same detector, `ArucoDetector`, ids encode position). | Same (no ML). | Expected in-plane scale error <0.2 %, tilt ±0.2-0.5° at 0.4-1.2 m with 36 corners [U, consistent with S sources below]. | OpenCV Apache-2.0. |
 | Depth (Tier 2 only) | **Depth Anything V2 (small)**: 11.9 ms w8a16 / 16.7-18 ms float at 518×518 on 8 Elite Gen 5 NPU [V]. Use only for layer separation (top vs bottom mesh), never for metric scale. | Skip. | Skip. | Small variant is Apache-2.0; Base/Large are CC-BY-NC-4.0 [S]. | Apache-2.0 (small). |
 | Diameter class (Tier 2) | Tiny classifier (MobileNetV3-Small, ~1-2 ms) on close-up crops at known card distance, 4 classes + abstain. Only if ≥200 labelled close-ups exist by 9 Oct. | Weigh test (kitchen scale OCR) stays the primary diameter evidence per physics.md. | Weigh test. | 8/10/12 mm separation is marginal by camera (physics.md). | - |
 | Runtime | **LiteRT 2.3.0 CompiledModel + Qualcomm NPU accelerator** (`com.google.ai.edge.litert:litert:2.3.0`, `litert-npu-runtime-qualcomm:2.3.0` on Google Maven [V]). | **ONNX Runtime QNN EP** (`com.microsoft.onnxruntime:onnxruntime-android-qnn:1.29.0` [V]) with an Ultralytics-style precompiled QNN context ONNX. GPU via LiteRT if NPU compile fails. | - | YOLOv11n-seg measured end-to-end on an SM8850 phone: 17.4 ms NPU, 33.2 ms GPU, 73.4 ms CPU [V, Ultralytics]. | Apache-2.0 / MIT. |
@@ -89,7 +89,7 @@ Input size: train and run at **1152×640 (16:9, multiples of 32)** rather than 6
 | SORD (NTU) | 25,287 synthetic on-site rebar images from BIM, Autom. Constr. 2024 (10.1016/j.autcon.2024.105953); 3× AP gain over real-only | availability unknown | Email the authors; do not plan on it | [S] |
 | RebarDSC / bundle-end sets | Bundle cross-sections | - | Not our task | - |
 
-Target for 9 Oct: ROI-1555 + the CC-BY Roboflow placed-mesh sets + **our own 15-25 Bengaluru sites** (workstream 7 protocol: 4K stills at 0.4/0.8/1.2 m with the card in frame, tape ground truth for every spacing in the zone, close-ups at 0.3 m for diameter). Our own images are the validation set; public data is training only. Label our images with the MobileSAM-/FastSAM-assisted polygon tool of choice (CVAT or Roboflow free tier), 150-300 images is enough for a semantic fine-tune [U].
+Target for 9 Oct: ROI-1555 + the CC-BY Roboflow placed-mesh sets + ~~our own 15-25 Bengaluru sites~~ (site set DROPPED 8 Oct; validation = tape-checked prop scans at the event) (workstream 7 protocol: 4K stills at 0.4/0.8/1.2 m with the card in frame, tape ground truth for every spacing in the zone, close-ups at 0.3 m for diameter). Our own images are the validation set; public data is training only. Label our images with the MobileSAM-/FastSAM-assisted polygon tool of choice (CVAT or Roboflow free tier), 150-300 images is enough for a semantic fine-tune [U].
 
 ### 4.2 Training recipe (single GPU, a few hours)
 
@@ -115,7 +115,7 @@ Target for 9 Oct: ROI-1555 + the CC-BY Roboflow placed-mesh sets + **our own 15-
 
 ### 5.1 OpenCV on Android
 
-- Maven Central `org.opencv:opencv` latest **5.0.0** (metadata updated 2026-07-21 [V]); 4.13.0 released 22 Jan 2026 [S] and also on Maven Central; Android AARs have been on Maven Central since 4.9.0 [S, opencv.org]. **Pin 4.13.0** (the 5.0 Java API has renamed modules [S]; the team's and the LLM's muscle memory is 4.x). ArUco/ChArUco live in `org.opencv.objdetect` (`ArucoDetector`, `CharucoBoard`, `CharucoDetector.detectBoard`, `CharucoBoard.matchImagePoints`, then `Calib3d.solvePnP`) since 4.7 [S, javadoc 4.13.0 listings; the page itself returned 403 to the fetcher].
+- Maven Central `org.opencv:opencv` latest **5.0.0** (metadata updated 2026-07-21 [V]); 4.13.0 released 22 Jan 2026 [S] and also on Maven Central; Android AARs have been on Maven Central since 4.9.0 [S, opencv.org]. **Pin 4.14.0** (settled 7 Oct; was 4.13.0) (the 5.0 Java API has renamed modules [S]; the team's and the LLM's muscle memory is 4.x). ArUco/ChArUco live in `org.opencv.objdetect` (`ArucoDetector`, `CharucoBoard`, `CharucoDetector.detectBoard`, `CharucoBoard.matchImagePoints`, then `Calib3d.solvePnP`) since 4.7 [S, javadoc 4.13.0 listings; the page itself returned 403 to the fetcher].
 
 ### 5.2 Card design (20 cm rigid)
 
@@ -151,11 +151,11 @@ Per measured spacing **s** between two adjacent bar centrelines on the card plan
 | Lens residual | s · ε_lens | ε_lens = 0.2 % calibrated, 1 % uncalibrated | 0.30 mm / 1.5 mm |
 | **Total (2σ)** | 2 · √Σ | | **±2.1 mm** (good case); **±6.4 mm** (uncalibrated lens + sagging card) |
 
-Computed values [U, scratchpad script]: good case at s = 150 mm gives ±4.0 mm at 0.4 m, ±2.7 at 0.6, ±2.1 at 0.8, ±1.8 at 1.0, ±1.6 at 1.2 (the out-of-plane term dominates and shrinks with H, while blur and pixel size grow; 0.6-1.0 m is the sweet spot). At s = 100 mm the good-case band is ±1.4 mm; at 200 mm ±2.8 mm. A bottom-layer bar 20 mm below the card plane, uncorrected, biases s by 3.75 mm at 0.8 m (so correct it from the known bar diameters, or report the layer as "needs tape").
+Computed values [U, scratchpad script]: good case at s = 150 mm gives ±4.0 mm at 0.4 m, ±2.7 at 0.6, ±2.1 at 0.8, ±1.8 at 1.0, ±1.6 at 1.2 (the out-of-plane term dominates and shrinks with H, while blur and pixel size grow; 0.6-1.0 m is the sweet spot for the 200 mm card; the half-scale demo with card S runs at 0.25-0.5 m and abstains beyond ~0.65 m). At s = 100 mm the good-case band is ±1.4 mm; at 200 mm ±2.8 mm. A bottom-layer bar 20 mm below the card plane, uncorrected, biases s by 3.75 mm at 0.8 m (so correct it from the known bar diameters, or report the layer as "needs tape").
 
 Rules for the table:
-1. Report band = max(2σ model, field floor). The **field floor** is the 95th percentile of |app − tape| from the pre-pour site set and the demo cage (physics.md expects 3-6 mm; the literature says 2.7-5 mm). Until measured, show ±5 mm.
-2. **Abstain ("re-scan")** when: fewer than 12 ChArUco corners matched, card tilt > 25°, H > 1.3 m or < 0.35 m, sharpness (variance of Laplacian) below the station threshold, the two centrelines are not both ≥ 80 % continuous within the zone, or |s − limit| < band (the measurement cannot separate "within" from "outside").
+1. Report band = max(2σ model, field floor). The **field floor** is the 95th percentile of |app − tape| from tape-checked scans of the half-scale props (P16; no site set exists) (physics.md expects 3-6 mm; the literature says 2.7-5 mm). Until measured, show ±5 mm.
+2. **Abstain ("re-scan")** when: fewer than 12 ChArUco corners matched, card tilt > 25°, H > 1.3 m or < 0.2 m, median card marker side < 45 px (card S beyond ~0.65 m), sharpness (variance of Laplacian) below the station threshold, the two centrelines are not both ≥ 80 % continuous within the zone, or |s − limit| < band (the measurement cannot separate "within" from "outside").
 3. Count has no band; it has a coverage statement: "n bars seen; the zone edges were/weren't in frame".
 4. Store every term with the measurement in the signed record so the engineer can see why the band is what it is.
 
@@ -168,7 +168,7 @@ This is the method to defend to the jury: every term is a one-line formula with 
 | # | Task | Time | Output |
 |---|---|---|---|
 | P1 | Accounts: Qualcomm ID → AI Hub API token (`pip install qai-hub==0.56.0; qai-hub configure`); Kaggle (phone-verified for GPU); Hugging Face token; Roboflow free | 30 min | tokens in a password manager, not in the repo |
-| P2 | Downloads: ROI-1555 (586 MB); Roboflow CC-BY placed-mesh sets (export COCO); OpenCV 4.13.0 Android AAR coordinates noted; Ultralytics 8.4.174; `ai-edge-litert==2.2.0 ai-edge-litert-sdk-qualcomm==2.2.0 litert-torch==0.9.4` in a venv (note the ~5 min SDK build) | 1 h | a `requirements-prep.txt` with pins |
+| P2 | Downloads: ROI-1555 (586 MB); Roboflow CC-BY placed-mesh sets (export COCO); OpenCV 4.14.0 Android AAR coordinates noted; Ultralytics 8.4.174; `ai-edge-litert==2.2.0 ai-edge-litert-sdk-qualcomm==2.2.0 litert-torch==0.9.4` in a venv (note the ~5 min SDK build) | 1 h | a `requirements-prep.txt` with pins |
 | P3 | Prove the NPU path with a public model: AI Hub compile + profile `deeplabv3_plus_mobilenet` and `yolo26_seg` for "Snapdragon 8 Elite Gen 5 QRD" (TFLite float and w8a16), save job URLs and the per-op compute-unit table; LiteRT AOT-compile the same .tflite for SM8850 with the Colab notebook flow; keep `*_Qualcomm_SM8850.tflite` + `*_fallback.tflite` | 2 h | proof-of-path folder with job links (jury evidence) |
 | P4 | Dataset prep script: COCO → binary masks (and 3-class orientation masks derived from mask principal axis), 1152×640 rect tiles, split by site, augmentation config | 2 h | `prep_data.py` |
 | P5 | Train U-Net-lite (smp) on public data; log start/end timestamps and git hash | 2-3 h GPU (background) | `unet_mbv3_1152.pt`, metrics, log |
@@ -176,9 +176,9 @@ This is the method to defend to the jury: every term is a one-line formula with 
 | P7 | Train the fallbacks in the background: DeepLabV3+-MobileNet 2-class; YOLO26n-seg at 1024 (AGPL noted) | 3 h GPU | weights + logs |
 | P8 | Card and strip artwork: generate with `cv2.aruco.CharucoBoard((8,8),0.022,0.015,DICT_4X4_50).generateImage`, site-id offsets, 600 dpi PDF; print on 3 mm ACP/acrylic matte; vernier the pitch; 2 m strip on vinyl + rigid segments | 2 h + print shop | 3 cards, 2 strips, measured pitches |
 | P9 | Bench accuracy test on the demo cage (workstream 7 BOM): 5 distances × 3 tilts × 3 lighting, tape ground truth; run the Python reference pipeline (ChArUco homography + skeleton + line fit) on the stills | 3 h | field-floor numbers for §6; the first error table |
-| P10 | Site photos: 15-25 pre-pour sites per workstream 7, with the card; label 150-300 frames (SAM-assisted) as the validation set | 2 days, parallel | validation set + the problem statistic |
+| P10 | (DROPPED 8 Oct) Site photos: 15-25 pre-pour sites per workstream 7, with the card; label 150-300 frames (SAM-assisted) as the validation set | 2 days, parallel | validation set + the problem statistic |
 | P11 | Python reference pipeline (allowed: not app code): calibration script, homography + skeleton + spacing, error-band calculator; this is the spec the Kotlin port follows at the event | 3 h | `ref_pipeline/` with unit tests on the cage images |
-| P12 | Write the at-event prompts: model conversion commands, Gradle snippets (litert 2.3.0 + litert-npu-runtime-qualcomm 2.3.0; OpenCV 4.13.0; ORT-QNN 1.29.0 as backup), CompiledModel usage, Camera2 lock settings | 1 h | `notes/05-feasibility/event-prompts.md` |
+| P12 | Write the at-event prompts: model conversion commands, Gradle snippets (litert 2.3.0 + litert-npu-runtime-qualcomm 2.3.0; OpenCV 4.14.0; ORT-QNN 1.29.0 as backup), CompiledModel usage, Camera2 lock settings | 1 h | `notes/05-feasibility/event-prompts.md` |
 
 Total: ~18 h of desk work plus GPU time in the background; fits 7-8 Oct with two people.
 
@@ -187,11 +187,11 @@ Total: ~18 h of desk work plus GPU time in the background; fits 7-8 Oct with two
 ## 8. At-event hour-1 checklist (9 Oct)
 
 1. Loaner probe (15 min): `adb shell getprop ro.soc.model` (expect SM8850), Camera2 characteristics dump (which rear lenses are exposed, 4K still/video modes, AF/OIS controls, `INFO_SUPPORTED_HARDWARE_LEVEL`), free storage, thermal state API presence.
-2. NPU smoke test (20 min): new project with `litert:2.3.0` + `litert-npu-runtime-qualcomm:2.3.0`, minSdk 31, arm64-v8a; load `deeplabv3_plus_mobilenet_Qualcomm_SM8850.tflite` from P3; log `CompiledModel.create` time and 50-run latency on NPU / GPU / CPU. Pass = NPU < 10 ms and the compile log shows QNN. If the Maven runtime artifact fails, switch to the zip + `qualcomm_runtime_v81` module flow; if that fails, ORT-QNN 1.29.0 with the P3 context ONNX; if that fails, LiteRT GPU and record the fact.
+2. (after 19:00, prompt P1) NPU smoke test (20 min): new project with `litert:2.3.0` + `litert-npu-runtime-qualcomm:2.3.0`, minSdk 31, arm64-v8a; load `deeplabv3_plus_mobilenet_Qualcomm_SM8850.tflite` from P3; log `CompiledModel.create` time and 50-run latency on NPU / GPU / CPU. Pass = NPU < 10 ms and the compile log shows QNN. If the Maven runtime artifact fails, switch to the zip + `qualcomm_runtime_v81` module flow; if that fails, ORT-QNN 1.29.0 with the P3 context ONNX; if that fails, LiteRT GPU and record the fact.
 3. Drop in our model (10 min): the P6 .tflite; same latency log; visual check on one cage still.
 4. Camera calibration on the loaner (15 min): 25 frames of card A at the measurement mode and locked focus, run the P11 calibration script on a laptop, store intrinsics JSON in assets with the capture-mode name.
 5. First measurement (10 min): one cage still → Kotlin port of the homography + spacing path (ported from P11), compare to tape; the delta starts the event error table.
-6. Start the timestamped fine-tune log: if the organisers disallow pre-event weights, kick off the U-Net training on the event laptop/Colab from ImageNet init on the P10 site set (≈1.5 h) and record start time, dataset hash and git hash; the app loads whichever .tflite is newest.
+6. Start the timestamped fine-tune log: if the organisers disallow pre-event weights, kick off the U-Net training on the event laptop/Colab from ImageNet init on public sets + prop photos (≈1.5 h) and record start time, dataset hash and git hash; the app loads whichever .tflite is newest.
 7. Thermal baseline (5 min): 5 minutes of continuous NPU inference with the torch on; log skin temperature and frame time; this sets the station-burst length.
 
 ---
@@ -206,10 +206,10 @@ Total: ~18 h of desk work plus GPU time in the background; fits 7-8 Oct with two
 | AI Hub "For Galaxy" numbers differ from the iQOO bin | high (but small) | re-profile on the loaner in hour 1 |
 | ROI-1555 licence unstated | medium | pre-training only, cited; ask the authors; the product trains on its own data |
 | AGPL (Ultralytics, FastSAM) in a closed product | certain if used | keep them as fallbacks; the primary stack is MIT/Apache |
-| Thin bars fragment at > 1 m (ISARC saw it for 8 mm at 0.3 m with RGB-D) | medium | stations at 0.6-1.0 m; tile inference; continuity check triggers re-scan |
+| Thin bars fragment at > 1 m (ISARC saw it for 8 mm at 0.3 m with RGB-D) | medium | stations at 0.6-1.0 m (half-scale demo: 0.25-0.5 m); tile inference; continuity check triggers re-scan |
 | Card plane vs bar plane offset is the biggest error term | certain | card rests on bar crowns with a spacer; known-diameter layer correction; report σ_z |
 | Specular steel under the torch | medium | matte card; exposure lock; augmentation with highlights |
-| Pre-trained weights disallowed on the day | low-medium | ImageNet-init U-Net trained live from our own site set, timestamped; classical ridge filter as the zero-weights path |
+| Pre-trained weights disallowed on the day | low-medium | ImageNet-init U-Net trained live from public sets + prop photos, timestamped; classical ridge filter as the zero-weights path |
 | Diameter classifier has no training data by 9 Oct | high | it stays Tier 2; the weigh test carries diameter |
 
 ---

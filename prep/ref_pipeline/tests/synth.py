@@ -95,3 +95,18 @@ def paste_calib(canvas, ppmm, origin_mm):
 
 def intrinsics_dict(K, size=(W4K, H4K), mode="synthetic_4k"):
     return {"capture_mode": mode, "image_size": list(size), "K": K, "dist": np.zeros(5), "rms_px": 0.0}
+
+
+def paste_strip300(canvas, ppmm, origin_mm):
+    """strip_300 (ids 450-461, 20 mm markers at 25 mm pitch, 30 mm band) with its top-left corner at origin_mm."""
+    S = F.STRIP300
+    w = int(round(S["w"] * ppmm)); L = int(round(S["length"] * ppmm))
+    band = np.full((w, L), 255, np.uint8)
+    mk = int(round(S["mk"] * ppmm))
+    for i in range(S["n"]):
+        m = cv2.aruco.generateImageMarker(F.DICT, S["id0"] + i, mk, borderBits=1)
+        x = int(round((i * S["pitch"] + (S["pitch"] - S["mk"]) / 2) * ppmm))
+        y = int(round((S["w"] - S["mk"]) / 2 * ppmm))
+        band[y:y + mk, x:x + mk] = m
+    x0 = int(round(origin_mm[0] * ppmm)); y0 = int(round(origin_mm[1] * ppmm))
+    canvas[y0:y0 + w, x0:x0 + L] = band

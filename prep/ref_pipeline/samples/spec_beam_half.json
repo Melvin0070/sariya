@@ -1,0 +1,4 @@
+{"member": "beam", "fiducial": "strip", "bar_dia_mm": 8, "polarity": "dark", "min_len_mm": 80,
+ "s_spec_end": 50, "s_spec_mid": 75, "L_end_spec": 150, "faces_mm": [0, 100000],
+ "zone": "II", "apply_13920": false,
+ "_note": "Half-scale 300 mm beam top face with strip_300 (BUILD-PLAN §7). Right face set far away: the prop is the left end zone plus mid-span, so a right end zone is never checked."}

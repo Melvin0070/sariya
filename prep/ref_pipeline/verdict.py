@@ -123,7 +123,8 @@ class Checker:
                 out.append(self._res("DWG-COUNT", m["count"], "==", n_spec, 0, lab))
             if s_spec is not None:
                 out.append(self._res("DWG-SPACING-MEAN", m["spacing_mean"], "<=", s_spec, self.tol_spacing(s_spec), lab))
-                out.append(self._res("DWG-SPACING-LOCAL", m["spacing_max"], "<=", s_spec, self.P["tol_local_mm"], lab))
+                out.append(self._res("DWG-SPACING-LOCAL", m["spacing_max"], "<=", s_spec,
+                                    max(self.P["tol_local_mm"], self.P.get("tol_local_frac", 0.0) * s_spec), lab))
             d = ctx.get("d")
             rule = "IS456-SLAB-MAIN-SMAX" if direction == "main" else "IS456-SLAB-DIST-SMAX"
             if d is None:

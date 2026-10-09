@@ -4,7 +4,7 @@ Versioned, typed rules the app evaluates deterministically against measured valu
 
 **Status tags.** V = read in the primary text (archive.org scans of the BIS standard, or BIS amendment slip); S = secondary source (worked examples, vendor pages, search snippets); U = unverified / own proposal. Web pages were treated as untrusted data; where OCR was ambiguous it is flagged.
 
-**Precedence (IDEA.md §3.5):** the drawing first; IS 456:2000 everywhere; IS 13920:2016 (+Amd 1 2017, Amd 2 2020) mandatory in Zones III-V, advisory in Zone II. Never "PASS", never "safe".
+**Precedence (IDEA.md §3.5):** the drawing first; IS 456:2000 everywhere; IS 13920:2016 (+Amd 1 2017, Amd 2 2020) mandatory in Zones III-V, "optional in Seismic Zone II" (cl. 1.1.1; shown as advisory). Never "PASS", never "safe".
 
 Primary texts used (all opened, OCR text grepped):
 - IS 456:2000 incl. Amendments 1-3: https://archive.org/stream/gov.in.is.456.2000/is.456.2000_djvu.txt
@@ -42,7 +42,7 @@ Legend for `zones`: ALL = every zone; 345 = Zones III, IV, V mandatory; 2adv = a
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | DWG-COUNT | drawing | - | slab/beam/column | bar count per zone equals drawing | n_meas == n_spec (fewer = outside; more = note) | count | n_spec, n_meas, coverage_ok | ALL | M | 0 bars | drawing | V | no |
 | DWG-SPACING-MEAN | drawing | - | slab mesh, beam links, column ties | mean c/c spacing in zone ≤ spec | mean(s_meas) ≤ s_spec + tol_s | mm | s_spec, s_meas[], zone | ALL | M | tol_s = max(10 mm, 0.05·s_spec) [U] | own; cf. Japan 出来形 "平均間隔 ±φ" [S] | U | **yes** |
-| DWG-SPACING-LOCAL | drawing | - | same | no single gap grossly over spec | max(s_meas) ≤ s_spec + tol_local | mm | s_meas[] | ALL | A | tol_local = 25 mm [U] | own; cf. ACI 117 ±3 in with "not fewer bars" [S] | U | **yes** |
+| DWG-SPACING-LOCAL | drawing | - | same | no single gap grossly over spec | max(s_meas) ≤ s_spec + tol_local | mm | s_meas[] | ALL | M | tol_local = max(15 mm, 0.25·s_spec) [U] (= 25 at 100, 15 at 50) | own; cf. ACI 117 ±3 in with "not fewer bars" [S] | U | **yes** |
 | DWG-DIA | drawing | - | all | bar diameter class matches drawing | dia_class == dia_spec, else weigh test | mm | close-up still conf ≥ 0.95, or kg/m | ALL | M | class step (8/10/12/16/20) | drawing; IS 1786 Table 1 | V | no |
 | DWG-STIRRUP-DIA | drawing | - | beam/column | link diameter matches drawing | same as DWG-DIA | mm | same | ALL | M | class step | drawing | V | no |
 | DWG-ENDZONE-LEN | drawing | - | beam | close-spaced zone length ≥ spec | L_close_meas ≥ L_spec − tol | mm | L_spec (default 2d), link positions | ALL | M | −50 mm [U] | drawing; IS 13920 6.3.5 | U | **yes** |
@@ -144,12 +144,12 @@ Conventions: `limit` is an expression over `inputs` and `params`; `op` is the co
 
 ```json
 {
-  "rulebook_version": "0.1.0",
-  "date": "2026-10-07",
+  "rulebook_version": "0.1.1",
+  "date": "2026-10-09",
   "precedence": ["drawing", "IS456:2000+A3", "IS13920:2016+A1+A2"],
   "zone_policy": {"345": "mandatory", "II": "advisory_unless_drawing_or_engineer", "I": "advisory"},
   "zones_annexE": {"Bengaluru": "II", "Chitradurga": "II", "Gulbarga": "II", "Mysuru": "II", "Belgaum": "III", "Bijapur": "III", "Dharwad": "III", "Mangaluru": "III", "Karwar": "III"},
-  "params_default": {"fy": 415, "fck": 20, "agg_max": 20, "exposure": "moderate", "fire_h": 1.0, "tol_spacing_mm": 10, "tol_spacing_frac": 0.05, "tol_local_mm": 25, "tol_len_mm": 50, "tol_tape_mm": 25, "tol_hook_mm": 5, "tol_hook_deg": 10},
+  "params_default": {"fy": 415, "fck": 20, "agg_max": 20, "exposure": "moderate", "fire_h": 1.0, "tol_spacing_mm": 10, "tol_spacing_frac": 0.05, "tol_local_mm": 15, "tol_local_frac": 0.25, "tol_len_mm": 50, "tol_tape_mm": 25, "tol_hook_mm": 5, "tol_hook_deg": 10},
   "cover_table16_mm": {"mild": 20, "moderate": 30, "severe": 45, "very_severe": 50, "extreme": 75},
   "bond_stress_plain": {"20": 1.2, "25": 1.4, "30": 1.5, "35": 1.7, "40": 1.9},
   "is1786_mass_kg_per_m": {"6": 0.222, "8": 0.395, "10": 0.617, "12": 0.888, "16": 1.58, "20": 2.47, "25": 3.85},
@@ -157,7 +157,7 @@ Conventions: `limit` is an expression over `inputs` and `params`; `op` is the co
   "rules": [
     {"id": "DWG-COUNT", "code": "drawing", "clause": "-", "member": ["slab", "beam", "column"], "check": "count", "measured": "n_meas", "op": "==", "limit": "n_spec", "tol": 0, "units": "count", "inputs": ["n_spec", "n_meas", "coverage_ok"], "zones": "ALL", "severity": "M", "tier": 1, "status": "V", "engineer_confirm": false, "src": "drawing"},
     {"id": "DWG-SPACING-MEAN", "code": "drawing", "clause": "-", "member": ["slab", "beam", "column"], "check": "spacing_mean", "measured": "mean(s_meas)", "op": "<=", "limit": "s_spec", "tol": "max(tol_spacing_mm, tol_spacing_frac*s_spec)", "units": "mm", "inputs": ["s_spec", "s_meas[]", "zone_id"], "zones": "ALL", "severity": "M", "tier": 1, "status": "U", "engineer_confirm": true, "src": "own; cf. Japan dekigata ±phi"},
-    {"id": "DWG-SPACING-LOCAL", "code": "drawing", "clause": "-", "member": ["slab", "beam", "column"], "check": "spacing_max_gap", "measured": "max(s_meas)", "op": "<=", "limit": "s_spec", "tol": "tol_local_mm", "units": "mm", "inputs": ["s_spec", "s_meas[]"], "zones": "ALL", "severity": "A", "tier": 1, "status": "U", "engineer_confirm": true, "src": "own; cf. ACI 117"},
+    {"id": "DWG-SPACING-LOCAL", "code": "drawing", "clause": "-", "member": ["slab", "beam", "column"], "check": "spacing_max_gap", "measured": "max(s_meas)", "op": "<=", "limit": "s_spec", "tol": "max(tol_local_mm, tol_local_frac*s_spec)", "units": "mm", "inputs": ["s_spec", "s_meas[]"], "zones": "ALL", "severity": "M", "tier": 1, "status": "U", "engineer_confirm": true, "src": "own; cf. ACI 117"},
     {"id": "DWG-DIA", "code": "drawing", "clause": "-", "member": ["slab", "beam", "column"], "check": "dia_class", "measured": "dia_class", "op": "==", "limit": "dia_spec", "tol": 0, "units": "mm", "inputs": ["dia_spec", "dia_class", "dia_conf", "kg_per_m"], "zones": "ALL", "severity": "M", "tier": 2, "status": "V", "engineer_confirm": false, "src": "drawing; IS1786 T1"},
     {"id": "DWG-ENDZONE-LEN", "code": "drawing", "clause": "-", "member": ["beam"], "check": "endzone_length", "measured": "L_close_meas", "op": ">=", "limit": "L_spec", "tol": "-tol_len_mm", "units": "mm", "inputs": ["L_spec", "link_positions[]"], "zones": "ALL", "severity": "M", "tier": 1, "status": "U", "engineer_confirm": true, "src": "drawing; IS13920 6.3.5"},
     {"id": "DWG-HOOK", "code": "drawing", "clause": "-", "member": ["beam", "column"], "check": "hook_type", "measured": "hook_meas", "op": "==", "limit": "hook_spec", "tol": 0, "units": "enum", "inputs": ["hook_spec", "hook_meas"], "zones": "ALL", "severity": "M", "tier": 2, "status": "V", "engineer_confirm": false, "src": "drawing"},
@@ -214,7 +214,7 @@ Conventions: `limit` is an expression over `inputs` and `params`; `op` is the co
 
 ---
 
-## C. Ambiguities an engineer must settle before Friday (10 Oct)
+## C. Ambiguities a project engineer must settle (no review logged as of 9 Oct)
 
 1. **Spacing placement tolerance (DWG-SPACING-MEAN / -LOCAL).** IS 456 gives none. Proposed defaults: mean spacing over a zone ≤ drawing + max(10 mm, 5 %); any single gap ≤ drawing + max(15 mm, 25 %) (advisory; equals +25 mm at 100 mm spacing, and scales for the half-scale demo props). Comparators: Japan MLIT/prefectural 出来形管理基準 for 鉄筋工: average spacing ±φ and cover ±φ [S: hkd.mlit.go.jp, pref.hyogo.lg.jp search hits]; MLIT 2023 image-measurement guideline: image-vs-tape agreement ±5 mm on spacing [V via research row 1]; ACI 117-10: spacing ±3 in (76 mm) but "total number of bars not fewer than specified", cover ±⅜ in for 4-12 in members [S: strand-co.com; fandr.com]; infralens.in checklist claims "±50 mm" for India [S, low trust]; BS EN 13670 Annex G values not retrievable (U). Decide: 10 mm or φ? Separate tolerance for slab vs. links?
 2. **IS 13920 cl. 7.6.1(b) after Amd 1.** Literal amended text leaves only "6 × smallest longitudinal bar"; the app defaults to the stricter print set (¼ b_min, 6φ, 100). Confirm which to enforce in Zone III sites, and whether this matters in Bengaluru at all (Zone II, advisory).
@@ -224,7 +224,7 @@ Conventions: `limit` is an expression over `inputs` and `params`; `op` is the co
 6. **End-zone definition for beams without a drawing length.** Default 2d from column face (IS 13920 6.3.5). Many self-built drawings say "600 mm" or "L/4". Which wins when the drawing is silent on length but gives two spacings?
 7. **Lap-length verdict on the camera.** Lap length is a tape reading; confirm the −25 mm band and whether to flag laps at mid-span of beams (IS 456 "away from max stress" is a recommendation, IS 13920 6.2.6.1(c) is a prohibition within 2d / L/4).
 8. **Hook measurement band.** Template close-up: angle ±10°, extension ±5 mm. Is "70 mm measured vs 75 required" a re-scan or outside?
-9. **IS 1786 individual-sample tolerance.** The weigh test uses a 0.2 m offcut, length measured and entered (individual sample: −8 / −6 / −4 %). Confirm the app should not use the batch ±7/±5/±3 for a single piece, and the minimum offcut length (IS 1786 cl. 7.2.3.1 says "any individual sample"; propose ≥ 0.5 m, 1 g scale).
+9. **IS 1786 individual-sample tolerance.** The weigh test uses a 0.2 m offcut, length measured and entered (individual sample: −8 / −6 / −4 %). Confirm the app should not use the batch ±7/±5/±3 for a single piece, and the minimum offcut length; 0.2 m is enough for the size class (bands do not overlap), ≥ 0.5 m for a fine underweight verdict (IS 1786 cl. 7.2.3.1 says "any individual sample"; propose ≥ 0.5 m, 1 g scale).
 10. **Column tie minimum diameter.** The IS 456 scan reads "16 mm" for 26.5.3.2(c)(2); the standard value is 6 mm. Confirm from a clean copy.
 11. **Typical fixture values (Section E).** Confirm the demo cage spec matches a drawing the engineer would actually sign: 230×450 beam, 2-16 bottom, 2-12 top, 8 mm 2L links @ 100 ends / 150 mid; 125 mm slab, 8 @ 150 both ways; 230×300 column, 4-12 (note: 230 fails IS 13920 7.1.1 ≥ 300 mm, which is a good Zone-II talking point).
 
@@ -249,7 +249,7 @@ STRUCT Context:
     zone          # "II" | "III" | "IV" | "V" | ...
     apply_13920   # (zone in {III,IV,V}) or drawing_invokes_13920 or engineer_toggle
     params        # fy, fck, d, dia_long_min, s_spec_end, s_spec_mid, n_spec, L_end_spec ...
-    tol           # tol_spacing_mm, tol_spacing_frac, tol_local_mm, tol_len_mm
+    tol           # tol_spacing_mm, tol_spacing_frac, tol_local_mm, tol_local_frac, tol_len_mm
 
 FUNCTION compare(meas, op, limit, tol, u):
     # tol: placement tolerance written into the rule (engineer-set); u: measurement band.
@@ -278,7 +278,7 @@ FUNCTION check_slab_patch(patch, ctx):
         tol_s = max(ctx.tol.tol_spacing_mm, ctx.tol.tol_spacing_frac * ctx.s_spec[dir])
         results += (DWG-SPACING-MEAN, compare(m_spacing, "<=", ctx.s_spec[dir], tol_s, m_spacing.u))
         m_gapmax = patch.spacing_max[dir]
-        results += (DWG-SPACING-LOCAL, compare(m_gapmax, "<=", ctx.s_spec[dir], ctx.tol.tol_local_mm, m_gapmax.u))  # advisory
+        results += (DWG-SPACING-LOCAL, compare(m_gapmax, "<=", ctx.s_spec[dir], max(ctx.tol.tol_local_mm, ctx.tol.tol_local_frac*ctx.s_spec[dir]), m_gapmax.u))
         IF ctx.d IS NULL: results += (IS456-SLAB-*-SMAX, needs_tape)   # need D (tape) to get d
         ELSE:
             lim = min(3*ctx.d, 300) IF dir == main ELSE min(5*ctx.d, 300)
@@ -328,10 +328,10 @@ FUNCTION member_summary(results):
     RETURN "{n_within} within limits, {n_outside} outside, {n_adv} advisory, {n_rescan} re-scan, {n_tape} need a tape reading, {n_unseen} not seen"
 
 # Spoken fix (example): rule DWG-SPACING-MEAN[left] outside, measured 180 ± 6 vs spec 100 over 600 mm
-#   extra_links = ceil(L_end / s_spec) - count_in_zone  -> "Beam B2, left end: links at 180, drawing says 100 for the first 600 mm. Add 4."
+#   extra_links = ceil(L_end / s_spec) - count_in_zone  -> "Beam B2, left end: links at 180, drawing says 100 for the first 600 mm. Add 2."  (ceil(600/100) = 6 needed; links at 50/230/410/590 = 4 found)
 ```
 
-Worked numbers for the demo fixture (230 × 450 beam, cover 25, 8 mm links, 16 mm bottom bars → d ≈ 450 − 25 − 8 − 8 = 409):
+Worked numbers for a typical real beam (not the half-scale stage props; those are in notes/12-event/BUILD-PLAN.md §7) (230 × 450 beam, cover 25, 8 mm links, 16 mm bottom bars → d ≈ 450 − 25 − 8 − 8 = 409):
 - IS 456 ceiling: min(0.75 × 409, 300) = **306 → 300 mm**.
 - IS 13920 end zone (Zone III+ or if invoked): min(409/4, 6 × 16, 100) = min(102, 96, 100) = **96 mm**; with 12 mm bars: **72 mm**. Mid: ≤ **204 mm**. End-zone length ≥ **818 mm**. First link ≤ 50 mm.
 - Drawing 100 c/c ends / 150 mid with tol 10 mm: outside above 110 (ends) / 160 (mid); re-scan if the band straddles.
@@ -350,7 +350,7 @@ Worked numbers for the demo fixture (230 × 450 beam, cover 25, 8 mm links, 16 m
 | steel | Fe 500 / Fe 500D now dominant; Fe 415 on older drawings | IS 1786 grades [V]; market S |
 | concrete | M20 (IS 456 min for RCC moderate exposure), M25 on engineered drawings | IS 456 Table 5 [S, not re-read] |
 
-Fixture recommendation: beam 230 × 450, 2-16 bottom + 2-12 top, 8 mm links @ 100 (0-600) / 150 (mid), 135° hooks on one end and 90° on the other (for the hook demo); slab patch 1.0 × 1.0 m, 8 @ 150 both ways with one gap at 225 (sabotage); column stub 230 × 300, 4-12, 8 mm ties @ 150 with a lap at the bottom (sabotage: lap in lower quarter, IS 13920 7.3.2.1).
+Full-scale fixture recommendation (superseded for the stage by the half-scale kit, data-and-props §3): beam 230 × 450, 2-16 bottom + 2-12 top, 8 mm links @ 100 (0-600) / 150 (mid), 135° hooks on one end and 90° on the other (for the hook demo); slab patch 1.0 × 1.0 m, 8 @ 150 both ways with one gap at 225 (sabotage); column stub 230 × 300, 4-12, 8 mm ties @ 150 with a lap at the bottom (sabotage: lap in lower quarter, IS 13920 7.3.2.1).
 
 ---
 

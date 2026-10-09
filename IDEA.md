@@ -41,7 +41,7 @@ This is the working spec. Log every change in STATE.md.
   - no cover blocks;
   - top steel trampled flat, or missing over supports and cantilevers.
 
-  "Most pour without an engineer" is unmeasured [U]. **We measure it this week at 15-25 Bengaluru pours** ("N of M slabs had at least one violation"), and that number replaces anecdotes on slide 1.
+  "Most pour without an engineer" is unmeasured [U]. The 15-25-site survey was dropped on 8 Oct (no access); one team site visit on 9 Oct is user-reported only [U]. **No "N of M" statistic exists: never quote one** (notes/12-event/BUILD-PLAN.md §8).
 - **Scale.** Housing is 55-57% of India's cement demand, and rural housing alone is 32-34% (CRISIL, FY25) [S]. This replaces the stale 2018 "IHB = 55%" line.
 - **Liability is moving onto professionals.**
   - Bengaluru's Nambike Nakshe lets registered architects and engineers self-certify plans, so the certifier carries the risk [S].
@@ -98,8 +98,8 @@ Kannada, and a signed record for the engineer."*
    - IS 13920 is required in zones III-V and "optional in Seismic Zone II" (cl. 1.1.1). Hook extension after Amendment 1 (2017): 135° + 8d, not less than 75 mm (`notes/06-rulebook/rulebook.md`).
 
    Each check returns **within limits**, **outside limits**, **needs a tape reading** or **not seen**. Never "PASS" or "safe".
-6. **Tell.** For example: *"Beam B2, left end: stirrups at 180, drawing says 100 for the first 600 mm. Add 4."*
-   - The site visits decide which language is the default, Hindi or Kannada.
+6. **Tell.** For example: *"Beam B2, left end: stirrups at 180, drawing says 100 for the first 600 mm. Add 2."* (6 links needed at 100 c/c, 4 found at 180)
+   - Default Hindi (demo); Kannada one tap away. (The site visits that were to decide this were dropped.)
    - Subtitles always.
    - A small push-to-talk command set, not free-form chat.
 7. **Record and sign off.**
@@ -159,8 +159,8 @@ Full minimal kit: `notes/07-data-plan/data-and-props.md` §3.
 
 **Before the event:** ask the organisers whether steel props are allowed on stage.
 
-## 7. Build plan (48 h)
-- **Tier 1 (must work by Eval 1), about 55-75 person-hours:**
+## 7. Build plan (48 h). Event-time plan: notes/12-event/BUILD-PLAN.md (block-by-block, gates, half-scale constants)
+- **Tier 1 (mesh loop + spoken Hindi fix by Eval 1; beam zones, voice spec, two-key record and Office Kit desk by Eval 2; see notes/12-event/EVAL-CARDS.md), about 55-75 person-hours:**
   - planar count and spacing with the card;
   - stirrup zones on a beam face, using the strip;
   - the physical prompts;
@@ -173,10 +173,10 @@ Full minimal kit: `notes/07-data-plan/data-and-props.md` §3.
   - the hook-template check;
   - NPU vs GPU vs CPU, battery and temperature numbers on the numbers screen.
 - **Roadmap only, never built at the event:** card-free depth, rib-mark OCR, slump check, work passport, AwaasApp export, drawing extraction by an LLM.
-- **Hour 1:** NPU model conversion goes on the critical path (INT8 recall on thin bars; GPU delegate as the fallback).
-- **Red Light hours:** scan the fixtures and replay the site scans, tune thresholds, grow the error table.
+- **Hour 1:** drop in the pre-compiled SM8850 .tflite (float first) and run the P1 NPU smoke test; GPU is the fallback (BUILD-PLAN gate G0).
+- **Red Light hours:** each phone alternates Office Kit Remote PC (driving the agent) and scanning the props with tape checks (camera, mic, NPU), which grows the error table (BUILD-PLAN §1.3).
 
-## 8. Before 9 Oct (data and people, not code)
+## 8. Before 9 Oct (data and people, not code). Historical: superseded by notes/12-event/BUILD-PLAN.md; items 2 and 4 did not happen
 1. Send the organiser questions (VERDICT.md):
    - the entry window and the number of direct slots;
    - public pretrained weights and fine-tuning at the event;
@@ -204,11 +204,11 @@ Full minimal kit: `notes/07-data-plan/data-and-props.md` §3.
 | "Japan already does this." | Yes. MLIT has accepted camera-based rebar inspection since 2023, which is why we trust the physics. What's new is where it runs and whom it serves: offline on a phone, IS codes, 2 mm size steps, Hindi and Kannada, and a pre-pour record for self-built homes with no QA team. |
 | "Can you tell 10 mm from 12 mm?" | Not from a standing sweep, and we don't pretend to. We take a close-up still at 20-30 cm and classify only above 95% confidence. Otherwise we use the scale: 20 cm of 10 mm weighs about 123 g, of 12 mm about 178 g, which also catches underweight steel. |
 | "Who holds the phone?" | The person paid to check: the owner's engineer or inspector, the builder's QC, or the brand's technical engineer. Never the mason who tied it; he hears the fix. |
-| "Scan a good cage, pour a bad one?" | Per-site card IDs, re-used-scan detection, and the engineer can demand a live re-scan of any member. Tamper-evident, not tamper-proof. |
+| "Scan a good cage, pour a bad one?" | Per-site card IDs (product), re-used-scan detection by perceptual hash (shown in the demo), and the engineer can demand a live re-scan of any member. Tamper-evident, not tamper-proof. |
 | "Whose key signs the approval?" | Two phones, two keys: the capture key on the operator's phone, the approval key on the engineer's behind a fingerprint. |
-| "Bengaluru is zone II." | The rulebook is zone-aware. IS 456 applies everywhere; IS 13920 is required in zones III-V and advisory in II. The drawing wins. |
-| "Why on-device, and why the NPU?" | Sites are offline, and 30 fps live guidance needs the NPU (segmentation takes ~3 ms on the 8 Elite Gen 5 [S]). Plus privacy (faces, home location) and zero marginal cost. We show measured NPU, GPU and CPU numbers. |
-| "What trained the model, and when?" | Public weights, attributed, fine-tuned at the event on public rebar datasets plus our site frames. The timestamped training log is in the repo. |
+| "Bengaluru is zone II." | The rulebook is zone-aware. IS 456 applies everywhere; IS 13920 is required in zones III-V and "optional in Seismic Zone II" (cl. 1.1.1). The drawing wins. |
+| "Why on-device, and why the NPU?" | Sites are offline, and 30 fps live guidance needs the NPU (AI Hub lists ~2-4 ms for segmentation models on the 8 Elite Gen 5 [S]; we show the latency measured on this loaner). Plus privacy (faces, home location) and zero marginal cost. We show measured NPU, GPU and CPU numbers. |
+| "What trained the model, and when?" | Public weights, attributed; [fine-tuned on public rebar sets plus photos of our own props, timestamped log in the repo] or [used as pre-trained]: say which is true. No site frames exist. |
 | "Would it have saved Babusapalya?" | Partly at most. Rods were reportedly badly installed, but the building also had no approvals. We build for owners who want to build right. |
 | "Cover depth is hidden." | Yes. Side cover is visible on beams; bottom cover is a tape reading entered by voice. |
 

@@ -1,5 +1,49 @@
 # Sariya session state
 
+## Status (9 Oct 2026, 18:00): event build plan ready, plan cross-checked
+- **Event plan:** `notes/12-event/BUILD-PLAN.md`. It covers:
+  - Red/Green rules and how the phones score;
+  - lanes A/B/C;
+  - the block-by-block plan with sleep in Green only;
+  - gates G0-G5;
+  - half-scale constants (§7, the single source);
+  - claims;
+  - the submission kit;
+  - kickoff questions.
+- **Checkpoint cards:** `notes/12-event/EVAL-CARDS.md`. CP1 = mesh loop + Hindi fix; CP2 = + beam, voice spec, Office Kit sign-off; CP3 = the full pitch.
+- **Cross-check:** `notes/12-event/ERRATA-2026-10-09.md`. The worst find was the single-gap tolerance, a flat 25 mm: every half-scale stage fault read "re-scan", never "outside". It is now max(15, 25 %), in rulebook v0.1.1 with `rules.json` regenerated.
+- **Reference pipeline** (prep code, before the clock) now knows card S and strip_300, has a marker-pixel abstention gate, and a 0.2 m minimum distance. 32 tests pass, including 7 half-scale ones.
+- **Live site, 17:25:** timetable and rubric unchanged. Finale jury published: Goutam Kurumella (AWS), Madhav Bissa (nasscom), Pradipta Dash (Avashya), Siddhant Agarwal (ClickHouse), Venkat Ragothaman (Microsoft), Vivek Sridhar. Submission cut-off still TBC. Sat 13:00-15:30 is labelled "laptops closed".
+
+## Decisions (9 Oct)
+| Change | Reason |
+|---|---|
+| Eval 1 = mesh loop + Hindi fix + accelerator chip; signed record only if ready | Three files defined Eval 1 differently; the cards pick the smallest honest promise |
+| App code written fresh from the prompt text; the Python is a test oracle only | A line-by-line port of pre-event code reads as pre-built work |
+| No APK on the loaners before 19:00; Red-block APKs go by Office Kit file transfer only | Fresh-code rule; Red = Office Kit is the only phone-laptop route |
+| Sleep in Green or eval blocks only; every phone alternates Remote PC and app scanning in Red | Device score is the per-phone average; idle-in-Red warnings are penalised |
+| Shared debug keystore in the event repo | Different laptop keys break APK updates, and an uninstall wipes the approval key |
+| Single-gap tolerance max(15 mm, 25 %), severity M | A flat 25 mm breaks the half-scale demo |
+| Pitch ask = one brand, a 60-pour pilot from November | Matches gtm.md |
+
+## Open questions (9 Oct)
+- Ask at kickoff:
+  - the submission cut-off time;
+  - wireless ADB in Red;
+  - one Remote PC per phone/laptop pair;
+  - whether `docs/` with pre-event design docs may stay in the repo;
+  - HackTracker in airplane mode.
+- Status of the pre-event assets (BUILD-PLAN §3.1): trained .tflite, AI Hub profile, ASR/TTS/LLM files, warm Gradle cache, wav set. Fill this in before 19:00.
+
+## Next step (9 Oct)
+At 19:00, follow BUILD-PLAN §4.1:
+- A sets up the repo by 19:25;
+- B runs P1 + G0 by 20:15;
+- C writes the parser and number words.
+
+Write the Red prompt files before 21:00.
+
+
 ## Status (7 Oct 2026): SHORTLISTED for the Grand Finale
 - Sariya was shortlisted. Event: Fri 9 Oct 17:00 check-in, 19:00 kickoff, to Sun 11 Oct 18:00 results, Bengaluru.
 - Workspace moved to `~/Desktop/sariya` (copied from `iqoo-finale-ideation/sariya`; originals untouched). Shared context now lives in `context/`.
@@ -137,3 +181,5 @@ Workstream 2 (why-now evidence and news). It starts from the leads in VERDICT.md
 - 2026-10-08: slab foam heights fixed: front/back strips are two 10 mm layers (20 mm) because the top bars rest on the bottom bars about 8 mm up; with 10 mm everywhere their ends would float above the foam.
 - 2026-10-09: props made half scale (user: as small as possible, still demoable). Every distance halved, real 8/12 mm steel: slab 280 x 280, 5 x 5 @ 50 both ways (single-gap limit 65 = 50 + max(15, 25 %)); beam top face 300 mm, rings @ 50 for 150 mm, 75 mid; offcuts 200 mm (123 / 178 g); spare slab bar 280 mm for F8 (~111 g). New prints: card_S (100 mm, ids 360-377) and strip_300 (ids 450-461, 25 mm pitch); self-tests: card S 18/18 markers at 0.25-0.8 m, strip 12/12 with centre error ≤ 0.3 mm; a 0.5 mm placement bug in the first strip_300 draft fixed. Re-scan beat now abstains on pixel size (card S beyond ~0.65 m) instead of band width. Fault deck and spec page regenerated. Updated data-and-props §3, demo-script (flags, layout, packing, pre-flight, script beats, evals, Q14, §6 table and Hindi lines, number list), IDEA pitch kit, PREP-PLAN, event-prompts (fiducial facts, pixel-based abstention, beam test positions), rulebook tolerance proposal. Kit ≈ ₹1,300 incl. printing; everything under 30 cm.
 - 2026-10-09: demo rewritten for half scale and no site visits: opening is the one-day window + Japan + "half-scale props, the app checks whatever the drawing says"; the site-replay beat is replaced by the lower-layer fault (F12, "both directions"); numbers screen and Q&A quote bench (prop) accuracy and name site validation as the next step; IDEA §6 demo table rewritten; offcut references set to 0.2 m everywhere (app default length 200 mm). Submitted texts (SUBMISSION.md, FINAL-ANSWERS.md, DESCRIPTION_v4.txt) left as submitted.
+- 2026-10-09: user visited a small/mid-size construction site and reports that reinforcement is not checked before the pour there and that a few bars were mis-measured (user-reported; number of sites, photos and measured values still to be captured for the opening slide).
+- 2026-10-09: event build plan, checkpoint cards and errata written (notes/12-event/). The 97-item audit was applied across IDEA, PREP-PLAN, event-prompts, vision-stack, speech-llm-ocr, device-devenv, rulebook, data-and-props, demo-script, gtm and prep/README. Reference pipeline fixed for half scale (tolerance, gates, card S, strip_300); 32 tests pass. Live site checked: jury published, cut-off TBC.

@@ -26,7 +26,7 @@ Tags: **V** opened and read; **S** search snippet only; **U** inferred or unveri
 **Cost per site.**
 - On-device inference, zero marginal [U by design].
 - Fiducial card and strip: A4 laminated, ₹15-40 printed in bulk; one card per site, re-usable per member [U].
-- Engineer time: 8-12 min per member for a scan, tape prompts and voice confirmations [H, measure at the Bengaluru visits].
+- Engineer time: 8-12 min per member for a scan, tape prompts and voice confirmations [H, measure in the pilot; no site visits happened].
 - Backend for signed records: a few KB per record; ₹1-2 per site/year at cloud prices [U].
 - Support and rulebook maintenance: one engineer-reviewer per 2,000 sites/yr [H].
 
@@ -66,7 +66,7 @@ Gate at day 45: if Pilot A's engineers scan fewer than half their pours, the pro
 > Brands already send engineers to the pour: Ambuja supervised 31,698 slab castings in a year; UltraTech fields 1,200 civil engineers. Sariya turns that free visit into a signed, branded pre-pour record and verifies the brand's own steel on site. Steel brands first, cement second, builders and inspectors per site. Lenders buy the evidence layer.
 
 **"Ask" slide:**
-> We are asking for three things. One steel or cement technical-services team in Bengaluru for a 60-pour pilot from November. Two structural engineers to sign off the rulebook tolerances. And an introduction to one organised builder's quality head. We bring the phones, the cards, the rulebook and a dataset of Bengaluru pours with tape ground truth. No money changes hands in the pilot.
+> We are asking for three things. One steel or cement technical-services team in Bengaluru for a 60-pour pilot from November. Two structural engineers to sign off the rulebook tolerances. And an introduction to one organised builder's quality head. We bring the phones, the cards and the rulebook; the pilot builds the first tape-checked dataset. No money changes hands in the pilot.
 
 ## 5. Risks
 

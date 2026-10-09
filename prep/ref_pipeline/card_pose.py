@@ -20,7 +20,7 @@ from . import fiducials as F
 @dataclass
 class PlanePose:
     kind: str                      # "card" | "strip"
-    fid_id: int                    # card k, or -1 for the strip
+    fid_id: int                    # card k; -1 for the 2 m strip, 300 for strip_300
     n_points: int                  # matched corners (card) or marker corners (strip)
     n_markers: int
     H_img2mm: np.ndarray           # 3x3, image px -> plane mm
@@ -106,7 +106,7 @@ def detect_markers(gray: np.ndarray):
 
 
 def detect_card(gray: np.ndarray, K: np.ndarray, card_id: int | None = None,
-                square_mm: float = F.CARD_SQ_MM) -> PlanePose | None:
+                square_mm: float | None = None) -> PlanePose | None:
     """Card k is inferred from the majority of marker ids (ids 18k..18k+17) unless given."""
     if card_id is None:
         _, ids = detect_markers(gray)
@@ -115,6 +115,8 @@ def detect_card(gray: np.ndarray, K: np.ndarray, card_id: int | None = None,
         if not ks:
             return None
         card_id = int(np.bincount(ks).argmax())
+    if square_mm is None:
+        square_mm = F.CARD_SQ_MM_BY_ID.get(card_id, F.CARD_SQ_MM)
     board = F.card_board(card_id, square_mm)
     det = cv2.aruco.CharucoDetector(board, detectorParams=F.detector_params())
     cc, cid, mc, mid = det.detectBoard(gray)
@@ -125,16 +127,25 @@ def detect_card(gray: np.ndarray, K: np.ndarray, card_id: int | None = None,
                               F.card_outline_mm(square_mm))
 
 
-def detect_strip(gray: np.ndarray, K: np.ndarray, pitch_mm: float = F.STRIP_PITCH_MM) -> PlanePose | None:
+def detect_strip(gray: np.ndarray, K: np.ndarray, pitch_mm: float | None = None) -> PlanePose | None:
+    """Picks the 2 m strip (ids 400-439) or strip_300 (ids 450-461) by whichever has more markers in view."""
     corners, ids = detect_markers(gray)
-    keep = [(c, i) for c, i in zip(corners, ids.ravel()) if F.STRIP_ID0 <= i < F.STRIP_ID0 + F.STRIP_N]
+    long_ = [(c, i) for c, i in zip(corners, ids.ravel()) if F.STRIP_ID0 <= i < F.STRIP_ID0 + F.STRIP_N]
+    s300 = [(c, i) for c, i in zip(corners, ids.ravel()) if F.STRIP300["id0"] <= i < F.STRIP300["id0"] + F.STRIP300["n"]]
+    half = len(s300) > len(long_)
+    keep = s300 if half else long_
     if len(keep) < 2:
         return None
-    board = F.strip_board(pitch_mm)
+    if half:
+        pitch_mm = pitch_mm or F.STRIP300["pitch"]
+        board, outline = F.strip300_board(pitch_mm), F.strip300_outline_mm(pitch_mm)
+    else:
+        pitch_mm = pitch_mm or F.STRIP_PITCH_MM
+        board, outline = F.strip_board(pitch_mm), F.strip_outline_mm(pitch_mm)
     c = [k[0] for k in keep]
     i = np.array([[k[1]] for k in keep], np.int32)
     obj, img = board.matchImagePoints(c, i)
-    return _pose_from_matches("strip", -1, len(keep), obj, img, K, F.strip_outline_mm(pitch_mm))
+    return _pose_from_matches("strip", 300 if half else -1, len(keep), obj, img, K, outline)
 
 
 def detect_plane(gray: np.ndarray, K: np.ndarray, prefer: str = "card", **kw) -> PlanePose | None:
