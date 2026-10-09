@@ -1,5 +1,12 @@
 # Sariya session state
 
+## Status (10 Oct 2026, 04:10): model v2 (hard negatives), v1 stays default
+- **v2** is in `models/seg/v2/`; report: `notes/14-model/MODEL-V2.md`. It was fine-tuned from v1 with 1,100 public no-rebar images (wires, COCO desk objects, indoor scenes), built directly on Kaggle.
+  - **Fixed:** false alarms on no-rebar tiles fell from 80 % to 0 %. On the phone, cables, keyboards and screen text are ignored.
+  - **Broke:** ROI test IoU fell from 0.846 to 0.811, and on the phone v2 misses rusty bars on a wooden desk. v1 misses one of the two as well.
+- **Decision:** v1 stays the default for the frontend; v2 is experimental (threshold 0.3). Round 3 adds **more bar images**: public rebar sets plus venue bar photos, so both failures are fixed together.
+- **Test app** (local, `~/Developer/narayana/sariya-app`, not pushed) now bundles v1 and v2 with on-screen switches (model, zoom 1x / 1.7x centre crop). Use it for side-by-side checks at the venue.
+
 ## Status (9 Oct 2026, 23:55): base segmentation model v1 trained
 - **Data:** ROI-1555 downloaded and verified (1,555 images, 10,481 bar instances, 0 errors; `prep/train/verify_labelme.py`), tiled by `prep_data.py`: train 853 / val 271 (scen1) / test 427 (scen2+3). Not used: ConRebSeg (22.6 GB, demolition scenes; index checked: 41,237 ExposedBars masks), Roboflow (needs a key), whiesty (Baidu only).
 - **Training:** Kaggle T4, private kernel `sabarinarayanakg/sariya-unet-train` v4, pushed by `prep/train/kaggle/push_train.sh` (offline: wheels + timm `mobilenetv3_large_100.ra_in1k` in the private dataset `sariya-train-deps`). 50 epochs, 17:17-18:17 UTC, git `b5df62c`, ~70 s per epoch.
