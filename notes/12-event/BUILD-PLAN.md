@@ -9,7 +9,7 @@ Live site checked 9 Oct, 17:25: the timetable and rubric are unchanged. The Fina
 ## 0. One page
 
 **What we ship by Sun 12:00 (Tier 1, in build order):**
-1. The mesh loop: card S on the half-scale mesh, NPU overlay live, count and spacing per layer with a ± band, a verdict against a 5-field spec, and "re-scan" when the card is too small in the frame.
+1. The mesh loop: card S on the half-scale mesh, a live AR line on every bar with the gap in mm (v4, `notes/13-ar-vision/AR-VISION.md`), Lock to fuse ~15 frames, count and spacing per layer with a ± band, a verdict against a 5-field spec, and "re-scan" when the card is too small in the frame.
 2. The beam: strip_300 along the beam top face, ring spacing by zone, and "add N".
 3. Voice: the spec spoken with read-back, and the fix spoken in Hindi with subtitles.
 4. The weigh test: offcut length and grams typed or spoken, then the IS 1786 class. It is cheap, needs no camera, and is a pitch beat.
@@ -20,7 +20,7 @@ Live site checked 9 Oct, 17:25: the timetable and rubric are unchanged. The Fina
 
 | Checkpoint | Hour | Promise |
 |---|---|---|
-| CP1, Sat 10:00 (scored, no elimination) | 15 | The mesh loop with a spoken Hindi fix |
+| CP1, Sat 10:00 (scored, no elimination) | 15 | The mesh loop (live AR lines + Lock) with a spoken Hindi fix |
 | CP2, Sat 19:00 (scored) | 24 | Plus the beam, voice spec, and pack + fingerprint sign-off over Office Kit |
 | CP3, Sun 09:00 (final build to 12:00) | 38 | The full pitch run, plus replay rejection, weigh test and numbers screen |
 | Pitch, Sun after lunch | - | demo-script.md §2 (3:30) |
@@ -210,6 +210,7 @@ See `EVAL-CARDS.md`. Each card has:
 |---|---|---|---|---|
 | **G0 NPU** | Fri 20:15 | P1 smoke: create + 50 runs, 3 accelerators | NPU p50 < 25 ms (U-Net) or < 10 ms (DeepLabV3+) | Try the JIT `.so` zip in `jniLibs` (15 minutes max), then GPU. Write it on the numbers screen as it is. Never spend more than 45 minutes here |
 | **G0b intrinsics** | Fri 20:45 | Calibrate from 25 stills of card S in the app's 4K still mode (laptop runs `prep/ref_pipeline/calibrate.py --card 20 --square-mm <measured/6>` as a tool, not app code; `card_board(20)` already yields ids 360-377) | RMS < 0.5 px | Use EXIF focal length × sensor; the band uses `eps_lens 0.01` (uncalibrated) and says so |
+| **G0c ARCore** (v4) | Fri 20:45 (B, 20 min max) | Probe: `ArCoreApk.checkAvailability`, session start, `isDepthModeSupported`, CPU-image camera configs. Play installed ARCore 1.56 on 9 Oct | Session runs and the overlay holds when the card leaves the frame | Card-only AR. No more time on ARCore |
 | **G1 geometry** | Sat 02:00 | 10 tape-checked scans of the control mesh at 0.3 m | count 10/10, spacing in band 8/10 | P18 tap-to-mark becomes the CP1 path ("marked by hand" chip); the model path keeps running for the overlay |
 | **G2 voice** | Sat 06:00 | Spec by voice on 5 tries in the hall | 4/5 chips correct after read-back | Keypad spec; TTS-out stays (WAVs) |
 | **G3 LLM** | Sat 06:00 | Gemma GPU init + JSON validity | init < 30 s, ≥ 90 % valid | Templates only (identical UX). Say "LLM off" if asked |

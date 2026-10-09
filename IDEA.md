@@ -1,6 +1,12 @@
-# Sariya: idea as of 5 Oct 2026 (v3, submission version)
+# Sariya: idea as of 9 Oct 2026 (v4, live AR camera)
 
 This is the working spec. Log every change in STATE.md.
+- **v4 (9 Oct, at the event), the team's vision:** a live AR measuring camera. Detail, comparison with v3 and the loaner check: `notes/13-ar-vision/AR-VISION.md`.
+  - When the camera sees a bar, it draws a line on that bar in real time; the card gives the scale, so the gaps between lines show live in mm.
+  - Live numbers are approximate ("~50 mm"); **Lock** (gyro still, ~15 frames fused) gives the value with its band, and only a locked value gets a verdict.
+  - **The card measures; ARCore only anchors** the overlay and coverage map. ARCore 1.56 installed from Play on the loaner (9 Oct), though Google's web list omits the iQOO 15. Its ±1-5 cm is never quoted as a measurement. If the hour-1 probe fails, the AR is card-only.
+  - AI does one job: bar pixels on the NPU, every frame. Card pose, lines, mm and the verdict are maths and rules. Pitch line: "AI finds the bars, maths measures them, rules decide."
+  - Open: whether voice, the Hindi fix and the signed record stay in Tier 1 (STATE.md).
 - **v1 (30 Sep):** `context/shared/DEEP-RESEARCH-2026-09-30.md` §3.
 - **Why v2 differs:** `notes/01-redteam/VERDICT.md`.
 - **v3 (5 Oct), for the Phase 1 submission:** `SUBMISSION.md`, `SUBMISSION_DECK.md`, `notes/10-submission/`. Changes from v2:
@@ -22,6 +28,7 @@ This is the working spec. Log every change in STATE.md.
 - a steel or cement brand's technical engineer.
 
 **What the phone does:**
+- draws a live line on every bar it sees, with the mm between them, anchored to the printed card;
 - counts the bars;
 - measures bar spacing, and stirrup spacing by zone, with an error band on every number;
 - says **"re-scan"** when a value is within its own error of the limit;
@@ -83,9 +90,10 @@ Kannada, and a signed record for the engineer."*
    - A rigid ChArUco card with a per-site ID goes on each slab patch, and a printed marker strip goes along each beam.
    - Stop and hold at the critical zones: beam ends, mid-span, cantilevers, and 2-3 slab patches.
    - The gyro picks the sharp frames, with the torch on.
-   - A live NPU overlay shows coverage ("bars 1-6 measured, move left").
+   - A live AR overlay draws a line on each bar with the gap in mm ("~50"), and shows coverage ("bars 1-6 measured, move left"). If ARCore runs, it keeps the lines anchored when the card leaves the frame.
 3. **Measure, on-device.**
-   - The pipeline: rebar segmentation on the NPU → centrelines → card homography on planar faces (the slab's top layer; a beam's top or side face).
+   - The pipeline, on every preview frame: rebar segmentation on the NPU → mask warped to the card plane → bar lines from a profile → back onto the image. Planar faces only (the slab's top layer; a beam's top or side face).
+   - **Lock** when the phone is still: ~15 frames fused into one value with its band. Only locked values reach the rulebook.
    - Outputs: count, spacing, and stirrup spacing by zone, each ± a band.
    - Plus a coverage map of what was actually seen.
 4. **Prompt for what a camera can't do,** and record each reading:
@@ -140,7 +148,7 @@ Product lens: 44/90 (industry jury; the v1 self-score was 61).
 |---|---|
 | 0:00 | The one-day window: the steel is visible for a day, then hidden. Japan has accepted camera checks since 2023; we built it for India. "Half-scale props; the app checks whatever the drawing says." |
 | 0:20 | A judge draws one card from a deck of robust faults and applies it: remove a mesh bar, open a gap to ~80 mm (drawing 50), or move an end-zone stirrup into mid-span. |
-| 0:45 | Scan at about 30 cm with the coverage overlay. The verdict arrives within 3 s, with values, spoken in Hindi and subtitled. |
+| 0:45 | Scan at about 30 cm: a line snaps onto every bar with the live gap in mm. The judge slides one bar and its line and number follow. Lock: the verdict arrives within 3 s, with values, spoken in Hindi and subtitled. |
 | 1:05 | The judge tapes the exact segment the app drew: "80 ± 3 mm c/c". |
 | 1:25 | Honesty on show: from 0.8 m the phone says "re-scan, too far"; at 30 cm, a confident "outside limits" (72 vs limit 65). |
 | 1:50 | Both directions: a lower-layer bar is moved; the app catches it through the gaps, with a wider band. |
@@ -161,6 +169,7 @@ Full minimal kit: `notes/07-data-plan/data-and-props.md` §3.
 
 ## 7. Build plan (48 h). Event-time plan: notes/12-event/BUILD-PLAN.md (block-by-block, gates, half-scale constants)
 - **Tier 1 (mesh loop + spoken Hindi fix by Eval 1; beam zones, voice spec, two-key record and Office Kit desk by Eval 2; see notes/12-event/EVAL-CARDS.md), about 55-75 person-hours:**
+  - the live AR line overlay with mm labels and Lock (card-anchored; ARCore anchoring only if the G0c probe passes);
   - planar count and spacing with the card;
   - stirrup zones on a beam face, using the strip;
   - the physical prompts;

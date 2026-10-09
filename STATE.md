@@ -1,5 +1,28 @@
 # Sariya session state
 
+## Status (9 Oct 2026, 20:05): v4, the team's live AR camera vision
+- **IDEA.md is now v4.** A camera app that draws a live line on every bar, with the mm between them from the card, and a Lock step for the verdict. Comparison and design: `notes/13-ar-vision/AR-VISION.md`.
+- **ARCore, checked on the loaner over ADB:** Google's web list omits the iQOO 15 (I2501), but Play installed ARCore 1.56 after sign-in, so it is certified. Session and Depth API are untested (gate G0c).
+- **Loaner facts** (EVIDENCE.md): main camera Camera2 level 3, focus down to 0.10 m; the tele can't focus under 0.65 m; no ToF; the NPU runtime libs are present; HackTracker is running.
+- **BUILD-PLAN.md:** §0 item 1 and the CP1 row now include AR lines and Lock; gate G0c (ARCore probe, 20 min max) was added. EVAL-CARDS.md CP1 script and demo-script.md are not yet updated for the "judge slides a bar" beat.
+
+## Decisions (9 Oct, 20:05)
+| Change | Reason |
+|---|---|
+| Live per-bar AR lines with mm labels; Lock fuses ~15 frames; only locked values get a verdict | The team's vision; live single frames are noisier than a fused value |
+| The card measures; ARCore only anchors the overlay and coverage map, and only if G0c passes | ARCore tracks to ±1-5 cm, too coarse for 50 mm spacing; the card gives ±2-5 mm |
+| AI does one job: NPU bar segmentation on every frame. Card pose, lines, mm and the verdict stay maths and rules | Auditable numbers; "AI finds the bars, maths measures them, rules decide" |
+| Lines from a card-plane profile of the mask; Zhang-Suen and Hough only as a fallback | < 5 ms per frame, and bars are tracked in card mm, so the overlay doesn't jitter as the phone moves |
+| No sideloading on the loaner; ARCore came from Play | HackTracker is running; sideloading as tampering was an open question |
+
+## Open questions (9 Oct, 20:05)
+- Does the team keep voice, the Hindi fix and the signed record in Tier 1, or go camera-first?
+- G0c: does an ARCore session run alongside the needs of the 4K still (ARCore owns the camera)?
+- Sign the team Google account out of the loaner before returning it.
+
+## Next step (9 Oct, 20:05)
+B runs G0 (NPU) by 20:15, then G0c (ARCore probe) by 20:45. P4 draws lines instead of the mask; P5 runs live with Lock. Update EVAL-CARDS CP1 and demo-script.md with the AR beat.
+
 ## Status (9 Oct 2026, 18:00): event build plan ready, plan cross-checked
 - **Event plan:** `notes/12-event/BUILD-PLAN.md`. It covers:
   - Red/Green rules and how the phones score;
