@@ -150,6 +150,7 @@ def main(argv=None):
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--resume", default=None)
     ap.add_argument("--no-pretrained", action="store_true", help="ImageNet init off (if the organisers disallow public weights)")
+    ap.add_argument("--init", default=None, help="start from these U-Net weights (a previous round's unet_mbv3_1152.pt)")
     ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args(argv)
     os.makedirs(a.out, exist_ok=True)
@@ -166,7 +167,10 @@ def main(argv=None):
     train = DataLoader(Tiles(a.data, "train", build_augment(aug_cfg, True)), a.batch, shuffle=True, num_workers=a.workers,
                        pin_memory=True, drop_last=True)
     val = DataLoader(Tiles(a.data, "val", build_augment(aug_cfg, False)), a.batch, num_workers=a.workers, pin_memory=True)
-    model = build_model(None if a.no_pretrained else "imagenet").to(device)
+    model = build_model(None if (a.no_pretrained or a.init) else "imagenet").to(device)
+    if a.init:
+        model.load_state_dict(torch.load(a.init, map_location=device))
+        log["init"] = a.init
     opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=a.lr, total_steps=a.epochs * max(len(train), 1), pct_start=0.1)
     scaler = torch.amp.GradScaler(enabled=device.type == "cuda")
