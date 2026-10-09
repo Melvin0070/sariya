@@ -32,6 +32,9 @@ except SystemExit as e:
         raise
 except Exception as e:                       # AOT failure must not lose the float .tflite
     print("AOT/export error:", repr(e))
+for f in glob.glob("/tmp/*.error"):          # the AOT compiler's reason, otherwise lost with /tmp
+    print("==", f); print(open(f, errors="replace").read()[-6000:])
+    os.system(f"cp {f} /kaggle/working/aot_{os.path.basename(f)}.txt")
 p = "/kaggle/working/export_log.json"
 log = json.load(open(p)) if os.path.exists(p) else {}
 log["git"] = GIT; log["files"] = sorted(os.listdir("/kaggle/working"))

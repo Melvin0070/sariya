@@ -1,0 +1,38 @@
+{
+ "start": "2026-10-09T18:38:52+00:00",
+ "weights": "/kaggle/input/notebooks/sabarinarayanakg/sariya-unet-train/unet_mbv3_1152.pt",
+ "input": [
+  "NHWC",
+  1,
+  640,
+  1152,
+  3,
+  "float32 0..255 RGB"
+ ],
+ "output": [
+  "NHWC",
+  1,
+  640,
+  1152,
+  1,
+  "probability"
+ ],
+ "socs": [
+  "SM8850"
+ ],
+ "tflite": "/kaggle/working/unet_mbv3_1152.tflite",
+ "aot": {
+  "report": "\n==========================\nCOMPILATION FAILURES:\n==========================\nQualcomm_SM8850\tapply_plugin failed to apply plugin. See /tmp/tmpkout03uw.error for details.",
+  "files": [
+   "unet_mbv3_1152.tflite",
+   "unet_mbv3_1152_Qualcomm_SM8850_apply_plugin.tflite"
+  ]
+ },
+ "end": "2026-10-09T18:39:24+00:00",
+ "git": "335a72e9869ebb06540d6d27b3a221f663c8a018",
+ "files": [
+  "export_log.json",
+  "unet_mbv3_1152.tflite",
+  "unet_mbv3_1152_Qualcomm_SM8850_apply_plugin.tflite"
+ ]
+}

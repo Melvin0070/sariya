@@ -1,0 +1,48 @@
+INFO: [environment.cc:36] Creating LiteRT environment with options
+WARNING: [npu_registry.cc:34] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
+INFO: [gpu_registry.cc:101] Attempting to load GPU accelerator(libLiteRtGpuAccelerator.so).
+INFO: [gpu_registry.cc:101] Attempting to load GPU accelerator(libLiteRtWebGpuAccelerator.so).
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0x58cca1e81790, name=GPU WebGPU
+INFO: [gpu_registry.cc:109] Dynamically loaded GPU accelerator(libLiteRtWebGpuAccelerator.so) registered.
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0x58cca1e82050, name=CpuAccelerator
+INFO: [cpu_registry.cc:75] XNNPACK CPU accelerator registered.
+INFO: [outstream.h:51] Setup file stream
+
+INFO: [outstream.h:41] Setup cerr stream
+
+CMD: apply
+MODEL: /tmp/tmp8h0zz46j
+SOC_MANUFACTURER: Qualcomm
+SOC_MODEL: SM8850
+
+    __    _ __       ____  __
+   / /   (_/ /____  / __ \/ /_
+  / /   / / __/ _ \/ /_/ / __/
+ / /___/ / /_/  __/ _, _/ /_
+/_____/_/\__/\___/_/ |_|\__/
+
+[LITERT_TOOLS:APPLY] Starting Load Model...
+[LITERT_TOOLS:APPLY] Loading model from: /tmp/tmp8h0zz46j
+INFO: [environment.cc:36] Creating LiteRT environment with options
+WARNING: [npu_registry.cc:34] NPU accelerator could not be loaded and registered: kLiteRtStatusErrorInvalidArgument.
+INFO: [gpu_registry.cc:101] Attempting to load GPU accelerator(libLiteRtGpuAccelerator.so).
+INFO: [gpu_registry.cc:101] Attempting to load GPU accelerator(libLiteRtWebGpuAccelerator.so).
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0x58cca1e87210, name=GPU WebGPU
+INFO: [gpu_registry.cc:109] Dynamically loaded GPU accelerator(libLiteRtWebGpuAccelerator.so) registered.
+INFO: [accelerator_registry.cc:54] RegisterAccelerator: ptr=0x58cca1e87270, name=CpuAccelerator
+INFO: [cpu_registry.cc:75] XNNPACK CPU accelerator registered.
+[LITERT_TOOLS:APPLY] LiteRtModel : [ #subgraphs=1 ]
+[LITERT_TOOLS:APPLY] 	 Done!
+[LITERT_TOOLS:APPLY] Starting Load Plugins...
+[LITERT_TOOLS:APPLY] Loading plugins from: /usr/local/lib/python3.13/dist-packages/ai_edge_litert/vendors/qualcomm/compiler
+INFO: [compiler_plugin.cc:308] Attempting to load plugin at: /usr/local/lib/python3.13/dist-packages/ai_edge_litert/vendors/qualcomm/compiler/libLiteRtCompilerPlugin_Qualcomm.so
+INFO: [compiler_plugin.cc:250] Loading plugin at: /usr/local/lib/python3.13/dist-packages/ai_edge_litert/vendors/qualcomm/compiler/libLiteRtCompilerPlugin_Qualcomm.so
+WARNING: [compiler_plugin.cc:312] Failed to load plugin at: /usr/local/lib/python3.13/dist-packages/ai_edge_litert/vendors/qualcomm/compiler/libLiteRtCompilerPlugin_Qualcomm.so with error: ERROR: [litert/compiler/plugin/compiler_plugin.cc:259]
+└ Could not load shared library /usr/local/lib/python3.13/dist-packages/ai_edge_litert/vendors/qualcomm/compiler/libLiteRtCompilerPlugin_Qualcomm.so: libc++.so.1: cannot open shared object file: No such file or directory.
+[LITERT_TOOLS:APPLY] Found plugins
+[LITERT_TOOLS:APPLY] Loaded 0 plugins
+[LITERT_TOOLS:APPLY] 	 Done!
+[LITERT_TOOLS:APPLY] Starting Select Plugin...
+[LITERT_TOOLS:APPLY] 	Failed
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0x58cca1e81790, name=GPU WebGPU
+INFO: [accelerator_registry.cc:43] DestroyAccelerator: ptr=0x58cca1e82050, name=CpuAccelerator

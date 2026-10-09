@@ -50,5 +50,32 @@ kaggle kernels output sabarinarayanakg/sariya-unet-train -p runs/
 ## Disclosure line (for the README and the jury)
 "Segmentation: U-Net with a MobileNetV3 encoder, ImageNet weights (timm, Apache-2.0), fine-tuned on ROI-1555 (Sun et al. 2025, cited) on a Kaggle T4. Timestamped log, dataset hash and git hash in `models/seg/v1/`."
 
-## Export and on-device benchmark
-See §Benchmark below (filled after the export run).
+## Export and on-device benchmark (10 Oct, 00:10-01:15 IST)
+
+**Export.** Kaggle kernel `sabarinarayanakg/sariya-unet-export` (`prep/train/kaggle/push_export.sh`, litert-torch 0.9.4, git `335a72e`) → `models/seg/v1/unet_mbv3_1152.tflite`.
+- Float32, 27 MB. Input NHWC `[1, 640, 1152, 3]` raw RGB 0-255; output `[1, 640, 1152, 1]` probability, bar = > 0.5. The normalisation is inside the graph.
+- **Parity with PyTorch (5 test tiles):** max |probability difference| 0.00002; mask agreement 100.0000 %.
+- **AOT for SM8850 failed** on Kaggle (`apply_plugin`). The on-device log shows the same root cause: the LiteRT Qualcomm plugin needs libQnnSystem ≥ 1.14, and the pinned QAIRT 2.47 ships 1.11. On-device JIT with QAIRT 2.50 works (below), so AOT is optional. To retry, pin a sdk-qualcomm build that bundles QAIRT 2.50.
+
+**Benchmark.** iQOO 15 (I2501, SM8850, Android 16, OriginOS 7), over USB, LiteRT `benchmark_model` (litert-cli-nightly 0.3.0.dev20261009). One 1152 x 640 frame per inference. Reproduce with `prep/train/bench_device.sh models/seg/v1/unet_mbv3_1152.tflite`.
+
+| Accelerator | Mode | Avg per frame | Min / max | ≈ fps | Layers on the accelerator | Memory |
+|---|---|---|---|---|---|---|
+| CPU (XNNPACK) | default threads | 234.6 ms | 233.3 / 239.0 | 4 | 155 / 160 | 499 MB peak |
+| GPU (OpenCL) | default | 19.8 ms | 19.0 / 23.9 | 50 | 160 / 160 | 240 MB peak |
+| NPU (Hexagon HTP v81, JIT) | default perf mode | 73.3 ms | - | 14 | 160 / 160, 1 partition | ~420 MB |
+| NPU | high_performance | 16.9 ms | 15.3 / - | 59 | 160 / 160 | 440 MB |
+| **NPU** | **burst** | **12.2 ms** | 11.6 / - | **82** | **160 / 160** | 423 MB |
+| **NPU, 60 s sustained** | **burst** | **12.8 ms** (4,692 runs) | 11.5 / 14.9 | 78 | 160 / 160 | - |
+
+- **Thermal over the 60 s burst run:** skin 32.7 → 39.8 °C, battery 31.1 → 33.7 °C, thermal status 0 (no throttling).
+- **NPU start-up:** the first JIT compile takes 53 s; with `--compiler_cache_path` it takes 4-8 s. The app must cache the compiled model (LiteRT `CompiledModel` cache dir), or users wait ~1 min on first launch.
+- **Verdict:** the plan's NPU gate (< 25 ms, every layer on the NPU) **passes at 12.2 ms in burst mode**, with no INT8 quantization yet. The GPU at 19.8 ms is a solid fallback that also passes.
+
+**For the app build (lane B):**
+1. Ship this float `.tflite` and run it with `Accelerator.NPU`, falling back to GPU.
+2. Set HTP performance mode to burst, and set a compiler cache dir.
+3. The NPU runtime libs must match QAIRT 2.50: the stub/skel v81, libQnnHtp, libQnnSystem ≥ 1.14 and the LiteRT dispatch lib. Bundle them through the matching `litert-npu-runtime-qualcomm` version, or copy them from `~/sariya-tools/qairt250`.
+4. Pre/post-processing (frame to 1152 x 640 float input, and the 2.9 MB output) is not in these numbers. Budget ~3-5 ms on top.
+
+**Next model steps:** round 2 on prop photos. Then optionally INT8 (w8a16) quantization for a smaller file and lower NPU power, measured against these numbers.
