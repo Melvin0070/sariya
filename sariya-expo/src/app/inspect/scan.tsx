@@ -2,7 +2,7 @@ import { useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { Check, CircleHelp, Flashlight, FlashlightOff, Hand, Ruler, Undo2, X } from 'lucide-react-native';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Image, Keyboard, Linking, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, SlideInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,43 +14,145 @@ import { Evidence } from '@/components/evidence';
 import { Button, Chip, Hairline, Notice, SourceTag, T, TextBtn, tap } from '@/components/ui';
 import { keepEvidence } from '@/lib/files';
 import type { Pt } from '@/lib/homography';
-import { autoLock, barDiaFor, flushTimings, LIVE, LIVE_COPY, manualLock, TAP_ERROR_PX, turnHint, useVisionLive } from '@/lib/measure';
-import { evaluate, gapsOf } from '@/lib/rules';
+import { autoLock, barDiaFor, flushTimings, LIVE, LIVE_COPY, manualLock, mmToUp, TAP_ERROR_PX, turnHint, useLive, useLiveFeed, type LiveFeed } from '@/lib/measure';
+import { evaluate, gapsOf, gapTone, liveSpec, type LiveTone } from '@/lib/rules';
 import { checksFor, checkName, MARKERS, TARGETS, type TargetId } from '@/lib/spec';
 import { actions, activeLock, getState, useDraft, type Lock } from '@/lib/store';
 
 const LOCK_MS = 1200; // ~15 preview frames
 
+const TONE: Record<LiveTone, string> = { within: '#3AD07A', near: '#FFC043', outside: '#FF5A4F' };
+type LiveSpec = ReturnType<typeof liveSpec>;
+
 // The model's bars and the detected card, mapped from the upright camera frame onto the screen the way the
-// preview fills it (centre crop).
-function LiveOverlay({ frame, w, h }: { frame: VisionFrame | null; w: number; h: number }) {
+// preview fills it (centre crop). Bars are drawn from their smoothed plane-mm centrelines through the newest
+// frame's pose, so they glide with the steel; each gap is coloured against the drawing's single-gap limit.
+function LiveOverlay({ feed, w, h, spec }: { feed: LiveFeed; w: number; h: number; spec: LiveSpec }) {
+  const { frame, smooth } = useLive(feed);
   if (!frame) return null;
   const k = Math.max(w / frame.w, h / frame.h);
   const ox = (w - frame.w * k) / 2;
   const oy = (h - frame.h * k) / 2;
   const X = (x: number) => ox + x * k;
   const Y = (y: number) => oy + y * k;
-  const bars = frame.bars;
+  const m = frame.mmToUp;
+  const segs: { pos: number; s: [number, number, number, number] }[] = m
+    ? smooth.map((b) => {
+        const [x1, y1] = mmToUp(m, b.mm[0], b.mm[1]);
+        const [x2, y2] = mmToUp(m, b.mm[2], b.mm[3]);
+        return { pos: b.pos, s: [x1, y1, x2, y2] };
+      })
+    : frame.bars.map((b) => ({ pos: b.pos, s: b.seg }));
   return (
     <Svg width={w} height={h} style={StyleSheet.absoluteFill} pointerEvents="none">
       {frame.pose ? <Polygon points={frame.pose.outline.map(([x, y]) => `${X(x)},${Y(y)}`).join(' ')} fill="rgba(255,106,19,0.10)" stroke="#FF6A13" strokeWidth={3} /> : null}
-      {bars.map((b, i) => (
-        <Line key={i} x1={X(b.seg[0])} y1={Y(b.seg[1])} x2={X(b.seg[2])} y2={Y(b.seg[3])} stroke="#FFFFFF" strokeWidth={3} opacity={0.9} />
+      {segs.map(({ s }, i) => (
+        <Line key={`h${i}`} x1={X(s[0])} y1={Y(s[1])} x2={X(s[2])} y2={Y(s[3])} stroke="#000" strokeWidth={7} opacity={0.45} strokeLinecap="round" />
+      ))}
+      {segs.map(({ s }, i) => (
+        <Line key={i} x1={X(s[0])} y1={Y(s[1])} x2={X(s[2])} y2={Y(s[3])} stroke="#FFFFFF" strokeWidth={3.5} strokeLinecap="round" />
       ))}
       {frame.weak.map((b, i) => (
         <Line key={`w${i}`} x1={X(b.seg[0])} y1={Y(b.seg[1])} x2={X(b.seg[2])} y2={Y(b.seg[3])} stroke="#FFC043" strokeWidth={3} strokeDasharray="10 8" opacity={0.9} />
       ))}
-      {bars.slice(1).map((b, i) => {
-        const a = bars[i];
-        const x = (a.seg[0] + a.seg[2] + b.seg[0] + b.seg[2]) / 4;
-        const y = (a.seg[1] + a.seg[3] + b.seg[1] + b.seg[3]) / 4;
+      {segs.slice(1).map((b, i) => {
+        const a = segs[i];
+        const gap = b.pos - a.pos;
+        const tone = gapTone(gap, spec.spacingAt((a.pos + b.pos) / 2));
+        const x = X((a.s[0] + a.s[2] + b.s[0] + b.s[2]) / 4);
+        const y = Y((a.s[1] + a.s[3] + b.s[1] + b.s[3]) / 4);
+        const label = `${Math.round(gap)}`;
         return (
-          <SvgText key={`g${i}`} x={X(x)} y={Y(y)} fontSize={15} fontWeight="700" fill="#FFFFFF" stroke="#000" strokeWidth={0.6} textAnchor="middle">
-            ~{Math.round(b.pos - a.pos)}
-          </SvgText>
+          <Fragment key={`g${i}`}>
+            <SvgText x={x} y={y} fontSize={18} fontWeight="800" fill="none" stroke="#000" strokeWidth={4} strokeLinejoin="round" textAnchor="middle" opacity={0.75}>
+              {label}
+            </SvgText>
+            <SvgText x={x} y={y} fontSize={18} fontWeight="800" fill={tone ? TONE[tone] : '#FFFFFF'} textAnchor="middle">
+              {label}
+            </SvgText>
+          </Fragment>
         );
       })}
     </Svg>
+  );
+}
+
+// Header line: which model and accelerator are running, from the frames themselves.
+function EngineLine({ feed }: { feed: LiveFeed }) {
+  const { frame } = useLive(feed);
+  return <>{frame && frame.accel !== 'none' ? `${frame.model} · ${frame.accel}${frame.inferMs >= 0 ? ` ${frame.inferMs} ms` : ''}` : LIVE.title}</>;
+}
+
+type ReadoutProps = { feed: LiveFeed; view: 'live' | 'locking'; markerName: string; spec: LiveSpec; lockProgress: number; onLock: () => void; onManual: () => void; bottom: number };
+
+// Status, the live headline and the Lock button. Subscribes to the feed on its own, so only this part re-renders
+// with each frame. The headline is what the rules judge: bar count against the drawing and the widest single gap.
+function LiveReadout({ feed, view, markerName, spec, lockProgress, onLock, onManual, bottom }: ReadoutProps) {
+  const live = useLive(feed);
+  useEffect(() => {
+    if (live.status === 'ready' && view === 'live') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  }, [live.status, view]);
+  const color = view === 'locking' ? '#3AD07A' : LIVE_COPY[live.status].color;
+  const n = live.positions.length;
+  const gaps = gapsOf(live.positions);
+  const widest = gaps.length ? Math.max(...gaps) : 0;
+  const wi = gaps.indexOf(widest);
+  const wTone = gaps.length ? gapTone(widest, spec.spacingAt((live.positions[wi] + live.positions[wi + 1]) / 2)) : null;
+  const countOff = spec.count != null && n !== spec.count;
+  const canLock = (live.status === 'ready' || live.status === 'steady') && view !== 'locking';
+  return (
+    <View className="absolute inset-x-0 items-center" style={{ bottom }}>
+      <View className="flex-row items-center gap-2 rounded-full bg-black/60 px-4 py-2">
+        <View className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+        <T w="semibold" className="text-[16px]" style={{ color }}>
+          {view === 'locking' ? 'Locking… hold still' : live.status === 'searching' ? `Find ${markerName}` : live.status === 'partial' ? `Show all of ${markerName}` : LIVE_COPY[live.status].label}
+        </T>
+      </View>
+      {n >= 2 ? (
+        <View className="mt-2 items-center rounded-2xl bg-black/45 px-4 py-2">
+          <View className="flex-row items-end">
+            <T w="bold" className="text-[34px] leading-[40px] tracking-[-1px]" style={{ color: countOff ? TONE.near : '#FFFFFF' }}>
+              {spec.count != null ? `${n} of ${spec.count}` : `${n}`}
+            </T>
+            <T w="medium" className="mb-1 ml-1.5 text-[17px] text-white/80">
+              bars
+            </T>
+            <T w="bold" className="mb-0.5 ml-3 text-[34px] leading-[40px] tracking-[-1px]" style={{ color: wTone ? TONE[wTone] : '#FFFFFF' }}>
+              {Math.round(widest)}
+            </T>
+            <T w="medium" className="mb-1 ml-1 text-[17px] text-white/80">
+              mm widest
+            </T>
+          </View>
+          <T className="text-[13px] text-white/75">
+            {live.frame?.weak.length ? `${live.frame.weak.length} partly seen · ` : ''}live preview · Lock for the verdict
+          </T>
+        </View>
+      ) : null}
+      {turnHint(live.frame) ? (
+        <T w="semibold" className="mt-1 text-[14px] text-[#FFC043]">
+          Turn the phone so the bars run up the screen
+        </T>
+      ) : null}
+
+      <View className="mt-4 w-full flex-row items-center justify-center gap-10">
+        <RoundBtn onPress={onManual} label="By hand">
+          <Hand size={20} color="#fff" />
+        </RoundBtn>
+        <View className="items-center">
+          <Pressable onPress={onLock} disabled={!canLock} className="h-24 w-24 items-center justify-center">
+            <LockRing progress={view === 'locking' ? lockProgress : live.progress} />
+            <View className={`h-[74px] w-[74px] items-center justify-center rounded-full ${live.status === 'ready' || view === 'locking' ? 'bg-white' : 'bg-white/25'}`}>
+              <Ruler size={28} color={live.status === 'ready' || view === 'locking' ? '#000' : 'rgba(255,255,255,0.7)'} />
+            </View>
+          </Pressable>
+          <T w="semibold" className="text-[15px] text-white">
+            Lock
+          </T>
+        </View>
+        <View className="w-12" />
+      </View>
+    </View>
   );
 }
 
@@ -122,19 +224,15 @@ export default function Scan() {
   const lock = cur && target ? activeLock(cur, target.id) : undefined;
   // A fix or re-scan supersedes the lock; the screen is then live again for that family.
   const view = phase === 'locked' && !lock ? 'live' : phase;
-  const { live, onFrame, startCapture, stopCapture, reset } = useVisionLive();
+  const feed = useLiveFeed();
 
-  useEffect(() => {
-    if (live.status === 'ready' && view === 'live') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-  }, [live.status, view]);
-
-  useEffect(() => reset(), [tid, reset]);
+  useEffect(() => feed.reset(), [tid, feed]);
   useEffect(() => flushTimings, []);
 
   if (!cur || !target) return <Redirect href="/" />;
   const marker = MARKERS[target.marker];
   const barDia = barDiaFor(cur.spec, cur.member);
-  const engineLine = live.frame && live.frame.accel !== 'none' ? `${live.frame.accel}${live.frame.inferMs >= 0 ? ` ${live.frame.inferMs} ms` : ''}` : LIVE.title;
+  const spec = liveSpec(cur, target.id);
 
   const snap = async (): Promise<Frozen | null> => {
     try {
@@ -152,9 +250,9 @@ export default function Scan() {
   const doLock = async () => {
     setPhase('locking');
     setLockProgress(0);
-    startCapture();
+    feed.startCapture();
     await holdFor(LOCK_MS, setLockProgress);
-    const frames = stopCapture();
+    const frames = feed.stopCapture();
     const photo = await snap();
     const l = autoLock(target, frames, photo?.frame ?? null, evidenceOf(photo));
     actions.addLock(l);
@@ -229,12 +327,12 @@ export default function Scan() {
           axis={target.axis}
           barDia={barDia}
           minLenMm={Math.max(60, 8 * barDia)}
-          onFrame={(e) => onFrame(e.nativeEvent)}
+          onFrame={(e) => feed.push(e.nativeEvent)}
           onError={(e) => setCamError(e.nativeEvent.message)}
         />
       ) : null}
 
-      {view === 'live' || view === 'locking' ? <LiveOverlay frame={live.frame} w={win.width} h={win.height} /> : null}
+      {view === 'live' || view === 'locking' ? <LiveOverlay feed={feed} w={win.width} h={win.height} spec={spec} /> : null}
 
       {/* frozen evidence behind the result sheet */}
       {view === 'locked' && lock ? (
@@ -288,7 +386,7 @@ export default function Scan() {
             {cur.rev > 1 ? ` · rev ${cur.rev}` : ''}
           </T>
           <T className="text-[13px] text-white/75" numberOfLines={1}>
-            {target.label} · {marker.name} · {engineLine}
+            {target.label} · {marker.name} · <EngineLine feed={feed} />
           </T>
         </View>
         {view === 'live' ? (
@@ -360,52 +458,7 @@ export default function Scan() {
 
       {/* live readout + lock */}
       {(view === 'live' || view === 'locking') && perm?.granted ? (
-        <View className="absolute inset-x-0 items-center" style={{ bottom: i.bottom + 24 }}>
-          <View className="flex-row items-center gap-2 rounded-full bg-black/60 px-4 py-2">
-            <View className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: view === 'locking' ? '#3AD07A' : LIVE_COPY[live.status].color }} />
-            <T w="semibold" className="text-[16px]" style={{ color: view === 'locking' ? '#3AD07A' : LIVE_COPY[live.status].color }}>
-              {view === 'locking' ? 'Locking… hold still' : live.status === 'searching' ? `Find ${marker.name}` : live.status === 'partial' ? `Show all of ${marker.name}` : LIVE_COPY[live.status].label}
-            </T>
-          </View>
-          {live.positions.length >= 2 ? (
-            <>
-              <View className="mt-2 flex-row items-end">
-                <T w="bold" className="text-[60px] leading-[66px] tracking-[-2px] text-white">
-                  ~{Math.round(gapsOf(live.positions).reduce((a, g) => a + g, 0) / (live.positions.length - 1))}
-                </T>
-                <T w="medium" className="mb-3 ml-1.5 text-[20px] text-white/80">
-                  mm
-                </T>
-              </View>
-              <T className="text-[14px] text-white/75">
-                {live.positions.length} bars{live.frame?.weak.length ? ` · ${live.frame.weak.length} partly seen` : ''} · Lock for the verdict
-              </T>
-            </>
-          ) : null}
-          {turnHint(live.frame) ? (
-            <T w="semibold" className="mt-1 text-[14px] text-[#FFC043]">
-              Turn the phone so the bars run up the screen
-            </T>
-          ) : null}
-
-          <View className="mt-4 w-full flex-row items-center justify-center gap-10">
-            <RoundBtn onPress={startManual} label="By hand">
-              <Hand size={20} color="#fff" />
-            </RoundBtn>
-            <View className="items-center">
-              <Pressable onPress={doLock} disabled={(live.status !== 'ready' && live.status !== 'steady') || view === 'locking'} className="h-24 w-24 items-center justify-center">
-                <LockRing progress={view === 'locking' ? lockProgress : live.progress} />
-                <View className={`h-[74px] w-[74px] items-center justify-center rounded-full ${live.status === 'ready' || view === 'locking' ? 'bg-white' : 'bg-white/25'}`}>
-                  <Ruler size={28} color={live.status === 'ready' || view === 'locking' ? '#000' : 'rgba(255,255,255,0.7)'} />
-                </View>
-              </Pressable>
-              <T w="semibold" className="text-[15px] text-white">
-                Lock
-              </T>
-            </View>
-            <View className="w-12" />
-          </View>
-        </View>
+        <LiveReadout feed={feed} view={view} markerName={marker.name} spec={spec} lockProgress={lockProgress} onLock={doLock} onManual={startManual} bottom={i.bottom + 24} />
       ) : null}
 
       {/* manual marking instructions */}

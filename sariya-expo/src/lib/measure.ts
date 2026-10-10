@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 
 import type { VisionFrame } from '../../modules/sariya-vision';
 import { apply, convex, dist, homography, type Pt } from './homography';
@@ -11,8 +11,8 @@ import { actions, uid, type Accel, type Coverage, type Lock, type Overlay } from
 export const LIVE = {
   source: 'auto' as const,
   engine: 'seg-v2',
-  title: 'Model v2 live',
-  note: 'Bars are found by the on-phone segmentation model (v2) and scaled by the printed card or strip. If it cannot see the bars, use By hand.',
+  title: 'On-phone model',
+  note: 'Bars are found by the on-phone segmentation model and scaled by the printed card or strip. If it cannot see the bars, use By hand.',
 };
 export const SIMULATED_NOTE = 'These values came from the earlier simulated engine, not the camera. Re-scan those zones before signing.';
 
@@ -79,44 +79,92 @@ function stable(frames: VisionFrame[]) {
   return true;
 }
 
-export type Live = { frame: VisionFrame | null; status: LiveStatus; positions: number[]; progress: number };
+// A bar as drawn live: centreline in plane mm, averaged over recent frames so the overlay glides instead of jumping.
+export type SmoothBar = { pos: number; mm: [number, number, number, number]; seen: number; missed: number };
+export type Live = { frame: VisionFrame | null; status: LiveStatus; positions: number[]; progress: number; smooth: SmoothBar[] };
 
-// Frames from the native view, the live status they imply, and a buffer the Lock fuses.
-export function useVisionLive() {
-  const recent = useRef<VisionFrame[]>([]);
-  const sharpness = useRef<number[]>([]);
-  const capture = useRef<VisionFrame[] | null>(null);
-  const [live, setLive] = useState<Live>({ frame: null, status: 'searching', positions: [], progress: 0 });
+const SMOOTH_ALPHA = 0.45; // weight of the newest frame
+const SMOOTH_MATCH_MM = 8; // a new detection within this of a drawn bar is the same bar
+const SMOOTH_KEEP = 2; // frames a drawn bar survives without being re-detected
+const EMPTY: Live = { frame: null, status: 'searching', positions: [], progress: 0, smooth: [] };
 
-  const onFrame = useCallback((f: VisionFrame) => {
+function smoothBars(prev: SmoothBar[], f: VisionFrame): SmoothBar[] {
+  if (!f.pose) return [];
+  const out: SmoothBar[] = [];
+  const used = new Set<SmoothBar>();
+  for (const b of f.bars) {
+    let best: SmoothBar | undefined;
+    for (const s of prev) if (!used.has(s) && Math.abs(s.pos - b.pos) < SMOOTH_MATCH_MM && (!best || Math.abs(s.pos - b.pos) < Math.abs(best.pos - b.pos))) best = s;
+    if (best) {
+      used.add(best);
+      const a = SMOOTH_ALPHA;
+      out.push({ pos: best.pos + a * (b.pos - best.pos), mm: best.mm.map((v, i) => v + a * (b.mm[i] - v)) as SmoothBar['mm'], seen: best.seen + 1, missed: 0 });
+    } else out.push({ pos: b.pos, mm: [...b.mm], seen: 1, missed: 0 });
+  }
+  for (const s of prev) if (!used.has(s) && s.missed < SMOOTH_KEEP) out.push({ ...s, missed: s.missed + 1 });
+  return out.sort((x, y) => x.pos - y.pos);
+}
+
+// Frames from the native view, the live status they imply, and a buffer the Lock fuses. Kept outside React state:
+// only the components that draw the live view subscribe, so the scan screen itself does not re-render every frame.
+export class LiveFeed {
+  private live: Live = EMPTY;
+  private listeners = new Set<() => void>();
+  private recent: VisionFrame[] = [];
+  private sharpness: number[] = [];
+  private capture: VisionFrame[] | null = null;
+
+  subscribe = (l: () => void) => {
+    this.listeners.add(l);
+    return () => {
+      this.listeners.delete(l);
+    };
+  };
+  get = () => this.live;
+  private emit(l: Live) {
+    this.live = l;
+    this.listeners.forEach((fn) => fn());
+  }
+
+  push = (f: VisionFrame) => {
     recordTiming(f);
-    capture.current?.push(f);
-    const r = [...recent.current, f].slice(-STABLE_FRAMES);
-    recent.current = r;
-    sharpness.current = [...sharpness.current, f.sharp].slice(-BLUR_WINDOW);
+    this.capture?.push(f);
+    const r = [...this.recent, f].slice(-STABLE_FRAMES);
+    this.recent = r;
+    this.sharpness = [...this.sharpness, f.sharp].slice(-BLUR_WINDOW);
     let status = frameStatus(f);
-    if (status === 'steady' && f.sharp < LIVE_SHARP_SHARE * Math.max(...sharpness.current)) status = 'blurred';
+    if (status === 'steady' && f.sharp < LIVE_SHARP_SHARE * Math.max(...this.sharpness)) status = 'blurred';
     let run = 0;
     for (let i = r.length - 1; i >= 0 && usable(r[i]) && r[i].bars.length === f.bars.length; i--) run++;
     if (status === 'steady' && stable(r)) status = 'ready';
-    setLive({ frame: f, status, positions: positionsOf(f), progress: status === 'ready' ? 1 : usable(f) ? run / STABLE_FRAMES : 0 });
-  }, []);
-
-  const startCapture = useCallback(() => {
-    capture.current = [];
-  }, []);
-  const stopCapture = useCallback(() => {
-    const got = capture.current ?? [];
-    capture.current = null;
+    this.emit({ frame: f, status, positions: positionsOf(f), progress: status === 'ready' ? 1 : usable(f) ? run / STABLE_FRAMES : 0, smooth: smoothBars(this.live.smooth, f) });
+  };
+  startCapture = () => {
+    this.capture = [];
+  };
+  stopCapture = () => {
+    const got = this.capture ?? [];
+    this.capture = null;
     return got;
-  }, []);
-  const reset = useCallback(() => {
-    recent.current = [];
-    sharpness.current = [];
-    setLive({ frame: null, status: 'searching', positions: [], progress: 0 });
-  }, []);
+  };
+  reset = () => {
+    this.recent = [];
+    this.sharpness = [];
+    this.emit(EMPTY);
+  };
+}
 
-  return { live, onFrame, startCapture, stopCapture, reset };
+export function useLiveFeed() {
+  const [feed] = useState(() => new LiveFeed());
+  return feed;
+}
+
+export const useLive = (feed: LiveFeed) => useSyncExternalStore(feed.subscribe, feed.get);
+
+// Plane mm -> upright px with a frame's 3x3 matrix.
+export function mmToUp(m: number[], x: number, y: number): [number, number] {
+  const w = m[6] * x + m[7] * y + m[8];
+  return [(m[0] * x + m[1] * y + m[2]) / w, (m[3] * x + m[4] * y + m[5]) / w];
 }
 
 // Fuse the frames seen while the Lock button was held: the most common bar count wins, each bar takes its median

@@ -26,6 +26,10 @@ export type VisionFrame = {
   angle?: number | null;
   maskPts: number;
   sharp: number; // Laplacian variance, comparable only within one scan
+  luma?: number; // mean brightness 0-255, for the torch hint
+  fidMs?: number; // card/strip detection time
+  barsMs?: number; // mask -> bars time
+  mmToUp?: number[] | null; // 3x3 row-major: plane mm -> upright px of this frame
 };
 
 export type VisionStatus = {
