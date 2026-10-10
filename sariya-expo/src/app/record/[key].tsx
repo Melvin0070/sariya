@@ -3,16 +3,14 @@ import { Check, Clock, FileInput, MessageSquareWarning, RotateCw, Send } from 'l
 import { useState } from 'react';
 import { View } from 'react-native';
 
-import { CoverageMap } from '@/components/coverage';
-import { Evidence } from '@/components/evidence';
 import { FindingRow } from '@/components/finding';
-import { QR } from '@/components/qr';
-import { Button, Group, H2, Notice, Screen, SourceTag, Sub, T, TextBtn, Title, TopBar } from '@/components/ui';
+import { DrawingValues, EvidenceList, SignoffCard } from '@/components/record-parts';
+import { Button, Group, H2, Notice, Screen, Sub, T, TextBtn, Title, TopBar } from '@/components/ui';
 import { shareFile } from '@/lib/files';
 import { short } from '@/lib/keys';
-import { capturePack, packName, signoffQr } from '@/lib/pack';
+import { capturePack, packName } from '@/lib/pack';
 import { evaluate, tallyLine } from '@/lib/rules';
-import { checksFor, checkName, KIND_LABEL, TARGETS, type TargetId } from '@/lib/spec';
+import { checksFor, checkName, KIND_LABEL, type TargetId } from '@/lib/spec';
 import { statusOf } from '@/lib/status';
 import { actions, getState, useRecord, when } from '@/lib/store';
 
@@ -44,7 +42,6 @@ export default function Record() {
   if (!r || !r.capture) return <Redirect href="/" />;
 
   const fs = evaluate(r);
-  const locks = r.locks.filter((l) => !l.superseded);
   const req = r.request?.payload;
   const newer = r.revised ? getState().records.find((x) => x.id === r.id && x.rev === r.rev + 1) : undefined;
 
@@ -108,39 +105,7 @@ export default function Record() {
         </Notice>
       ) : null}
 
-      {r.approval ? (
-        <View className="mt-2 items-center rounded-card bg-tile p-5">
-          <View className="rounded-xl bg-paper p-2">
-            <QR value={signoffQr(r.approval)} size={220} />
-          </View>
-          <T w="bold" className="mt-4 text-[18px]">
-            Sign-off QR
-          </T>
-          <T className="mt-1 text-center text-[14px] leading-[20px] text-ink-2">Proves offline that {r.approval.payload.e} approved this exact record. Not a safety certificate.</T>
-        </View>
-      ) : null}
-
-      <H2 className="mt-8">Evidence</H2>
-      {locks.length ? (
-        locks.map((l) => (
-          <View key={l.id} className="mt-3">
-            <Evidence lock={l} />
-            {l.coverage ? (
-              <View className="mt-2">
-                <CoverageMap c={l.coverage} />
-              </View>
-            ) : null}
-            <View className="mt-2 flex-row items-center gap-2">
-              <T w="medium" className="text-[14px]">
-                {TARGETS[r.member].find((t) => t.id === l.target)?.label} · {l.positions.length} bars ± {l.band} mm
-              </T>
-              <SourceTag source={l.source} />
-            </View>
-          </View>
-        ))
-      ) : (
-        <T className="mt-2 text-[15px] text-ink-2">No camera locks in this revision.</T>
-      )}
+      {r.approval ? <SignoffCard approval={r.approval} title="Sign-off QR" sub={`Proves offline that ${r.approval.payload.e} approved this exact record. Not a safety certificate.`} /> : null}
 
       <H2 className="mt-8">Checks</H2>
       <Group className="mt-3">
@@ -148,6 +113,12 @@ export default function Record() {
           <FindingRow key={f.def.id} f={f} first={i === 0} corrected={r.corrected[f.def.id]} />
         ))}
       </Group>
+
+      <H2 className="mt-8">Evidence</H2>
+      <EvidenceList r={r} />
+
+      <H2 className="mt-8">Drawing</H2>
+      <DrawingValues r={r} />
       {!r.revised && !req ? <TextBtn label={`Scan again as rev ${r.rev + 1}`} onPress={() => revise([])} /> : null}
     </Screen>
   );

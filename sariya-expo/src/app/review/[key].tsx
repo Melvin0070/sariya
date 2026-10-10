@@ -1,19 +1,17 @@
 import { Redirect, useLocalSearchParams } from 'expo-router';
-import { Check, KeyRound, MessageSquareWarning, Send, Square, SquareCheck } from 'lucide-react-native';
+import { KeyRound, MessageSquareWarning, Send, Square, SquareCheck } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 
-import { CoverageMap } from '@/components/coverage';
-import { Evidence } from '@/components/evidence';
 import { FindingRow } from '@/components/finding';
 import { PinPrompt } from '@/components/pin-prompt';
-import { QR } from '@/components/qr';
-import { Button, Group, H2, KV, Notice, Screen, SourceTag, Sub, T, TextBtn, Title, TopBar, tap } from '@/components/ui';
+import { DrawingValues, EvidenceList, SignoffCard } from '@/components/record-parts';
+import { Button, Group, H2, Notice, Screen, Sub, T, TextBtn, Title, TopBar, tap } from '@/components/ui';
 import { saveToFolder, shareFile } from '@/lib/files';
 import { short } from '@/lib/keys';
-import { approvalFile, makeApproval, makeRequest, packName, requestFile, signoffQr, specOrigin } from '@/lib/pack';
+import { approvalFile, makeApproval, makeRequest, packName, requestFile, specOrigin } from '@/lib/pack';
 import { evaluate, RULEBOOK, tally, tallyLine } from '@/lib/rules';
-import { checkName, FIELDS, KIND_LABEL, TARGETS, type CheckId } from '@/lib/spec';
+import { checkName, KIND_LABEL, type CheckId } from '@/lib/spec';
 import { actions, getState, useRecord, useStore, when } from '@/lib/store';
 
 // The engineer's desk, mirrored to the laptop: everything that was signed, then a deliberate decision with their own key.
@@ -34,7 +32,6 @@ export default function Review() {
 
   const fs = evaluate(r);
   const t = tally(fs);
-  const locks = r.locks.filter((l) => !l.superseded);
   const decided = !!r.approval || !!r.request;
   const sameKey = r.capture.signer.fp === myFp;
   const origin = specOrigin(r.spec, r.member, myFp);
@@ -137,18 +134,7 @@ export default function Review() {
       {msg ? <Notice tone={msg.tone} className="mt-3" title={msg.text} /> : null}
 
       {r.approval ? (
-        <View className="mt-4 items-center rounded-card bg-tile p-5">
-          <View className="flex-row items-center gap-2">
-            <Check size={20} color="#05944F" strokeWidth={3} />
-            <T w="bold" className="text-[18px]">
-              You approved · {when(r.approval.payload.t)}
-            </T>
-          </View>
-          <View className="mt-4 rounded-xl bg-paper p-2">
-            <QR value={signoffQr(r.approval)} size={200} />
-          </View>
-          <T className="mt-3 text-center text-[14px] text-ink-2">Key {r.approval.payload.f}. Send it back so it attaches to this capture.</T>
-        </View>
+        <SignoffCard approval={r.approval} title={`You approved · ${when(r.approval.payload.t)}`} sub={`Key ${r.approval.payload.f}. Send it back so it attaches to this capture.`} />
       ) : null}
       {r.request ? (
         <Notice tone="warn" className="mt-4" title={`You asked for another view · ${when(r.request.payload.t)}`}>
@@ -193,35 +179,10 @@ export default function Review() {
       </Group>
 
       <H2 className="mt-8">Evidence</H2>
-      {locks.length ? (
-        locks.map((l) => (
-          <View key={l.id} className="mt-3">
-            <Evidence lock={l} />
-            {l.coverage ? (
-              <View className="mt-2">
-                <CoverageMap c={l.coverage} />
-              </View>
-            ) : null}
-            <View className="mt-2 flex-row flex-wrap items-center gap-2">
-              <T w="medium" className="text-[14px]">
-                {TARGETS[r.member].find((x) => x.id === l.target)?.label} · {l.positions.length} bars ± {l.band} mm · {l.frames} frame{l.frames > 1 ? 's' : ''}
-              </T>
-              <SourceTag source={l.source} />
-            </View>
-          </View>
-        ))
-      ) : (
-        <T className="mt-2 text-[15px] text-ink-2">No camera locks.</T>
-      )}
+      <EvidenceList r={r} />
 
       <H2 className="mt-8">Drawing</H2>
-      <Group className="mt-3">
-        {r.spec?.noDrawing ? (
-          <KV first k="Drawing" v="None: measure only" />
-        ) : (
-          FIELDS[r.member].map((f, i) => <KV key={f.id} first={i === 0} k={f.label} v={r.spec?.values[f.id] == null ? 'Not on drawing' : `${r.spec.values[f.id]} ${f.unit}`} />)
-        )}
-      </Group>
+      <DrawingValues r={r} />
       <T className="mt-3 text-[13px] leading-[19px] text-ink-3">
         Drawing rev {r.spec?.rev ?? '—'}
         {r.spec?.preset ? ' (demo prop)' : ''} · rulebook {RULEBOOK} · revision {r.rev}

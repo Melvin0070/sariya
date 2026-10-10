@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { Clipboard } from '@/components/art';
+import { PinPrompt } from '@/components/pin-prompt';
 import { Button, Group, KV, Notice, Screen, SourceTag, Sub, T, TextBtn, Title, TopBar } from '@/components/ui';
 import { confirmSent, saveToFolder, shareFile } from '@/lib/files';
 import { short } from '@/lib/keys';
@@ -21,6 +22,7 @@ export default function Sign() {
   const noEngineer = useStore((s) => !s.trusted.some((p) => p.role === 'engineer'));
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [pinOpen, setPinOpen] = useState(false);
   if (!r) return <Redirect href="/" />;
 
   const fs = evaluate(r);
@@ -32,6 +34,7 @@ export default function Sign() {
   const unassessed = t.pending + t.tape;
 
   const sign = () => {
+    setPinOpen(false);
     try {
       actions.signDraft(signCapture(r));
     } catch (e) {
@@ -80,7 +83,11 @@ export default function Sign() {
           {r.name} · rev {r.rev} · {when(r.capture!.at)}
         </Sub>
         <T className="mt-1 text-[14px] text-ink-3">Record {short(r.capture!.hash)}</T>
-        {r.sentAt ? <Notice tone="pass" className="mt-6" title={`Sent ${when(r.sentAt)}`} /> : <Sub className="mt-6">Send the pack to the engineer. It is checked on their phone before anything shows.</Sub>}
+        {r.sentAt ? (
+          <Notice tone="pass" className="mt-6" title={`Sent ${when(r.sentAt)}`} />
+        ) : (
+          <Sub className="mt-6">Send the pack to the engineer. It is checked on their phone before anything shows.</Sub>
+        )}
         {noEngineer ? (
           <Notice tone="warn" className="mt-4" title="No engineer enrolled">
             Enrol their phone in Settings before their approval comes back.
@@ -92,7 +99,8 @@ export default function Sign() {
   }
 
   return (
-    <Screen footer={<Button label="Sign with this phone’s key" icon={KeyRound} disabled={!signer} onPress={sign} />}>
+    <Screen footer={<Button label="Sign with PIN" icon={KeyRound} disabled={!signer} onPress={() => setPinOpen(true)} />}>
+      <PinPrompt title={`Sign ${r.name} rev ${r.rev}`} visible={pinOpen} onCancel={() => setPinOpen(false)} onOk={sign} />
       <TopBar name={`${r.name}${r.rev > 1 ? ` · rev ${r.rev}` : ''}`} sub={KIND_LABEL[r.member]} />
       <View className="flex-row items-center">
         <Title className="flex-1">Sign the capture</Title>

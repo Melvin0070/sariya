@@ -1,5 +1,15 @@
 # Sariya session state
 
+## Session note (10 Oct, ~09:00): one UI for engineer and operator
+- Engineer "Send drawing values" now uses the operator's flow: member + name, then one value at a time on the keypad, then the check list (`components/member-pick.tsx`, `components/spec-form.tsx`). "No drawing" stays operator-only.
+- Record (P1) and review (P2) share the evidence list, the sign-off QR card and a Drawing section (`components/record-parts.tsx`); both read Checks → Evidence → Drawing.
+- **Decision:** every signature others trust asks for the PIN: capture signing (P1) and issuing drawing values (P2) now join approval and key trust. Demo adds one PIN entry on P1 at signing.
+
+## Session note (10 Oct, ~08:30): end-to-end explainer
+- Wrote `notes/08-demo/END-TO-END.html` (published as a private artifact): roles, the 9-stage loop as built, every scenario in rules/pack/measure, user stories, design rationale, the 3:30 demo updated for PIN + slab-only, failure branches, open risks. No spec or code changes.
+- Found while writing: P2 shows the sign-off QR right after approval, so the stage QR beat needs no transfer back to P1. P3 can't be both verifier and hot spare (one role per phone), so a spare operator phone must be set up in pre-flight. demo-script.md still says fingerprint/BiometricPrompt and lists F3/F12.
+- Next: G1 tape gate on the prop, v2 vs v1 on the prop, two-phone run of spec → approve → QR → replay before Eval 2 (19:00).
+
 ## Session note (10 Oct, 07:30): roles clarified, engineer-issued spec
 - **Roles (decision):** the designer writes the drawing/BBS (the spec source); the **operator** is the on-site checker (site engineer/supervisor, inspector, builder QC, brand technical engineer); the **engineer** is the responsible engineer, usually remote, who issues the drawing values and approves; the mason hears the fix. IDEA.md "Who does what", §3.1, §4 and §9 updated; demo line 0:20 no longer says "the engineer scans".
 - **Gap fixed in the app:** the operator used to type the spec they are checked against. Now P2 → Send drawing values (`app/issue.tsx`) signs a `sariya.spec/1` file; P1 → Drawing values from the engineer accepts it only from an enrolled engineer key and opens a new inspection (same file twice = same inspection). Editing a value drops the signature. Review shows *issued by you · unchanged* (pass), *typed on site* / *issued by another engineer* (extra tick "the drawing values match my drawing" required), or *differ from the issued ones* (approval blocked). The capture hash already covers the spec, so no format change to captures/approvals.
