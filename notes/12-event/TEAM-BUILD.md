@@ -6,6 +6,14 @@ Execution plan for IDEA.md v4. The GitHub issues were closed as not planned and 
 
 **B02 runtime integration is done, in the Expo app** (`sariya-expo/`, not a Kotlin/Compose scaffold): `modules/sariya-vision` runs model v2 live on the NPU with ChArUco/strip pose, bar geometry, partly-seen abstention, blur rejection, Lock fusion and a signed coverage map. Release APK builds arm64-only (107 MB). Sabari: do not re-implement the runtime or geometry; the remaining vision work is **G1 on the props** (10 tape-checked scans, 8/10 in band), the too-far gate distance at 0.6/0.8 m, and model rounds (`-Psariya.model=vN -Psariya.threshold=x`). Details: `STATE.md` session notes of 10 Oct and `sariya-expo/README.md`.
 
+**Every laptop, once after pulling (before building):** the NPU path needs four Qualcomm QAIRT 2.50 libraries that are not in git.
+
+```bash
+cd sariya-expo && scripts/fetch-qnn.sh
+```
+
+It reads only those files (~22 MB, ~30 s) from Qualcomm's SDK zip, checks each hash and installs them into `modules/sariya-vision/android/src/main/jniLibs/arm64-v8a/`; re-running is a no-op. Without them the build silently runs on GPU: after installing, Device → Role, name and readiness must say **"Model v2 (7ad05e742fad) on NPU"**. The same files serve every model round exported with QAIRT 2.50.
+
 ### Earlier progress — pulled 52db88a (10 Oct)
 
 **The model-preparation blocker is cleared.** `models/seg/v1/unet_mbv3_1152.tflite` is committed (26,935,452 bytes; checked SHA-256 `196d279e980b159e88c5a4b60936daeb8f593c9ac45e3fe02c424c614599f7c0`). Training/export logs and [MODEL-V1](../14-model/MODEL-V1.md) report ROI-1555 test IoU 0.8466/F1 0.917 and five-tile PyTorch/TFLite parity. These are segmentation/export results, not tape accuracy or Android camera parity.
