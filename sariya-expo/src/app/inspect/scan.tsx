@@ -4,13 +4,14 @@ import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { Check, CircleHelp, Flashlight, FlashlightOff, Hand, Ruler, Undo2, X } from 'lucide-react-native';
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Image, Keyboard, Linking, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, SlideInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Line, Polygon, Text as SvgText } from 'react-native-svg';
 
 import { VisionView, type VisionFrame, type VisionViewRef } from '../../../modules/sariya-vision';
 
 import { Evidence } from '@/components/evidence';
+import { ScanResultSheet } from '@/components/scan-result-sheet';
 import { Button, Chip, Details, Group, Hairline, Illo, KV, Notice, Num, Overline, Press, SHADOW, SourceTag, T, TextBtn, tap } from '@/components/ui';
 import { keepEvidence } from '@/lib/files';
 import type { Pt } from '@/lib/homography';
@@ -353,6 +354,16 @@ export default function Scan() {
   const widest = lockGaps.length ? Math.round(Math.max(...lockGaps)) : null;
   const showTape = hot !== undefined && lockGaps.length > 0;
   const goFix = () => outside && router.push({ pathname: '/inspect/fix', params: { check: outside.def.id, from: 'scan' } });
+  const redoScan = () => {
+    feed.reset();
+    setLockProgress(0);
+    setBenchOpen(false);
+    setBenchSaved('');
+    setTape('');
+    setCamError('');
+    actions.rescan(target.id);
+    setPhase('live');
+  };
 
   return (
     <View className="flex-1 bg-black">
@@ -553,88 +564,91 @@ export default function Scan() {
 
       {/* locked result sheet: the actions stay pinned under the scrolling findings */}
       {view === 'locked' && lock ? (
-        <Animated.View entering={SlideInDown.springify().damping(18)} className="absolute inset-x-0 bottom-0 max-h-[64%] rounded-t-sheet bg-paper" style={[{ paddingBottom: i.bottom + 8 }, SHADOW.float]}>
-          <ScrollView style={{ flexShrink: 1 }} contentContainerClassName="px-5 pb-2 pt-3" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            <View className="mb-3 h-1.5 w-10 self-center rounded-full bg-line" />
-            <View className="flex-row items-center gap-2">
-              <Overline>{target.label}</Overline>
-              <SourceTag source={lock.source} />
-            </View>
-            <View className="mt-2 flex-row items-end gap-8">
-              <Stat value={lock.positions.length} unit="bars" caption="Counted" />
-              {widest !== null ? <Stat value={widest} unit={`± ${lock.band} mm`} caption="Widest gap" /> : null}
-            </View>
-
-            {findings.length ? (
-              <Group className="mt-4">
-                {findings.map((f, k) => (
-                  <View key={f.def.id} className="px-4 py-3.5">
-                    {k ? <Hairline /> : null}
-                    <View className="flex-row items-center gap-3">
-                      <T w="semibold" className="flex-1 text-[16px] leading-[22px]" numberOfLines={2}>
-                        {checkName(f.def)}
-                      </T>
-                      <Chip outcome={f.outcome} small />
-                    </View>
-                    {f.value || f.limit ? (
-                      <View className="mt-1 flex-row flex-wrap items-baseline gap-x-2">
-                        {f.value ? (
-                          <Num w="semibold" className="text-[15px]">
-                            {f.value}
-                          </Num>
-                        ) : null}
-                        {f.limit ? <T className="text-[13px] text-ink-3">Limit {f.limit}</T> : null}
-                      </View>
-                    ) : null}
-                    {f.reason && f.outcome !== 'within' ? (
-                      <T className="mt-1 text-[14px] leading-[20px] text-ink-2">
-                        {f.reason}
-                        {f.action ? `. ${f.action}` : ''}
-                      </T>
-                    ) : null}
-                  </View>
-                ))}
-              </Group>
-            ) : null}
-
-            {hot !== undefined && showTape && benchOpen ? (
-              <View className="mt-3 rounded-card bg-tile p-3">
-                <T w="semibold" className="text-[15px]">
-                  Tape gap {hot + 1} (highlighted), centre to centre
-                </T>
-                <View className="mt-2 flex-row items-center gap-2">
-                  <View className="h-12 flex-1 flex-row items-center rounded-xl bg-paper px-3">
-                    <TextInput value={tape} onChangeText={(t) => setTape(t.replace(/[^0-9.]/g, '').slice(0, 5))} keyboardType="numeric" placeholder="tape mm" placeholderTextColor="#8A8A8A" className="flex-1 font-semibold text-[18px] text-ink" />
-                  </View>
-                  <Press onPress={saveBench} accessibilityRole="button" className="h-12 justify-center rounded-xl bg-ink px-4">
-                    <T w="semibold" className="text-[15px] text-white">
-                      Save row
-                    </T>
-                  </Press>
+        <ScanResultSheet onRescan={redoScan}>
+          {(redo) => (
+            <>
+              <ScrollView style={{ flexShrink: 1 }} contentContainerClassName="px-5 pb-2 pt-3" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                <View className="flex-row items-center gap-2">
+                  <Overline>{target.label}</Overline>
+                  <SourceTag source={lock.source} />
                 </View>
-                {benchSaved ? <T className="mt-2 text-[13px] text-ink-2">{benchSaved}</T> : null}
+                <View className="mt-2 flex-row items-end gap-8">
+                  <Stat value={lock.positions.length} unit="bars" caption="Counted" />
+                  {widest !== null ? <Stat value={widest} unit={`± ${lock.band} mm`} caption="Widest gap" /> : null}
+                </View>
+
+                {findings.length ? (
+                  <Group className="mt-4">
+                    {findings.map((f, k) => (
+                      <View key={f.def.id} className="px-4 py-3.5">
+                        {k ? <Hairline /> : null}
+                        <View className="flex-row items-center gap-3">
+                          <T w="semibold" className="flex-1 text-[16px] leading-[22px]" numberOfLines={2}>
+                            {checkName(f.def)}
+                          </T>
+                          <Chip outcome={f.outcome} small />
+                        </View>
+                        {f.value || f.limit ? (
+                          <View className="mt-1 flex-row flex-wrap items-baseline gap-x-2">
+                            {f.value ? (
+                              <Num w="semibold" className="text-[15px]">
+                                {f.value}
+                              </Num>
+                            ) : null}
+                            {f.limit ? <T className="text-[13px] text-ink-3">Limit {f.limit}</T> : null}
+                          </View>
+                        ) : null}
+                        {f.reason && f.outcome !== 'within' ? (
+                          <T className="mt-1 text-[14px] leading-[20px] text-ink-2">
+                            {f.reason}
+                            {f.action ? `. ${f.action}` : ''}
+                          </T>
+                        ) : null}
+                      </View>
+                    ))}
+                  </Group>
+                ) : null}
+
+                {hot !== undefined && showTape && benchOpen ? (
+                  <View className="mt-3 rounded-card bg-tile p-3">
+                    <T w="semibold" className="text-[15px]">
+                      Tape gap {hot + 1} (highlighted), centre to centre
+                    </T>
+                    <View className="mt-2 flex-row items-center gap-2">
+                      <View className="h-12 flex-1 flex-row items-center rounded-xl bg-paper px-3">
+                        <TextInput value={tape} onChangeText={(t) => setTape(t.replace(/[^0-9.]/g, '').slice(0, 5))} keyboardType="numeric" placeholder="tape mm" placeholderTextColor="#8A8A8A" className="flex-1 font-semibold text-[18px] text-ink" />
+                      </View>
+                      <Press onPress={saveBench} accessibilityRole="button" className="h-12 justify-center rounded-xl bg-ink px-4">
+                        <T w="semibold" className="text-[15px] text-white">
+                          Save row
+                        </T>
+                      </Press>
+                    </View>
+                    {benchSaved ? <T className="mt-2 text-[13px] text-ink-2">{benchSaved}</T> : null}
+                  </View>
+                ) : null}
+
+                <Details>
+                  <Group>
+                    <KV first k="Frames" v={String(lock.frames)} />
+                    {lock.engine ? <KV k="Engine" v={lock.engine} /> : null}
+                    <KV k="Photo" v={lock.image ? lock.image.hash.slice(0, 12) : 'None'} />
+                  </Group>
+                </Details>
+              </ScrollView>
+
+              <View className="border-t border-line px-5 pt-3" onTouchStart={() => Keyboard.dismiss()}>
+                {outside ? <Button label="Show fix for the mason" kind="accent" onPress={goFix} /> : null}
+                {rescan && !outside ? <Button label={`Re-scan ${target.short.toLowerCase()}`} onPress={redo} /> : null}
+                {outside || rescan ? null : <Button label={next.label} onPress={next.go} />}
+                <View className="flex-row items-center justify-center gap-6">
+                  {outside || rescan ? <TextBtn label={next.label} onPress={next.go} /> : null}
+                  {showTape && !benchOpen ? <TextBtn label="Add a tape check" onPress={() => setBenchOpen(true)} /> : null}
+                </View>
               </View>
-            ) : null}
-
-            <Details>
-              <Group>
-                <KV first k="Frames" v={String(lock.frames)} />
-                {lock.engine ? <KV k="Engine" v={lock.engine} /> : null}
-                <KV k="Photo" v={lock.image ? lock.image.hash.slice(0, 12) : 'None'} />
-              </Group>
-            </Details>
-          </ScrollView>
-
-          <View className="border-t border-line px-5 pt-3" onTouchStart={() => Keyboard.dismiss()}>
-            {outside ? <Button label="Show fix for the mason" kind="accent" onPress={goFix} /> : null}
-            {rescan && !outside ? <Button label={`Re-scan ${target.short.toLowerCase()}`} onPress={() => actions.rescan(target.id)} /> : null}
-            {outside || rescan ? null : <Button label={next.label} onPress={next.go} />}
-            <View className="flex-row items-center justify-center gap-6">
-              {outside || rescan ? <TextBtn label={next.label} onPress={next.go} /> : null}
-              {showTape && !benchOpen ? <TextBtn label="Add a tape check" onPress={() => setBenchOpen(true)} /> : null}
-            </View>
-          </View>
-        </Animated.View>
+            </>
+          )}
+        </ScanResultSheet>
       ) : null}
     </View>
   );
