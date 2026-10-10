@@ -351,7 +351,7 @@ export default function Scan() {
   const place = {
     main: 'Lay card S flat on the bars, edges along the bars.',
     dist: 'Lay card S flat on the bars, edges along the bars.',
-    stirrups: cur.member === 'column' ? 'Tape strip_300 up the column face, 0 end at the floor.' : 'Lay strip_300 along the beam, 0 end at the column face.',
+    stirrups: cur.member === 'column' ? 'Tape strip_300 up the column face, 0 end at the floor.' : 'Lay strip_300 along the beam across the rings, 0 end at the column face. Hold the phone so the strip runs up the screen.',
     ties_top: 'Tape strip_300 down the column face, 0 end at the beam bottom.',
   }[target.id];
   let manualLabel = 'Tap the bars';

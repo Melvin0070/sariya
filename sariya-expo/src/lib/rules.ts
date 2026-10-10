@@ -133,8 +133,10 @@ function beamZones(lock: Lock | undefined, L: number | null) {
   const g = gapsOf(lock.positions);
   const end: Zone = { gaps: [], index: [] };
   const mid: Zone = { gaps: [], index: [] };
+  // A gap belongs to the zone its midpoint is in (as prep/ref_pipeline run_one.beam_zones and the live colours do),
+  // so the gap from the last end-zone ring into mid-span is judged against mid-span spacing.
   g.forEach((x, i) => {
-    const z = lock.positions[i] < L ? end : mid;
+    const z = lock.positions[i] + x / 2 <= L ? end : mid;
     z.gaps.push(x);
     z.index.push(i);
   });
@@ -199,7 +201,7 @@ export function liveSpec(r: Inspection, t: TargetId): { count: number | null; sp
   if (t === 'main') return { count: val('main_count'), spacingAt: () => val('main_spacing') };
   if (t === 'dist') return { count: val('dist_count'), spacingAt: () => val('dist_spacing') };
   const L = val('end_length');
-  return { count: null, spacingAt: (pos) => (L == null ? null : pos < L ? val('end_spacing') : val('mid_spacing')) };
+  return { count: null, spacingAt: (pos) => (L == null ? null : pos <= L ? val('end_spacing') : val('mid_spacing')) };
 }
 
 export function gapTone(gap: number, spec: number | null): LiveTone | null {

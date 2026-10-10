@@ -88,8 +88,8 @@ export type Spec = {
 };
 
 export const KIND_LABEL: Record<MemberKind, string> = { slab: 'Slab', beam: 'Beam', column: 'Column' };
-// Shown but not selectable until the strip and zone checks are validated on the props.
-export const COMING_SOON: MemberKind[] = ['beam'];
+// Shown but not selectable until validated on the props. Beam: half-scale prop of 8 mm x 200 mm pieces (BUILD-PLAN §7).
+export const COMING_SOON: MemberKind[] = [];
 export const isSoon = (k: MemberKind) => COMING_SOON.includes(k);
 export const KIND_HINT: Record<MemberKind, string> = { slab: 'Count and spacing both ways, cover', beam: 'Ring spacing by zone, cover', column: 'Tie spacing at both ends and the middle, cover' };
 

@@ -1,12 +1,25 @@
 # Sariya session state
 
+## Session note (11 Oct, ~00:30): beam live end to end, 8 mm x 200 mm prop
+- **Beam un-gated:** `COMING_SOON = []`.
+  - The operator and engineer member pickers now allow beam, and a received beam spec is no longer refused.
+  - The rest of the beam path was already built: preset (8 mm rings, 50 c/c over the first 150 mm, 75 mid, cover 25), strip_300 scan, manual mark, readings (cover tape, weigh test, hooks when asked), the "add N" fix in three languages, sign, pack and review.
+- **Bug fixed (`rules.ts` beamZones):** a gap went to the zone of the bar it starts at, so the planned prop (25/75/125/200/275) put its 75 mm gap from 125 to 200 in the end zone and read "outside". Gaps are now zoned by midpoint, which matches `prep/ref_pipeline/run_one.beam_zones` and the live colours.
+- **Tests:** `bun test src/lib/zones.test.ts` covers the prop as built (both zones within), F3 (75 slid to 180: end gap 100, outside, add 1) and the column cases.
+- **Prop for what we have (8 mm x 200 mm rods only):** recorded in BUILD-PLAN §7.
+  - Five rods sit parallel at 25/75/125/200/275 mm from the strip's 0 end, on plain light card, with strip_300 laid across their middles.
+  - Hold the phone so the strip runs up the screen, about 30-40 cm away, torch on.
+  - Faults: F3 (move 75 to 180, expect "add 1"); remove 275 (mid gap, expect add 1 in gap 4).
+  - A spare rod is the weigh test (about 79 g).
+- **Open:** not yet scanned on the device (the iQOO was off adb). The EVAL-CARDS and demo-script "beam is coming soon" lines are now stale: put F3 back only after a real scan passes.
+
 ## Session note (11 Oct, 00:10): column member (`bfa9f5a`)
 - **Done:** Column is a third member type, live (not "soon"). It reuses the beam strip path.
   - **Fields:** tie diameter, tie spacing in lo, lo length, tie spacing in the middle, cover.
   - **Scans:** two, both with strip_300 on the column face. The bottom scan has its 0 end at the floor; the top scan (`ties_top`) has its 0 end at the beam bottom.
   - **Checks:** bottom end, top end, middle (taken from whichever scan saw gaps past lo), cover, tie size, and hooks if the drawing asks for 135°.
   - **Other:** "ties" wording in English fixes (Hindi and Kannada keep रिंग / ರಿಂಗ್); the turn-phone hint now shows for slab only; the home screen has a wide Column tile; the beam illustration stands in for a column one.
-  - **Verified:** tsc and lint pass, and `bun test src/lib/column.test.ts` passes. Run each test file alone, because their store mocks clash.
+  - **Verified:** tsc and lint pass, and the column tests (now in `src/lib/zones.test.ts`) pass. Run each test file alone, because their store mocks clash.
 - **Open:**
   - Not yet installed or tested on the iQOO (the phone dropped off adb).
   - No column prop has been scanned yet, so the side view of the ties (the far face showing through the cage) is untested.
