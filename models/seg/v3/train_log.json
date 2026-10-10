@@ -1,0 +1,168 @@
+{
+ "start": "2026-10-10T03:01:17+00:00",
+ "end": "2026-10-10T03:49:19+00:00",
+ "git": "caea715d8cf5dbdfa660b4bb20eacc9489c8cac7",
+ "dataset_sha256": "3aeb97898bcec473a664189d854111be94e0e394ca73d374856d4345ac9d7f7c",
+ "dataset": {
+  "train": 3122,
+  "val": 796,
+  "test": 933
+ },
+ "args": {
+  "data": "/kaggle/temp/data",
+  "out": "/kaggle/working",
+  "epochs": 12,
+  "batch": 8,
+  "lr": 0.0001,
+  "workers": 4,
+  "resume": null,
+  "no_pretrained": false,
+  "init": "/kaggle/input/notebooks/sabarinarayanakg/sariya-unet-train-r2/unet_mbv3_1152.pt",
+  "seed": 0
+ },
+ "encoder": "tu-mobilenetv3_large_100",
+ "pretrained": "imagenet",
+ "device": "cuda",
+ "torch": "2.11.0+cu128",
+ "python": "3.13.15",
+ "epochs": [
+  {
+   "epoch": 0,
+   "loss": 0.35,
+   "iou": 0.7623,
+   "f1": 0.8652,
+   "sec": 258.9,
+   "time": "2026-10-10T03:06:21+00:00"
+  },
+  {
+   "epoch": 1,
+   "loss": 0.2467,
+   "iou": 0.7866,
+   "f1": 0.8805,
+   "sec": 235.1,
+   "time": "2026-10-10T03:10:17+00:00"
+  },
+  {
+   "epoch": 2,
+   "loss": 0.2252,
+   "iou": 0.8061,
+   "f1": 0.8926,
+   "sec": 234.5,
+   "time": "2026-10-10T03:14:11+00:00"
+  },
+  {
+   "epoch": 3,
+   "loss": 0.2197,
+   "iou": 0.8051,
+   "f1": 0.8921,
+   "sec": 235.2,
+   "time": "2026-10-10T03:18:07+00:00"
+  },
+  {
+   "epoch": 4,
+   "loss": 0.2047,
+   "iou": 0.8155,
+   "f1": 0.8984,
+   "sec": 234.6,
+   "time": "2026-10-10T03:22:02+00:00"
+  },
+  {
+   "epoch": 5,
+   "loss": 0.2057,
+   "iou": 0.8202,
+   "f1": 0.9012,
+   "sec": 234.1,
+   "time": "2026-10-10T03:25:56+00:00"
+  },
+  {
+   "epoch": 6,
+   "loss": 0.199,
+   "iou": 0.8154,
+   "f1": 0.8983,
+   "sec": 233.9,
+   "time": "2026-10-10T03:29:50+00:00"
+  },
+  {
+   "epoch": 7,
+   "loss": 0.1942,
+   "iou": 0.8179,
+   "f1": 0.8998,
+   "sec": 233.1,
+   "time": "2026-10-10T03:33:43+00:00"
+  },
+  {
+   "epoch": 8,
+   "loss": 0.1915,
+   "iou": 0.8234,
+   "f1": 0.9032,
+   "sec": 234.5,
+   "time": "2026-10-10T03:37:38+00:00"
+  },
+  {
+   "epoch": 9,
+   "loss": 0.1897,
+   "iou": 0.8226,
+   "f1": 0.9027,
+   "sec": 233.5,
+   "time": "2026-10-10T03:41:32+00:00"
+  },
+  {
+   "epoch": 10,
+   "loss": 0.1868,
+   "iou": 0.8267,
+   "f1": 0.9051,
+   "sec": 233.2,
+   "time": "2026-10-10T03:45:25+00:00"
+  },
+  {
+   "epoch": 11,
+   "loss": 0.1872,
+   "iou": 0.8244,
+   "f1": 0.9038,
+   "sec": 233.3,
+   "time": "2026-10-10T03:49:19+00:00"
+  }
+ ],
+ "init": "/kaggle/input/notebooks/sabarinarayanakg/sariya-unet-train-r2/unet_mbv3_1152.pt",
+ "best": {
+  "epoch": 10,
+  "iou": 0.8267,
+  "f1": 0.9051
+ },
+ "test": {
+  "iou": 0.8185,
+  "f1": 0.9002
+ },
+ "round2_compare": {
+  "before": {
+   "roi_test": {
+    "iou": 0.8109,
+    "f1": 0.8955
+   },
+   "false_alarm_test": {
+    "tiles": 146,
+    "bar_pixel_pct": 0.002,
+    "tiles_flagged_pct": 0.0
+   },
+   "stirrup_real_recall": {
+    "tiles": 233,
+    "recall": 0.8727
+   }
+  },
+  "after": {
+   "roi_test": {
+    "iou": 0.8505,
+    "f1": 0.9192
+   },
+   "false_alarm_test": {
+    "tiles": 146,
+    "bar_pixel_pct": 0.001,
+    "tiles_flagged_pct": 0.0
+   },
+   "stirrup_real_recall": {
+    "tiles": 233,
+    "recall": 0.9097
+   }
+  }
+ }
+}
