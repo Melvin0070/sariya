@@ -35,8 +35,12 @@ REAL_DIR = f"{TMP}/realtiles"
 def _stirrup(n_syn: int) -> None:
     """Round 3 positives (needs internet): n_syn synthetic stirrup scenes (varied colour, light, background,
     distractors; straight segments labelled, bends not) + the 233 real stirrup photos as a val/test split."""
+    pre = _root("postiles/dataset.json")          # sariya-stirrup-tiles: the same sample, tiled on the laptop
+    if pre:
+        os.symlink(f"{pre}/postiles", f"{TMP}/postiles"); os.symlink(f"{pre}/realtiles", REAL_DIR)
+        return
     import random
-    from huggingface_hub import hf_hub_download, snapshot_download
+    from huggingface_hub import hf_hub_download, snapshot_download   # anonymous HF: ~1 file/s, ~45 min for 2,733 files
     d = f"{TMP}/stirrup"
     ann = json.load(open(hf_hub_download(STIRRUP, "train_syn/annotations/instances_val2017.json", repo_type="dataset", local_dir=d)))
     ims = random.Random(0).sample(ann["images"], n_syn)

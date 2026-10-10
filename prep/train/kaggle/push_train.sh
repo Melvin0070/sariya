@@ -27,6 +27,8 @@ fi
 # Round 3: R_STIRRUP=<n> pulls n synthetic stirrup scenes + 233 real photos from Hugging Face (internet on);
 # R_WIRES / R_COCO / R_INDOOR set the negative counts (defaults 400 / 400 / 300).
 INTERNET=false; [ -n "${R_STIRRUP:-}" ] && INTERNET=true
+# STIRRUP_DATASET=sariya-stirrup-tiles uses the pre-tiled upload instead (no Hugging Face download, no internet).
+if [ -n "${STIRRUP_DATASET:-}" ]; then NEG_SOURCES="$NEG_SOURCES, \"$USER_SLUG/$STIRRUP_DATASET\""; INTERNET=false; fi
 R_ENV="R_WIRES=${R_WIRES:-400} R_COCO=${R_COCO:-400} R_INDOOR=${R_INDOOR:-300} R_STIRRUP=${R_STIRRUP:-0}"
 INIT_ARGS=""; KERNEL_SOURCES="[]"
 if [ -n "${INIT_FROM:-}" ]; then
