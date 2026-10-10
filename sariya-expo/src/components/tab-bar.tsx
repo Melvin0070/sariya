@@ -1,6 +1,8 @@
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
-import { BarChart3, ClipboardCheck, ClipboardList, QrCode, ScanLine, Smartphone, type LucideIcon } from 'lucide-react-native';
+import { ClipboardCheck, ClipboardList, QrCode, ScanLine, Settings, type LucideIcon } from 'lucide-react-native';
+import { useEffect } from 'react';
 import { Pressable, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { T, tap } from './ui';
@@ -14,46 +16,57 @@ const HOME: Record<Role, Item> = {
   verifier: { label: 'Verify', icon: QrCode },
 };
 
-const TABS: Record<Role, string[]> = {
-  operator: ['index', 'records', 'numbers', 'device'],
-  engineer: ['index', 'records', 'numbers', 'device'],
-  verifier: ['index', 'device'],
-};
-
 const OTHER: Record<string, Item> = {
   records: { label: 'Records', icon: ClipboardList },
-  numbers: { label: 'Numbers', icon: BarChart3 },
-  device: { label: 'Device', icon: Smartphone },
+  settings: { label: 'Settings', icon: Settings },
 };
 
-// Floating pill tab bar, as in the Uber app. Tabs depend on what this phone does.
-export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
+// A verifier only checks QR codes; it keeps no records.
+const HIDDEN: Record<Role, string[]> = { operator: [], engineer: [], verifier: ['records'] };
+
+const TAB_W = 84;
+const GAP = 4;
+const SPRING = { damping: 20, stiffness: 220, mass: 0.8 };
+
+// Floating pill tab bar, as in the Uber app.
+export function TabBar({ state, navigation }: BottomTabBarProps) {
   const i = useSafeAreaInsets();
   const role = useStore((s) => s.role) ?? 'operator';
   const unenrolled = useStore((s) => s.trusted.length === 0);
+  const visible = state.routes.filter((r) => !HIDDEN[role].includes(r.name) && (r.name === 'index' || OTHER[r.name]));
+  const at = Math.max(0, visible.findIndex((r) => r.key === state.routes[state.index].key));
+  // The grey pill slides under the tabs instead of jumping between them.
+  const x = useSharedValue(at * (TAB_W + GAP));
+  useEffect(() => {
+    x.value = withSpring(at * (TAB_W + GAP), SPRING);
+  }, [at, x]);
+  const pill = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
   return (
     <View pointerEvents="box-none" className="absolute inset-x-0 items-center" style={{ bottom: Math.max(i.bottom, 12) + 2 }}>
       <View
         className="flex-row gap-1 rounded-full border border-line bg-paper p-1"
         style={{ shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 10 }}
       >
-        {state.routes.map((r, idx) => {
-          if (!TABS[role].includes(r.name)) return null;
+        <Animated.View className="absolute left-1 top-1 h-[54px] rounded-full bg-pill" style={[{ width: TAB_W }, pill]} />
+        {visible.map((r) => {
           const item = r.name === 'index' ? HOME[role] : OTHER[r.name];
-          const on = state.index === idx;
+          const on = r.key === state.routes[state.index].key;
           const Icon = item.icon;
           return (
             <Pressable
               key={r.key}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: on }}
               onPress={() => {
                 tap();
                 if (!on) navigation.navigate(r.name);
               }}
-              className={`h-[54px] w-[70px] items-center justify-center rounded-full ${on ? 'bg-pill' : ''}`}
+              className="h-[54px] items-center justify-center rounded-full"
+              style={{ width: TAB_W }}
             >
               <View>
                 <Icon size={20} color={on ? '#000' : '#5E5E5E'} strokeWidth={on ? 2.4 : 1.8} />
-                {r.name === 'device' && unenrolled ? <View className="absolute -right-1.5 -top-1 h-2.5 w-2.5 rounded-full border-2 border-paper bg-accent" /> : null}
+                {r.name === 'settings' && unenrolled ? <View className="absolute -right-1.5 -top-1 h-2.5 w-2.5 rounded-full border-2 border-paper bg-accent" /> : null}
               </View>
               <T w={on ? 'bold' : 'regular'} className={`mt-0.5 text-[11px] ${on ? '' : 'text-ink-2'}`}>
                 {item.label}

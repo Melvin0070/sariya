@@ -26,16 +26,21 @@ export function T({ w = 'regular', className = '', ...p }: TextProps & { w?: Wei
 
 export function Title({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <T w="bold" className={`text-[40px] leading-[46px] tracking-[-1.2px] ${className}`}>
+    <T w="bold" className={`text-[38px] leading-[44px] tracking-[-1.2px] ${className}`}>
       {children}
     </T>
   );
 }
 
+// Grey line under a title: one sentence at most.
+export function Sub({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <T className={`mt-1.5 text-[16px] leading-[23px] text-ink-2 ${className}`}>{children}</T>;
+}
+
 export function H2({ children, right, className = '' }: { children: ReactNode; right?: ReactNode; className?: string }) {
   return (
     <View className={`flex-row items-center justify-between ${className}`}>
-      <T w="bold" className="text-[24px] tracking-[-0.5px]">
+      <T w="bold" className="text-[22px] tracking-[-0.5px]">
         {children}
       </T>
       {right}
@@ -62,7 +67,7 @@ export function Screen({
     <KeyboardAvoidingView behavior="padding" className="flex-1 bg-paper">
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={{ paddingTop: i.top + 20, paddingBottom: tabs ? 110 : footer ? 24 : 40 }}
+        contentContainerStyle={{ paddingTop: i.top + 12, paddingBottom: tabs ? 110 : footer ? 24 : 40 }}
         contentContainerClassName="px-5"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -70,7 +75,7 @@ export function Screen({
         {children}
       </ScrollView>
       {footer ? (
-        <View className="border-t border-line bg-paper px-5 pt-3" style={{ paddingBottom: i.bottom + 12 }}>
+        <View className="bg-paper px-5 pt-3" style={{ paddingBottom: i.bottom + 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: -2 }, elevation: 8 }}>
           {footer}
         </View>
       ) : null}
@@ -78,108 +83,81 @@ export function Screen({
   );
 }
 
-// Back arrow plus the persistent inspection name.
-export function TopBar({ name, sub, right, onBack }: { name?: string; sub?: string; right?: ReactNode; onBack?: () => void }) {
+export function IconBtn({ icon: Icon, onPress, label }: { icon: LucideIcon; onPress: () => void; label: string }) {
   return (
-    <View className="mb-5 flex-row items-center gap-3">
-      <Pressable
-        onPress={() => {
-          tap();
-          if (onBack) onBack();
-          else router.back();
-        }}
-        className="h-12 w-12 items-center justify-center rounded-full bg-pill active:opacity-70"
-        hitSlop={8}
-      >
-        <ArrowLeft size={22} color="#000" />
-      </Pressable>
-      <View className="flex-1">
-        {name ? (
-          <T w="semibold" className="text-[16px]" numberOfLines={1}>
-            {name}
-          </T>
-        ) : null}
-        {sub ? (
-          <T className="text-[13px] text-ink-2" numberOfLines={1}>
-            {sub}
-          </T>
-        ) : null}
+    <Pressable
+      accessibilityLabel={label}
+      onPress={() => {
+        tap();
+        onPress();
+      }}
+      hitSlop={8}
+      className="h-11 w-11 items-center justify-center rounded-full bg-pill active:opacity-70"
+    >
+      <Icon size={20} color="#000" />
+    </Pressable>
+  );
+}
+
+// Back arrow, then the record this screen belongs to as a small line above the title.
+export function TopBar({ name, sub, right, onBack }: { name?: string; sub?: string; right?: ReactNode; onBack?: () => void }) {
+  const context = [name, sub].filter(Boolean).join(' · ');
+  return (
+    <View className="mb-4">
+      <View className="h-11 flex-row items-center justify-between">
+        <IconBtn icon={ArrowLeft} label="Back" onPress={() => (onBack ? onBack() : router.back())} />
+        {right}
       </View>
-      {right}
+      {context ? (
+        <T w="medium" className="mt-5 text-[14px] text-ink-2" numberOfLines={1}>
+          {context}
+        </T>
+      ) : null}
     </View>
   );
 }
 
 // ---- surfaces -----------------------------------------------------------------
 
-export function Tile({
-  children,
-  onPress,
-  className = '',
-  badge,
-}: {
-  children: ReactNode;
-  onPress?: () => void;
-  className?: string;
-  badge?: string;
-}) {
-  const body = (
+// A selectable card: grey, black outline when picked.
+export function Tile({ children, onPress, className = '', on }: { children: ReactNode; onPress?: () => void; className?: string; on?: boolean }) {
+  return (
     <Pressable
       disabled={!onPress}
       onPress={() => {
         tap();
         onPress?.();
       }}
-      className={`rounded-card bg-tile active:opacity-80 ${className}`}
+      className={`rounded-card border-2 bg-tile active:opacity-80 ${on ? 'border-ink' : 'border-tile'} ${className}`}
     >
       {children}
     </Pressable>
   );
-  if (!badge) return body;
-  return (
-    <View className="pt-3">
-      {body}
-      <View className="absolute left-0 right-0 top-0 items-center" pointerEvents="none">
-        <Badge>{badge}</Badge>
-      </View>
-    </View>
-  );
 }
 
 // The red promo tag from Uber, recoloured to the Sariya accent.
-export function Badge({ children, tone = 'accent' }: { children: ReactNode; tone?: 'accent' | 'fail' }) {
+export function Badge({ children }: { children: ReactNode }) {
   return (
-    <View className={`flex-row items-center gap-1 rounded-md px-2 py-[3px] ${tone === 'fail' ? 'bg-fail' : 'bg-accent'}`}>
-      <Tag size={13} color="#fff" fill="#fff" />
-      <T w="semibold" className="text-[14px] text-white">
+    <View className="flex-row items-center gap-1 self-start rounded-md bg-accent px-2 py-[3px]">
+      <Tag size={12} color="#fff" fill="#fff" />
+      <T w="semibold" className="text-[13px] text-white">
         {children}
       </T>
     </View>
   );
 }
 
-export function Outline({ children, className = '' }: { children: ReactNode; className?: string }) {
+// A card of rows. Children are Row, KV or anything with px-4.
+export function Group({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <View className={`overflow-hidden rounded-card border border-line bg-paper ${className}`}>{children}</View>;
 }
 
-// ---- buttons ------------------------------------------------------------------
-
-export function Pill({ icon: Icon, label, onPress, dark = false }: { icon?: LucideIcon; label: string; onPress?: () => void; dark?: boolean }) {
-  return (
-    <Pressable
-      onPress={() => {
-        tap();
-        onPress?.();
-      }}
-      className={`h-12 flex-row items-center gap-2 self-start rounded-full px-5 active:opacity-70 ${dark ? 'bg-ink' : 'bg-pill'}`}
-    >
-      {Icon ? <Icon size={20} color={dark ? '#fff' : '#000'} /> : null}
-      <T w="medium" className={`text-[16px] ${dark ? 'text-white' : ''}`}>
-        {label}
-      </T>
-    </Pressable>
-  );
+// Hairline between rows, starting where the text starts.
+export function Hairline({ inset = 16 }: { inset?: number }) {
+  return <View className="absolute right-0 top-0 h-px bg-line" style={{ left: inset }} />;
 }
+
+// ---- buttons ------------------------------------------------------------------
 
 export function Button({
   label,
@@ -213,6 +191,24 @@ export function Button({
   );
 }
 
+// The quiet second action under a primary button.
+export function TextBtn({ label, onPress, tone = 'ink', disabled }: { label: string; onPress: () => void; tone?: 'ink' | 'fail'; disabled?: boolean }) {
+  return (
+    <Pressable
+      disabled={disabled}
+      onPress={() => {
+        tap();
+        onPress();
+      }}
+      className={`h-12 items-center justify-center active:opacity-60 ${disabled ? 'opacity-40' : ''}`}
+    >
+      <T w="semibold" className={`text-[16px] ${tone === 'fail' ? 'text-fail' : ''}`}>
+        {label}
+      </T>
+    </Pressable>
+  );
+}
+
 // ---- results --------------------------------------------------------------------
 
 // Five answers per check, plus "not checked yet" and measure-only. Never safe, PASS, certified or permit.
@@ -221,17 +217,17 @@ export const OUTCOME: Record<Outcome, { label: string; bg: string; fg: string; c
   within: { label: 'Within limits', bg: 'bg-pass-soft', fg: 'text-pass', color: '#05944F', icon: Check },
   outside: { label: 'Outside limits', bg: 'bg-fail-soft', fg: 'text-fail', color: '#E11900', icon: X },
   rescan: { label: 'Re-scan', bg: 'bg-warn-soft', fg: 'text-warn', color: '#C77700', icon: RotateCw },
-  tape: { label: 'Needs a tape reading', bg: 'bg-warn-soft', fg: 'text-warn', color: '#C77700', icon: Ruler },
+  tape: { label: 'Needs a reading', bg: 'bg-warn-soft', fg: 'text-warn', color: '#C77700', icon: Ruler },
   not_seen: { label: 'Not seen', bg: 'bg-pill', fg: 'text-ink-2', color: '#5E5E5E', icon: EyeOff },
-  pending: { label: 'Not checked yet', bg: 'bg-pill', fg: 'text-ink-2', color: '#5E5E5E', icon: Circle },
-  measured: { label: 'Measured · no drawing', bg: 'bg-pill', fg: 'text-ink', color: '#000000', icon: Minus },
+  pending: { label: 'To do', bg: 'bg-pill', fg: 'text-ink-2', color: '#5E5E5E', icon: Circle },
+  measured: { label: 'Measured', bg: 'bg-pill', fg: 'text-ink', color: '#000000', icon: Minus },
 };
 
 export function Chip({ outcome, small, label }: { outcome: Outcome; small?: boolean; label?: string }) {
   const o = OUTCOME[outcome];
   const Icon = o.icon;
   return (
-    <View className={`flex-row items-center gap-1.5 self-start rounded-full ${o.bg} ${small ? 'px-2.5 py-1' : 'px-3 py-1.5'}`}>
+    <View className={`flex-row items-center gap-1 self-start rounded-full ${o.bg} ${small ? 'px-2 py-[3px]' : 'px-3 py-1.5'}`}>
       <Icon size={small ? 12 : 14} color={o.color} strokeWidth={3} />
       <T w="semibold" className={`${small ? 'text-[12px]' : 'text-[14px]'} ${o.fg}`}>
         {label ?? o.label}
@@ -243,7 +239,7 @@ export function Chip({ outcome, small, label }: { outcome: Outcome; small?: bool
 const SOURCE: Record<Source, { label: string; warn?: boolean }> = {
   simulated: { label: 'SIMULATED', warn: true },
   auto: { label: 'AUTO' },
-  manual: { label: 'MARKED BY HAND' },
+  manual: { label: 'BY HAND' },
   tape: { label: 'TAPE' },
   scale: { label: 'SCALE' },
   template: { label: 'TEMPLATE' },
@@ -253,8 +249,8 @@ const SOURCE: Record<Source, { label: string; warn?: boolean }> = {
 export function SourceTag({ source }: { source: Source }) {
   const s = SOURCE[source];
   return (
-    <View className={`self-start rounded-md px-1.5 py-0.5 ${s.warn ? 'bg-warn-soft' : 'bg-pill'}`}>
-      <T w="bold" className={`text-[11px] tracking-wider ${s.warn ? 'text-warn' : 'text-ink-2'}`}>
+    <View className={`self-start rounded px-1.5 py-[1px] ${s.warn ? 'bg-warn-soft' : 'bg-pill'}`}>
+      <T w="bold" className={`text-[10px] tracking-wider ${s.warn ? 'text-warn' : 'text-ink-2'}`}>
         {s.label}
       </T>
     </View>
@@ -271,22 +267,20 @@ const TONE = {
 export function Notice({ tone = 'info', title, children, className = '' }: { tone?: keyof typeof TONE; title?: string; children?: ReactNode; className?: string }) {
   const t = TONE[tone];
   return (
-    <View className={`rounded-card p-4 ${t.bg} ${className}`}>
+    <View className={`rounded-card px-4 py-3.5 ${t.bg} ${className}`}>
       {title ? (
-        <T w="semibold" className="text-[16px]" style={{ color: t.color }}>
+        <T w="semibold" className="text-[15px] leading-[21px]" style={{ color: t.color }}>
           {title}
         </T>
       ) : null}
       {children ? (
-        <T className={`text-[15px] leading-[22px] ${title ? 'mt-1' : ''}`} style={{ color: title ? '#5E5E5E' : t.color }}>
-          {children}
-        </T>
+        <T className={`text-[14px] leading-[20px] text-ink-2 ${title ? 'mt-0.5' : ''}`}>{children}</T>
       ) : null}
     </View>
   );
 }
 
-// A tappable list row in the Uber "recent places" style.
+// A tappable list row in the Uber "recent places" style. Use inside Group.
 export function Row({ icon: Icon, title, sub, onPress, right, first }: { icon?: LucideIcon; title: string; sub?: string; onPress?: () => void; right?: ReactNode; first?: boolean }) {
   return (
     <Pressable
@@ -295,8 +289,9 @@ export function Row({ icon: Icon, title, sub, onPress, right, first }: { icon?: 
         tap();
         onPress?.();
       }}
-      className={`flex-row items-center gap-4 px-4 py-4 active:bg-tile ${first ? '' : 'border-t border-line'}`}
+      className="flex-row items-center gap-4 px-4 py-4 active:bg-tile"
     >
+      {first ? null : <Hairline inset={Icon ? 80 : 16} />}
       {Icon ? (
         <View className="h-12 w-12 items-center justify-center rounded-xl bg-tile">
           <Icon size={22} color="#000" strokeWidth={1.8} />
@@ -307,7 +302,7 @@ export function Row({ icon: Icon, title, sub, onPress, right, first }: { icon?: 
           {title}
         </T>
         {sub ? (
-          <T className="mt-0.5 text-[14px] text-ink-2" numberOfLines={2}>
+          <T className="mt-0.5 text-[14px] leading-[19px] text-ink-2" numberOfLines={2}>
             {sub}
           </T>
         ) : null}
@@ -317,6 +312,15 @@ export function Row({ icon: Icon, title, sub, onPress, right, first }: { icon?: 
   );
 }
 
-export function Divider({ inset = 0 }: { inset?: number }) {
-  return <View className="h-px bg-line" style={{ marginLeft: inset }} />;
+// Label on the left, value on the right. Use inside Group.
+export function KV({ k, v, first }: { k: string; v: string; first?: boolean }) {
+  return (
+    <View className="flex-row items-start gap-4 px-4 py-3.5">
+      {first ? null : <Hairline />}
+      <T className="flex-1 text-[15px] text-ink-2">{k}</T>
+      <T w="medium" className="max-w-[62%] text-right text-[15px]">
+        {v}
+      </T>
+    </View>
+  );
 }

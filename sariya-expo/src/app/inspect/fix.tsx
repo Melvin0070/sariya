@@ -1,10 +1,10 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
-import { Check as CheckIcon, Play, RotateCcw, Square, VolumeX } from 'lucide-react-native';
+import { Check as CheckIcon, Play, Square } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import Svg, { Line, Rect } from 'react-native-svg';
 
-import { Button, Chip, H2, Notice, Screen, T, Title, TopBar, tap } from '@/components/ui';
+import { Button, Chip, H2, Notice, Screen, T, TextBtn, Title, TopBar, tap } from '@/components/ui';
 import { speak, stopSpeaking, voices, type Voices } from '@/lib/device';
 import { LANG_LABEL, say, spoken } from '@/lib/fix';
 import { evaluate } from '@/lib/rules';
@@ -87,15 +87,17 @@ export default function Fix() {
   return (
     <Screen
       footer={
-        <View className="gap-2">
-          <Button label="Mason fixed it · check again" icon={CheckIcon} onPress={done} />
-          <Button label="Not fixed yet" kind="secondary" onPress={() => (stopSpeaking(), router.back())} />
-        </View>
+        <>
+          <Button label="Fixed · check again" icon={CheckIcon} onPress={done} />
+          <TextBtn label="Not fixed yet" onPress={() => (stopSpeaking(), router.back())} />
+        </>
       }
     >
       <TopBar name={cur.name} sub={f.def.zone ?? f.def.label} />
-      <Chip outcome="outside" />
-      <Title className="mt-3">Fix for the mason</Title>
+      <View className="flex-row items-center gap-3">
+        <Title className="flex-1">Fix for the mason</Title>
+        <Chip outcome="outside" small />
+      </View>
 
       <View className="mt-5 flex-row rounded-full bg-pill p-1">
         {(['hi', 'kn', 'en'] as Lang[]).map((l) => (
@@ -118,7 +120,7 @@ export default function Fix() {
       </View>
 
       {/* subtitles are the primary channel; audio is for the mason */}
-      <View className="mt-4 rounded-card bg-ink p-6">
+      <View className="mt-4 rounded-card bg-ink p-5">
         <T w="medium" className="text-[15px] text-white/60">
           {s.head}
         </T>
@@ -140,13 +142,8 @@ export default function Fix() {
           Show the subtitles to the mason. Add the voice in Settings › Text-to-speech to hear it offline.
         </Notice>
       ) : (
-        <View className="mt-4 flex-row gap-2">
-          <View className="flex-1">
-            <Button label={speaking ? 'Stop' : 'Play'} icon={speaking ? Square : Play} kind="secondary" disabled={!v} onPress={() => (speaking ? (stopSpeaking(), setSpeaking(false)) : play())} />
-          </View>
-          <View className="flex-1">
-            <Button label="Repeat" icon={v ? RotateCcw : VolumeX} kind="secondary" disabled={!v} onPress={play} />
-          </View>
+        <View className="mt-3">
+          <Button label={speaking ? 'Stop' : 'Play again'} icon={speaking ? Square : Play} kind="secondary" disabled={!v} onPress={() => (speaking ? (stopSpeaking(), setSpeaking(false)) : play())} />
         </View>
       )}
 
@@ -166,9 +163,7 @@ export default function Fix() {
           </View>
         </>
       ) : null}
-      <T className="mt-4 text-[13px] leading-[19px] text-ink-3">
-        From the record: {f.value}. The sentence uses these numbers only.
-      </T>
+      <T className="mt-4 text-[13px] leading-[19px] text-ink-3">From the record: {f.value}</T>
     </Screen>
   );
 }

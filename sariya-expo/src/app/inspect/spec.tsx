@@ -1,10 +1,9 @@
 import { Redirect, router } from 'expo-router';
-import { Delete, FileText, Pencil, Ruler, ScanLine } from 'lucide-react-native';
+import { ChevronRight, Delete, FileText, Grid3x3, Ruler, ScanLine } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, Switch, View } from 'react-native';
 
-import { MemberArt } from '@/components/art';
-import { Badge, Button, Notice, Outline, Screen, T, Tile, Title, TopBar, tap } from '@/components/ui';
+import { Badge, Button, Group, Hairline, Notice, Row, Screen, Sub, T, TextBtn, Title, TopBar, tap } from '@/components/ui';
 import { FIELDS, KIND_LABEL, PRESET, validate, type FieldId } from '@/lib/spec';
 import { actions, useDraft } from '@/lib/store';
 
@@ -36,25 +35,23 @@ export default function Spec() {
       <Screen>
         {head}
         <Title>Drawing values</Title>
-        <T className="mt-2 text-[17px] text-ink-2">Sariya checks whatever the drawing says.</T>
-        <View className="mt-6 gap-3">
-          <Tile
+        <Sub>Every scan is checked against these.</Sub>
+        <Group className="mt-5">
+          <Row
+            first
+            icon={FileText}
+            title="Enter from the drawing"
+            sub="One value at a time"
             onPress={() => {
               setPhase('field');
               setStep(0);
             }}
-            className="flex-row items-center gap-4 px-5 py-5"
-          >
-            <FileText size={28} color="#000" strokeWidth={1.8} />
-            <View className="flex-1">
-              <T w="semibold" className="text-[20px]">
-                Enter from the drawing
-              </T>
-              <T className="mt-1 text-[15px] text-ink-2">Type each value, one at a time</T>
-            </View>
-          </Tile>
-          <Tile
-            badge="DEMO PROP"
+          />
+          <Row
+            icon={Grid3x3}
+            title="Stage prop values"
+            sub={cur.member === 'slab' ? '8 mm bars, 5 each way at 50 c/c' : '8 mm rings, 50 end zone, 75 mid'}
+            right={<Badge>DEMO</Badge>}
             onPress={() => {
               const v: Vals = {};
               for (const f of fields) v[f.id] = String(PRESET[cur.member][f.id]);
@@ -63,34 +60,19 @@ export default function Spec() {
               setNoDrawing(false);
               setPhase('confirm');
             }}
-            className="flex-row items-center gap-4 px-5 py-5"
-          >
-            <MemberArt kind={cur.member} size={44} />
-            <View className="flex-1">
-              <T w="semibold" className="text-[20px]">
-                Half-scale stage prop
-              </T>
-              <T className="mt-1 text-[15px] text-ink-2">{cur.member === 'slab' ? '8 mm bars, 5 each way at 50 c/c' : '8 mm rings, 50 over the first 150, 75 mid'}. Editable.</T>
-            </View>
-          </Tile>
-          <Tile
+          />
+          <Row
+            icon={Ruler}
+            title="No drawing"
+            sub="Measure only: values and bands, no verdict"
             onPress={() => {
               setVals({});
               setNoDrawing(true);
               setPreset(false);
               setPhase('confirm');
             }}
-            className="flex-row items-center gap-4 px-5 py-5"
-          >
-            <Ruler size={28} color="#000" strokeWidth={1.8} />
-            <View className="flex-1">
-              <T w="semibold" className="text-[20px]">
-                No drawing: measure only
-              </T>
-              <T className="mt-1 text-[15px] text-ink-2">Values and bands, no within or outside</T>
-            </View>
-          </Tile>
-        </View>
+          />
+        </Group>
       </Screen>
     );
   }
@@ -128,13 +110,13 @@ export default function Spec() {
             <View key={x.id} className={`h-1.5 flex-1 rounded-full ${i <= step ? 'bg-ink' : 'bg-line'}`} />
           ))}
         </View>
-        <T w="medium" className="mt-5 text-[15px] text-ink-2">
-          Value {step + 1} of {fields.length} · from the drawing
+        <T w="medium" className="mt-5 text-[14px] text-ink-2">
+          {step + 1} of {fields.length}
         </T>
         <Title className="mt-1">{f.label}</Title>
-        <T className="mt-1 text-[17px] text-ink-2">{f.hint}</T>
+        <Sub>{f.hint}</Sub>
 
-        <View className="mt-6 flex-row items-end justify-center rounded-card bg-tile py-6">
+        <View className="mt-5 flex-row items-end justify-center py-4">
           <T w="bold" className={`text-[64px] leading-[70px] tracking-[-2px] ${v ? '' : 'text-ink-3'}`}>
             {v || '—'}
           </T>
@@ -142,12 +124,12 @@ export default function Spec() {
             {f.unit}
           </T>
         </View>
-        <T w="medium" className={`mt-2 text-center text-[15px] ${err ? 'text-fail' : 'text-ink-2'}`}>
+        <T w="medium" className={`text-center text-[14px] ${err ? 'text-fail' : 'text-ink-3'}`}>
           {err ?? (f.allowed ? 'Pick a standard size' : `${f.min}–${f.max} ${f.unit}`)}
         </T>
 
         {f.allowed ? (
-          <View className="mt-3 flex-row flex-wrap gap-2">
+          <View className="mt-5 flex-row flex-wrap gap-2">
             {f.allowed.map((d) => (
               <Pressable
                 key={d}
@@ -155,7 +137,7 @@ export default function Spec() {
                   tap();
                   setV(String(d));
                 }}
-                className={`h-16 w-[23%] items-center justify-center rounded-xl ${v === String(d) ? 'bg-ink' : 'bg-tile'} active:opacity-70`}
+                className={`h-14 w-[23%] items-center justify-center rounded-xl ${v === String(d) ? 'bg-ink' : 'bg-tile'} active:opacity-70`}
               >
                 <T w="semibold" className={`text-[24px] ${v === String(d) ? 'text-white' : ''}`}>
                   {d}
@@ -164,10 +146,10 @@ export default function Spec() {
             ))}
           </View>
         ) : (
-          <View className="mt-3 flex-row flex-wrap justify-between gap-y-2">
+          <View className="mt-5 flex-row flex-wrap justify-between gap-y-2">
             {KEYS.map((k, i) =>
               k === '' ? (
-                <View key={i} className="h-16 w-[32%]" />
+                <View key={i} className="h-14 w-[32%]" />
               ) : (
                 <Pressable
                   key={i}
@@ -175,7 +157,7 @@ export default function Spec() {
                     tap();
                     setV(k === 'del' ? v.slice(0, -1) : (v + k).replace(/^0+/, '').slice(0, 4));
                   }}
-                  className="h-16 w-[32%] items-center justify-center rounded-xl bg-tile active:bg-pill"
+                  className="h-14 w-[32%] items-center justify-center rounded-xl bg-tile active:bg-pill"
                 >
                   {k === 'del' ? (
                     <Delete size={26} color="#000" />
@@ -210,21 +192,21 @@ export default function Spec() {
   const missing = !noDrawing && fields.some((f) => vals[f.id] === undefined);
 
   return (
-    <Screen footer={<Button label={missing ? 'Enter every value first' : existing ? `Confirm · spec rev ${rev}` : 'Confirm and start scan'} icon={existing ? undefined : ScanLine} disabled={missing} onPress={confirm} />}>
+    <Screen footer={<Button label={missing ? 'Enter every value first' : existing ? (same ? 'Done' : `Save as rev ${rev}`) : 'Start scan'} icon={existing ? undefined : ScanLine} disabled={missing} onPress={confirm} />}>
       {head}
       <View className="flex-row items-center gap-3">
-        <Title className="flex-1">Check the drawing</Title>
-        {preset ? <Badge>DEMO PROP</Badge> : null}
+        <Title className="flex-1">{noDrawing ? 'Measure only' : 'Check the values'}</Title>
+        {preset ? <Badge>DEMO</Badge> : null}
       </View>
-      <T className="mt-2 text-[17px] text-ink-2">{noDrawing ? 'Measure-only mode: values with their bands, no verdict against a drawing.' : 'Every scan is compared with these values. Tap one to change it.'}</T>
+      <Sub>{noDrawing ? 'Values with their bands, no verdict.' : 'Tap a value to change it.'}</Sub>
 
       {existing && rev > existing.rev && cur.locks.some((l) => !l.superseded) ? (
-        <Notice tone="warn" className="mt-4" title="Changing the drawing clears fresh scans">
-          Locked values so far stay in the record as history. You will scan again against rev {rev}.
+        <Notice tone="warn" className="mt-4" title={`Saving makes drawing rev ${rev}`}>
+          Scans so far stay as history; scan again against the new values.
         </Notice>
       ) : null}
 
-      <Outline className="mt-6">
+      <Group className="mt-4">
         {fields.map((f, i) => {
           const raw = vals[f.id];
           const shown = noDrawing || raw === null ? 'Not on drawing' : raw === undefined ? 'Not entered' : `${raw} ${f.unit}`;
@@ -238,43 +220,29 @@ export default function Spec() {
                 setReturnTo('confirm');
                 setPhase('field');
               }}
-              className={`flex-row items-center px-4 py-4 active:bg-tile ${i ? 'border-t border-line' : ''}`}
+              className="flex-row items-center gap-3 px-4 py-4 active:bg-tile"
             >
-              <View className="flex-1">
-                <T className="text-[15px] text-ink-2">{f.label}</T>
-                <T w="semibold" className={`mt-0.5 text-[20px] ${raw == null || noDrawing ? 'text-ink-3' : ''}`}>
-                  {shown}
-                </T>
-              </View>
-              <Pencil size={18} color="#5E5E5E" />
+              {i ? <Hairline /> : null}
+              <T className="flex-1 text-[16px] text-ink-2">{f.label}</T>
+              <T w="semibold" className={`text-[17px] ${raw == null || noDrawing ? 'text-ink-3' : ''}`}>
+                {shown}
+              </T>
+              <ChevronRight size={18} color="#BDBDBD" />
             </Pressable>
           );
         })}
         {cur.member === 'beam' && !noDrawing ? (
-          <View className="flex-row items-center border-t border-line px-4 py-4">
+          <View className="flex-row items-center gap-3 px-4 py-3">
+            <Hairline />
             <View className="flex-1">
-              <T className="text-[15px] text-ink-2">135° hooks</T>
-              <T w="semibold" className="mt-0.5 text-[17px]">
-                {hooks ? 'Drawing asks for them' : 'Not asked for (Zone II: advisory)'}
-              </T>
+              <T className="text-[16px] text-ink-2">135° hooks asked for</T>
+              {hooks ? null : <T className="text-[13px] text-ink-3">Zone II: advisory only</T>}
             </View>
             <Switch value={hooks} onValueChange={setHooks} trackColor={{ true: '#000', false: '#E2E2E2' }} thumbColor="#fff" />
           </View>
         ) : null}
-      </Outline>
-      {existing == null ? (
-        <Pressable
-          onPress={() => {
-            tap();
-            setPhase('choose');
-          }}
-          className="mt-4 self-start"
-        >
-          <T w="medium" className="text-[15px] text-ink-2 underline">
-            Start over
-          </T>
-        </Pressable>
-      ) : null}
+      </Group>
+      {existing == null ? <TextBtn label="Start over" onPress={() => setPhase('choose')} /> : null}
     </Screen>
   );
 }

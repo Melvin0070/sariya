@@ -1,5 +1,13 @@
 # Sariya session state
 
+## Session note (10 Oct, 07:10): UI pass (Uber-style, decluttered)
+- **Nav:** 3 tabs (Inspect/Review/Verify, Records, Settings) in the floating pill bar; Numbers and "How to check steel" moved under Settings (`/numbers`, new `/guide`). Verifier has no Records tab.
+- **Kit (`components/ui.tsx`):** `Outline` → `Group` (card of rows), new `Sub`, `TextBtn`, `IconBtn`, `KV`, `Hairline`; TopBar shows record context as a small line above the title. One primary button per footer, secondary actions as text buttons.
+- **Screens:** home keeps hero + "New inspection" bar + slab/beam tiles + guide cards, one "In progress" list (engineer-reply row only when something is waiting); checks split Camera / By hand with a progress bar, discard moved to a top-right icon; scan hides the empty "—" readout, engine (NPU ms) moved into the label card; lock sheet uses rows; sign has a "Signed" success state; record/review lead with the record name, fewer notices, safety disclaimer kept on sign, QR and review.
+- **Fix:** draft status "n of 6 checked" no longer counts checks still waiting for a tape/scale reading.
+- **Verified:** typecheck + lint clean; debug dev client installed on the iQOO (replaces the release APK; rebuild release before the demo). Phone has 3 empty "S1" drafts from this session.
+- **Next:** user review of the look; then fix/review screens on device with a real outside finding; release build.
+
 ## Session note (10 Oct, 06:55): blur gate, coverage map, saved timings, docs, commit
 - **Pulled** caea715 (round 3 prep only, no new model).
 - **Blur:** native Laplacian-variance sharpness per frame; live status "Blurred: hold still" when a frame is under 60 % of the sharpest of the last 30; Lock keeps only frames at ≥ 70 % of the sharpest in its window and the re-scan reason counts the blurred ones. Relative, so no camera-specific threshold.

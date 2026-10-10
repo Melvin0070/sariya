@@ -11,7 +11,7 @@ import Svg, { Circle, Line, Polygon, Text as SvgText } from 'react-native-svg';
 import { VisionView, type VisionFrame, type VisionViewRef } from '../../../modules/sariya-vision';
 
 import { Evidence } from '@/components/evidence';
-import { Button, Chip, Notice, SourceTag, T, tap } from '@/components/ui';
+import { Button, Chip, Hairline, Notice, SourceTag, T, TextBtn, tap } from '@/components/ui';
 import { keepEvidence } from '@/lib/files';
 import type { Pt } from '@/lib/homography';
 import { autoLock, barDiaFor, flushTimings, LIVE, LIVE_COPY, manualLock, TAP_ERROR_PX, turnHint, useVisionLive } from '@/lib/measure';
@@ -134,7 +134,7 @@ export default function Scan() {
   if (!cur || !target) return <Redirect href="/" />;
   const marker = MARKERS[target.marker];
   const barDia = barDiaFor(cur.spec, cur.member);
-  const engineLine = live.frame && live.frame.accel !== 'none' ? `MODEL ${live.frame.model.toUpperCase()} · ${live.frame.accel} ${live.frame.inferMs >= 0 ? `${live.frame.inferMs} MS` : ''}` : LIVE.title.toUpperCase();
+  const engineLine = live.frame && live.frame.accel !== 'none' ? `${live.frame.accel}${live.frame.inferMs >= 0 ? ` ${live.frame.inferMs} ms` : ''}` : LIVE.title;
 
   const snap = async (): Promise<Frozen | null> => {
     try {
@@ -200,6 +200,12 @@ export default function Scan() {
   const rescan = findings.some((f) => f.outcome === 'rescan');
   const hot = findings.find((f) => f.hot !== undefined)?.hot;
   const lockGaps = lock ? gapsOf(lock.positions) : [];
+
+  const next = nextTarget
+    ? { label: `Next: ${nextTarget.label.toLowerCase()}`, go: () => (setTid(nextTarget.id), setPhase('live')) }
+    : readingsLeft
+      ? { label: 'Next: readings by hand', go: () => router.replace('/inspect/readings') }
+      : { label: 'See all checks', go: () => router.back() };
 
   const saveBench = () => {
     const t = Number(tape);
@@ -282,7 +288,7 @@ export default function Scan() {
             {cur.rev > 1 ? ` · rev ${cur.rev}` : ''}
           </T>
           <T className="text-[13px] text-white/75" numberOfLines={1}>
-            {target.label} · {marker.name}
+            {target.label} · {marker.name} · {engineLine}
           </T>
         </View>
         {view === 'live' ? (
@@ -316,11 +322,6 @@ export default function Scan() {
               })}
             </View>
           ) : null}
-          <Pressable onPress={() => setHelp(true)} className="rounded-full bg-black/60 px-3 py-1">
-            <T w="bold" className="text-[12px] tracking-wider text-white">
-              {engineLine}
-            </T>
-          </Pressable>
         </View>
       ) : null}
 
@@ -366,17 +367,21 @@ export default function Scan() {
               {view === 'locking' ? 'Locking… hold still' : live.status === 'searching' ? `Find ${marker.name}` : live.status === 'partial' ? `Show all of ${marker.name}` : LIVE_COPY[live.status].label}
             </T>
           </View>
-          <View className="mt-3 flex-row items-end">
-            <T w="bold" className="text-[64px] leading-[70px] tracking-[-2px] text-white">
-              {live.positions.length < 2 ? '—' : `~${Math.round(gapsOf(live.positions).reduce((a, g) => a + g, 0) / (live.positions.length - 1))}`}
-            </T>
-            <T w="medium" className="mb-3 ml-2 text-[22px] text-white/80">
-              mm
-            </T>
-          </View>
-          <T className="text-[15px] text-white/75">
-            {live.positions.length} bars{live.frame?.weak.length ? ` · ${live.frame.weak.length} partly seen` : ''} · live guide, not a verdict
-          </T>
+          {live.positions.length >= 2 ? (
+            <>
+              <View className="mt-2 flex-row items-end">
+                <T w="bold" className="text-[60px] leading-[66px] tracking-[-2px] text-white">
+                  ~{Math.round(gapsOf(live.positions).reduce((a, g) => a + g, 0) / (live.positions.length - 1))}
+                </T>
+                <T w="medium" className="mb-3 ml-1.5 text-[20px] text-white/80">
+                  mm
+                </T>
+              </View>
+              <T className="text-[14px] text-white/75">
+                {live.positions.length} bars{live.frame?.weak.length ? ` · ${live.frame.weak.length} partly seen` : ''} · Lock for the verdict
+              </T>
+            </>
+          ) : null}
           {turnHint(live.frame) ? (
             <T w="semibold" className="mt-1 text-[14px] text-[#FFC043]">
               Turn the phone so the bars run up the screen
@@ -390,8 +395,8 @@ export default function Scan() {
             <View className="items-center">
               <Pressable onPress={doLock} disabled={(live.status !== 'ready' && live.status !== 'steady') || view === 'locking'} className="h-24 w-24 items-center justify-center">
                 <LockRing progress={view === 'locking' ? lockProgress : live.progress} />
-                <View className={`h-[74px] w-[74px] items-center justify-center rounded-full ${live.status === 'ready' || view === 'locking' ? 'bg-white' : 'bg-white/40'}`}>
-                  <Ruler size={28} color="#000" />
+                <View className={`h-[74px] w-[74px] items-center justify-center rounded-full ${live.status === 'ready' || view === 'locking' ? 'bg-white' : 'bg-white/25'}`}>
+                  <Ruler size={28} color={live.status === 'ready' || view === 'locking' ? '#000' : 'rgba(255,255,255,0.7)'} />
                 </View>
               </Pressable>
               <T w="semibold" className="text-[15px] text-white">
@@ -438,35 +443,36 @@ export default function Scan() {
           <ScrollView contentContainerClassName="px-5 pt-3" keyboardShouldPersistTaps="handled">
             <View className="mb-3 h-1.5 w-10 self-center rounded-full bg-line" />
             <View className="flex-row items-center gap-2">
-              <T w="medium" className="text-[15px] text-ink-2">
-                Locked · {target.label}
+              <T w="medium" className="text-[14px] text-ink-2">
+                {target.label}
               </T>
               <SourceTag source={lock.source} />
             </View>
-            <T w="bold" className="mt-1 text-[30px] tracking-[-0.8px]">
-              {lock.positions.length} bars{lockGaps.length ? ` · ${Math.round(Math.max(...lockGaps))} ± ${lock.band} mm widest` : ''}
+            <T w="bold" className="mt-1 text-[28px] tracking-[-0.8px]">
+              {lock.positions.length} bars{lockGaps.length ? ` · widest ${Math.round(Math.max(...lockGaps))} ± ${lock.band} mm` : ''}
             </T>
-            <T className="text-[14px] text-ink-2">
-              {lock.frames} frame{lock.frames === 1 ? '' : 's'}{lock.engine ? ` · ${lock.engine}` : ''} · {lock.image ? `photo ${lock.image.hash.slice(0, 8)}…` : 'no photo saved'}
+            <T className="mt-0.5 text-[13px] text-ink-3">
+              {lock.frames} frame{lock.frames === 1 ? '' : 's'}{lock.engine ? ` · ${lock.engine}` : ''}{lock.image ? ` · photo ${lock.image.hash.slice(0, 8)}` : ' · no photo'}
             </T>
 
-            <View className="mt-3 gap-3">
-              {findings.map((f) => (
-                <View key={f.def.id} className="rounded-xl bg-tile p-3">
-                  <T w="semibold" className="text-[16px]">
-                    {checkName(f.def)}
-                  </T>
-                  {f.value ? <T className="mt-0.5 text-[14px]">{f.value}</T> : null}
-                  {f.limit ? <T className="text-[13px] text-ink-2">Limit {f.limit}</T> : null}
+            <View className="-mx-5 mt-2">
+              {findings.map((f, k) => (
+                <View key={f.def.id} className="px-5 py-3">
+                  {k ? <Hairline /> : null}
+                  <View className="flex-row items-start gap-2">
+                    <T w="medium" className="flex-1 text-[16px]">
+                      {checkName(f.def)}
+                    </T>
+                    <Chip outcome={f.outcome} small />
+                  </View>
+                  {f.value ? <T className="mt-0.5 text-[15px]">{f.value}</T> : null}
+                  {f.limit ? <T className="text-[13px] text-ink-3">Limit {f.limit}</T> : null}
                   {f.reason && f.outcome !== 'within' ? (
                     <T className="mt-1 text-[14px] text-ink-2">
                       {f.reason}
                       {f.action ? `. ${f.action}` : ''}
                     </T>
                   ) : null}
-                  <View className="mt-2">
-                    <Chip outcome={f.outcome} small />
-                  </View>
                 </View>
               ))}
             </View>
@@ -489,25 +495,18 @@ export default function Scan() {
                   </View>
                   {benchSaved ? <T className="mt-2 text-[13px] text-ink-2">{benchSaved}</T> : null}
                 </View>
-              ) : (
-                <Pressable onPress={() => (tap(), setBenchOpen(true))} className="mt-3 self-start">
-                  <T w="medium" className="text-[15px] underline">
-                    Add a tape check to the error table
-                  </T>
-                </Pressable>
-              )
+              ) : null
             ) : null}
 
-            <View className="mt-4 gap-2" onTouchStart={() => Keyboard.dismiss()}>
+            <View className="mt-4" onTouchStart={() => Keyboard.dismiss()}>
               {outside ? <Button label="Show fix for the mason" kind="accent" onPress={() => router.push({ pathname: '/inspect/fix', params: { check: outside.def.id, from: 'scan' } })} /> : null}
-              {rescan ? <Button label={`Re-scan ${target.short.toLowerCase()}`} onPress={() => actions.rescan(target.id)} /> : null}
-              {nextTarget ? (
-                <Button label={`Next: ${nextTarget.label.toLowerCase()}`} kind={outside || rescan ? 'secondary' : 'primary'} onPress={() => (setTid(nextTarget.id), setPhase('live'))} />
-              ) : readingsLeft ? (
-                <Button label="Next: readings by hand" kind={outside || rescan ? 'secondary' : 'primary'} onPress={() => router.replace('/inspect/readings')} />
+              {rescan && !outside ? <Button label={`Re-scan ${target.short.toLowerCase()}`} onPress={() => actions.rescan(target.id)} /> : null}
+              {outside || rescan ? (
+                <TextBtn label={next.label} onPress={next.go} />
               ) : (
-                <Button label="See all checks" kind={outside || rescan ? 'secondary' : 'primary'} onPress={() => router.back()} />
+                <Button label={next.label} onPress={next.go} />
               )}
+              {hot !== undefined && lockGaps.length && !benchOpen ? <TextBtn label="Add a tape check" onPress={() => setBenchOpen(true)} /> : null}
             </View>
           </ScrollView>
         </Animated.View>

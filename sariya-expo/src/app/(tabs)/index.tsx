@@ -7,10 +7,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, Line, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { CardArt, MemberArt, PhoneArt, TapeArt } from '@/components/art';
-import { H2, Notice, Outline, Row, T, tap } from '@/components/ui';
+import { Group, H2, Notice, Row, T, tap } from '@/components/ui';
 import { KIND_HINT, KIND_LABEL, type MemberKind } from '@/lib/spec';
 import { openRecord, statusOf } from '@/lib/status';
 import { ROLE_LABEL, useStore, when, type Inspection, type Role } from '@/lib/store';
+
+const RECENT = 4;
 
 function Hero({ height }: { height: number }) {
   // Steel mesh photo stand-in: rust bars over a dusk gradient.
@@ -62,72 +64,77 @@ function Primary({ icon: Icon, label, href }: { icon: LucideIcon; label: string;
   );
 }
 
-function List({ title, items, icon }: { title: string; items: Inspection[]; icon: LucideIcon }) {
-  if (!items.length) return null;
+const GUIDES = [
+  { title: 'Print card S and the strip', sub: 'At 100%; the card pattern tapes 90 mm', Art: CardArt, bg: '#F6EFE7' },
+  { title: 'Tape what the camera can’t see', sub: 'Cover, a 200 mm offcut, hooks', Art: TapeArt, bg: '#FFF3E8' },
+  { title: 'How a scan works', sub: 'Live ~mm, then Lock for the verdict', Art: PhoneArt, bg: '#EEF0F2' },
+];
+
+function List({ title, items, icon, action }: { title: string; items: Inspection[]; icon: (r: Inspection) => LucideIcon; action?: ReactNode }) {
+  if (!items.length && !action) return null;
   return (
     <>
       <H2 className="mt-8">{title}</H2>
-      <Outline className="mt-3">
+      <Group className="mt-3">
         {items.map((r, i) => (
-          <Row key={r.key} first={i === 0} icon={icon} title={`${r.name}${r.rev > 1 ? ` · rev ${r.rev}` : ''}`} sub={`${statusOf(r)} · ${when(r.createdAt)}`} onPress={() => openRecord(r)} />
+          <Row key={r.key} first={i === 0} icon={icon(r)} title={`${r.name}${r.rev > 1 ? ` · rev ${r.rev}` : ''}`} sub={statusOf(r)} onPress={() => openRecord(r)} />
         ))}
-      </Outline>
+        {action}
+      </Group>
     </>
   );
 }
 
-const GUIDES = [
-  { title: 'Print card S and the strip', sub: '100% scale; the card pattern must tape 90 mm', Art: CardArt, bg: '#F6EFE7' },
-  { title: 'Tape what the camera can’t see', sub: 'Cover, a 200 mm offcut on a scale, hooks', Art: TapeArt, bg: '#FFF3E8' },
-  { title: 'How a scan works', sub: 'Live ~mm, then Lock for the verdict', Art: PhoneArt, bg: '#EEF0F2' },
-];
-
 function Operator() {
   const records = useStore((s) => s.records).filter((r) => r.origin === 'local');
-  const drafts = records.filter((r) => r.status === 'draft');
   const requests = records.filter((r) => r.status === 'signed' && r.request && !r.revised);
+  const drafts = records.filter((r) => r.status === 'draft');
   const waiting = records.filter((r) => r.status === 'signed' && !r.approval && !r.request && !r.revised);
+  const open = [...requests, ...drafts, ...waiting].slice(0, RECENT);
   const start = (k: MemberKind) => {
     tap();
     router.push({ pathname: '/inspect/new', params: { kind: k } });
   };
+  const iconOf = (r: Inspection) => (r.status === 'draft' ? Clock : r.request ? MessageSquareWarning : Send);
 
   return (
     <>
       <Primary icon={Plus} label="New inspection" href="/inspect/new" />
-      <Outline className="mt-4">
-        <Row first icon={FileInput} title="Open the engineer’s file" sub="Approval or review request, received through Office Kit" onPress={() => router.push('/received')} />
-      </Outline>
-      <List title="Engineer asked for another view" items={requests} icon={MessageSquareWarning} />
-      <List title="Continue" items={drafts} icon={Clock} />
-      <List title="Waiting for approval" items={waiting} icon={Send} />
-
       <H2 className="mt-8">Check a member</H2>
-      <View className="mt-3 flex-row gap-6">
+      <View className="mt-3 flex-row gap-3">
         {(['slab', 'beam'] as MemberKind[]).map((k) => (
-          <Pressable key={k} onPress={() => start(k)} className="items-center active:opacity-70">
-            <View className="h-[84px] w-[84px] items-center justify-center rounded-card bg-tile">
-              <MemberArt kind={k} size={68} />
+          <Pressable key={k} onPress={() => start(k)} className="flex-1 rounded-card bg-tile px-4 pb-4 pt-3 active:opacity-80">
+            <View className="items-center">
+              <MemberArt kind={k} size={110} />
             </View>
-            <T w="medium" className="mt-2.5 text-[16px]">
+            <T w="bold" className="mt-1 text-[19px]">
               {KIND_LABEL[k]}
             </T>
-            <T className="w-[110px] text-center text-[12px] text-ink-2">{KIND_HINT[k]}</T>
+            <T className="mt-0.5 text-[13px] leading-[18px] text-ink-2">{KIND_HINT[k]}</T>
           </Pressable>
         ))}
       </View>
 
+      <List
+        title="In progress"
+        items={open}
+        icon={iconOf}
+        action={
+          waiting.length ? <Row first={!open.length} icon={FileInput} title="Open the engineer’s reply" sub="Approval or request, from Office Kit" onPress={() => router.push('/received')} /> : null
+        }
+      />
+
       <H2 className="mt-9">Before tonight’s pour</H2>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-5" contentContainerClassName="gap-3 px-5 pt-3">
         {GUIDES.map(({ title, sub, Art, bg }) => (
-          <Pressable key={title} onPress={() => router.push('/device')} className="w-[270px] active:opacity-80">
-            <View className="h-[160px] items-center justify-center overflow-hidden rounded-card" style={{ backgroundColor: bg }}>
-              <Art size={190} />
+          <Pressable key={title} onPress={() => router.push('/guide')} className="w-[260px] active:opacity-80">
+            <View className="h-[150px] items-center justify-center overflow-hidden rounded-card" style={{ backgroundColor: bg }}>
+              <Art size={180} />
             </View>
             <T w="semibold" className="mt-3 text-[17px]">
               {title}
             </T>
-            <T className="mt-0.5 text-[15px] text-ink-2">{sub}</T>
+            <T className="mt-0.5 text-[14px] text-ink-2">{sub}</T>
           </Pressable>
         ))}
       </ScrollView>
@@ -139,60 +146,44 @@ function Engineer() {
   const received = useStore((s) => s.records).filter((r) => r.origin === 'received');
   const noOperator = useStore((s) => !s.trusted.some((p) => p.role === 'operator'));
   const todo = received.filter((r) => !r.approval && !r.request);
-  const done = received.filter((r) => r.approval || r.request);
+  const done = received.filter((r) => r.approval || r.request).slice(0, RECENT);
   return (
     <>
       <Primary icon={FileInput} label="Open a received pack" href="/received" />
       {noOperator ? (
-        <Pressable onPress={() => router.push('/keys')}>
-          <Notice tone="warn" className="mt-4" title="Enrol the operator’s phone">
-            Packs from an unknown key open read-only, with approval switched off.
+        <Pressable onPress={() => router.push('/keys')} className="mt-4">
+          <Notice tone="warn" title="Enrol the operator’s phone">
+            Until then, packs open read-only.
           </Notice>
         </Pressable>
       ) : null}
-      <List title="Waiting for your review" items={todo} icon={Clock} />
-      <List title="Decided" items={done} icon={ShieldCheck} />
-      <H2 className="mt-8">How a review reaches you</H2>
-      <View className="mt-3 gap-2 rounded-card bg-tile p-5">
-        {[
-          'The operator signs the capture and sends the pack with Office Kit file transfer.',
-          'Move it from the laptop to this phone with Office Kit, then open it here from the file picker.',
-          'Review on this phone, mirrored to the laptop. Approve with your fingerprint, or ask for another view.',
-          'Send the approval file back the same way. The laptop never holds a key.',
-        ].map((t, i) => (
-          <View key={t} className="flex-row gap-3">
-            <T w="bold" className="w-5 text-[15px]">
-              {i + 1}
-            </T>
-            <T className="flex-1 text-[15px] leading-[22px] text-ink-2">{t}</T>
-          </View>
-        ))}
-      </View>
+      <List title="To review" items={todo} icon={() => Clock} />
+      <List title="Decided" items={done} icon={() => ShieldCheck} />
     </>
   );
 }
 
 function Verifier() {
-  const checks = useStore((s) => s.verifications);
+  const checks = useStore((s) => s.verifications).slice(0, RECENT * 2);
   const noEngineer = useStore((s) => !s.trusted.some((p) => p.role === 'engineer'));
   return (
     <>
       <Primary icon={QrCode} label="Scan a sign-off QR" href={{ pathname: '/qr', params: { mode: 'verify' } }} />
       {noEngineer ? (
-        <Pressable onPress={() => router.push('/keys')}>
-          <Notice tone="warn" className="mt-4" title="Enrol the engineer’s phone">
-            A sign-off can only be checked against an engineer key enrolled here.
+        <Pressable onPress={() => router.push('/keys')} className="mt-4">
+          <Notice tone="warn" title="Enrol the engineer’s phone">
+            A sign-off is checked against an enrolled engineer key.
           </Notice>
         </Pressable>
       ) : null}
       {checks.length ? (
         <>
           <H2 className="mt-8">Recent checks</H2>
-          <Outline className="mt-3">
+          <Group className="mt-3">
             {checks.map((c, i) => (
-              <Row key={c.at} first={i === 0} icon={c.ok ? ShieldCheck : ShieldX} title={c.title} sub={`${c.sub} · checked ${when(c.at)}`} />
+              <Row key={c.at} first={i === 0} icon={c.ok ? ShieldCheck : ShieldX} title={c.title} sub={`${c.sub} · ${when(c.at)}`} />
             ))}
-          </Outline>
+          </Group>
         </>
       ) : null}
     </>
@@ -205,23 +196,30 @@ export default function Home() {
   const i = useSafeAreaInsets();
   const role = useStore((s) => s.role) ?? 'operator';
   const name = useStore((s) => s.name);
+  const focused = useIsFocused();
   // Equal gap above and below the app name; the hero runs on under the sheet's rounded corners.
   const GAP = 18;
   const heroH = i.top + GAP + 36 + GAP + 28;
-  const focused = useIsFocused();
   const Body = BODY[role];
 
   return (
     <ScrollView className="flex-1 bg-paper" contentContainerStyle={{ paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
       <StatusBar style={focused ? 'light' : 'dark'} />
       <Hero height={heroH} />
-      <View style={{ paddingTop: i.top + GAP, paddingBottom: GAP }} className="flex-row items-end justify-between px-5">
+      <View style={{ paddingTop: i.top + GAP, paddingBottom: GAP }} className="flex-row items-center justify-between px-5">
         <T w="bold" className="text-[30px] leading-[36px] tracking-[-0.8px] text-white">
           Sariya
         </T>
-        <T w="medium" className="mb-1 text-[14px] text-white/80">
-          {ROLE_LABEL[role]} · {name}
-        </T>
+        <Pressable onPress={() => (tap(), router.push('/settings'))} className="h-9 flex-row items-center gap-2 rounded-full bg-white/15 pl-1 pr-3 active:opacity-70">
+          <View className="h-7 w-7 items-center justify-center rounded-full bg-white">
+            <T w="bold" className="text-[13px]">
+              {name.trim().charAt(0).toUpperCase() || '?'}
+            </T>
+          </View>
+          <T w="medium" className="text-[14px] text-white">
+            {ROLE_LABEL[role]}
+          </T>
+        </Pressable>
       </View>
       <View className="rounded-t-sheet bg-paper px-5 pt-5">
         <Body />

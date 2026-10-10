@@ -5,7 +5,7 @@ import { Camera, Check, Cpu, Fingerprint, HardDrive, KeyRound, Loader, TriangleA
 import { useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, ScrollView, TextInput, View } from 'react-native';
 
-import { Button, H2, Outline, Screen, T, Tile, Title, TopBar } from '@/components/ui';
+import { Button, Group, H2, Hairline, Screen, Sub, T, Tile, Title, TopBar } from '@/components/ui';
 import { biometric, BIOMETRIC_COPY, voices, type Biometric, type Voices } from '@/lib/device';
 import { PROTECTION } from '@/lib/keys';
 import { visionStatus, type VisionStatus } from '../../modules/sariya-vision';
@@ -22,15 +22,16 @@ const MARK: Record<RowState, { I: LucideIcon; bg: string; word: string }> = {
 function Row({ icon: Icon, label, note, state, action, first }: { icon: LucideIcon; label: string; note: string; state: RowState; action?: { label: string; onPress: () => void }; first?: boolean }) {
   const m = MARK[state];
   return (
-    <View className={`flex-row items-center gap-4 px-4 py-4 ${first ? '' : 'border-t border-line'}`}>
-      <View className="h-12 w-12 items-center justify-center rounded-full bg-tile">
+    <View className="flex-row items-center gap-4 px-4 py-4">
+      {first ? null : <Hairline inset={80} />}
+      <View className="h-12 w-12 items-center justify-center rounded-xl bg-tile">
         <Icon size={22} color="#000" strokeWidth={1.8} />
       </View>
       <View className="flex-1">
-        <T w="semibold" className="text-[17px]">
+        <T w="medium" className="text-[17px]">
           {label}
         </T>
-        <T className="mt-0.5 text-[14px] leading-[20px] text-ink-2">{note}</T>
+        <T className="mt-0.5 text-[14px] leading-[19px] text-ink-2">{note}</T>
         {action ? (
           <Pressable onPress={action.onPress} className="mt-2 self-start rounded-full bg-ink px-4 py-2 active:opacity-70">
             <T w="semibold" className="text-[14px] text-white">
@@ -39,20 +40,17 @@ function Row({ icon: Icon, label, note, state, action, first }: { icon: LucideIc
           </Pressable>
         ) : null}
       </View>
-      <View className="items-center">
-        <View className="h-7 w-7 items-center justify-center rounded-full" style={{ backgroundColor: m.bg }}>
-          <m.I size={15} color="#fff" strokeWidth={3} />
-        </View>
-        <T className="mt-1 text-[11px] text-ink-2">{m.word}</T>
+      <View accessibilityLabel={m.word} className="h-6 w-6 items-center justify-center rounded-full" style={{ backgroundColor: m.bg }}>
+        <m.I size={14} color="#fff" strokeWidth={3} />
       </View>
     </View>
   );
 }
 
 const ROLES: { role: Role; body: string }[] = [
-  { role: 'operator', body: 'Scans the steel, plays the fix to the mason, signs the capture' },
-  { role: 'engineer', body: 'Opens packs, reviews on the laptop mirror, approves with a fingerprint' },
-  { role: 'verifier', body: 'Checks an engineer’s sign-off QR, offline' },
+  { role: 'operator', body: 'Scans the steel and signs the capture' },
+  { role: 'engineer', body: 'Reviews packs and approves with a fingerprint' },
+  { role: 'verifier', body: 'Checks a sign-off QR, offline' },
 ];
 
 function visionNote(v: VisionStatus | null | 'missing') {
@@ -108,26 +106,26 @@ export default function Setup() {
   return (
     <Screen scrollRef={scroll} footer={<Button label={!role ? 'Choose what this phone does' : !name.trim() ? 'Enter your name' : first ? 'Next: enrol phones' : 'Save'} disabled={!ready} onPress={save} />}>
       {first ? null : <TopBar />}
-      <Title className={first ? 'mt-8' : ''}>{first ? 'Set up this phone' : 'This phone'}</Title>
-      <T className="mt-2 text-[17px] text-ink-2">
+      <Title className={first ? 'mt-10' : ''}>{first ? 'Set up this phone' : 'This phone'}</Title>
+      <Sub>
         {phone} · Android {Device.osVersion ?? ''}
-      </T>
+      </Sub>
 
       <H2 className="mt-8">What does this phone do?</H2>
-      <View className="mt-3 gap-3">
+      <View className="mt-3 gap-2">
         {ROLES.map((r) => (
-          <Tile key={r.role} onPress={() => setRole(r.role)} className={`px-5 py-4 ${role === r.role ? 'border-2 border-ink' : 'border-2 border-tile'}`}>
-            <T w="semibold" className="text-[20px]">
+          <Tile key={r.role} on={role === r.role} onPress={() => setRole(r.role)} className="px-4 py-3.5">
+            <T w="semibold" className="text-[18px]">
               {ROLE_LABEL[r.role]}
             </T>
-            <T className="mt-1 text-[15px] text-ink-2">{r.body}</T>
+            <T className="mt-0.5 text-[14px] text-ink-2">{r.body}</T>
           </Tile>
         ))}
       </View>
 
       <H2 className="mt-8">Your name</H2>
-      <T className="mt-1 text-[15px] text-ink-2">Shown next to everything this phone signs.</T>
-      <View className="mt-3 h-16 justify-center rounded-xl bg-tile px-4">
+      <T className="mt-1 text-[14px] text-ink-2">Shown on everything this phone signs</T>
+      <View className="mt-3 h-14 justify-center rounded-xl bg-tile px-4">
         <TextInput
           value={name}
           onChangeText={setName}
@@ -135,12 +133,12 @@ export default function Setup() {
           placeholderTextColor="#8A8A8A"
           onFocus={() => setTimeout(() => scroll.current?.scrollTo({ y: 520, animated: true }), 80)}
           returnKeyType="done"
-          className="font-medium text-[19px] text-ink"
+          className="font-medium text-[18px] text-ink"
         />
       </View>
 
       <H2 className="mt-8">Readiness</H2>
-      <Outline className="mt-3">
+      <Group className="mt-3">
         <Row first icon={Camera} label="Camera" note={!cam ? 'Checking access' : cam.granted ? 'Allowed' : 'Needed to scan steel and QR codes'} state={camState} action={camAction} />
         <Row icon={Cpu} label="Bar model" note={visionNote(vis)} state={visionState(vis)} />
         <Row icon={Volume2} label="Hindi voice" note={v == null ? 'Checking' : v.hi ? 'Installed, works offline' : 'Not installed: fixes show as subtitles only. Add it in Settings › Text-to-speech.'} state={voiceState(v?.hi)} />
@@ -148,7 +146,7 @@ export default function Setup() {
         <Row icon={Fingerprint} label="Fingerprint" note={bio == null ? 'Checking' : `${BIOMETRIC_COPY[bio]}. The engineer needs it to approve.`} state={bioState} />
         <Row icon={KeyRound} label="Signing key" note={me ? `${me.fp} · ${PROTECTION}` : 'Could not create a key: this build lacks secure storage'} state={me ? 'ok' : 'bad'} />
         <Row icon={HardDrive} label="Storage" note={persistent ? 'Records are kept on this phone across restarts' : 'This build cannot save: records are lost on restart'} state={persistent ? 'ok' : 'bad'} />
-      </Outline>
+      </Group>
     </Screen>
   );
 }

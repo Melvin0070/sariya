@@ -6,7 +6,7 @@ import { actions, when, type Inspection } from './store';
 export function statusOf(r: Inspection) {
   if (r.status === 'draft') {
     const t = tally(evaluate(r));
-    return r.spec ? `Draft · ${t.total - t.pending} of ${t.total} checked` : 'Draft · drawing values not entered';
+    return r.spec ? `Draft · ${t.total - t.pending - t.tape} of ${t.total} checked` : 'Draft · drawing values not entered';
   }
   if (r.origin === 'received') {
     if (r.approval) return `You approved · ${when(r.approval.payload.t)}`;

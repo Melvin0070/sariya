@@ -29,7 +29,7 @@ export default function QrScan() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     if (mode === 'enrol') {
       const peer = parseKeyQr(data);
-      if (!peer) setResult({ kind: 'error', title: 'Not a Sariya key', sub: 'Open Device › Enrol phones on the other phone and scan its key QR.' });
+      if (!peer) setResult({ kind: 'error', title: 'Not a Sariya key', sub: 'On the other phone open Settings › Trusted phones and scan its key QR.' });
       else if (peer.fp === getState().me?.fp) setResult({ kind: 'error', title: 'This is your own key', sub: 'Scan the other phone’s key.' });
       else setResult({ kind: 'peer', peer });
     } else {
@@ -75,7 +75,7 @@ export default function QrScan() {
           <T w="semibold" className="text-[16px] text-white">
             {mode === 'enrol' ? 'Scan the other phone’s key' : 'Scan the sign-off QR'}
           </T>
-          <T className="text-[13px] text-white/75">{mode === 'enrol' ? 'Device › Enrol phones, on that phone' : 'Checked offline against enrolled keys'}</T>
+          <T className="text-[13px] text-white/75">{mode === 'enrol' ? 'Settings › Trusted phones, on that phone' : 'Checked offline against enrolled keys'}</T>
         </View>
       </View>
 

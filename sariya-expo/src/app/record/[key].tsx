@@ -7,7 +7,7 @@ import { CoverageMap } from '@/components/coverage';
 import { Evidence } from '@/components/evidence';
 import { FindingRow } from '@/components/finding';
 import { QR } from '@/components/qr';
-import { Button, H2, Notice, Outline, Screen, SourceTag, T, Title, TopBar } from '@/components/ui';
+import { Button, Group, H2, Notice, Screen, SourceTag, Sub, T, TextBtn, Title, TopBar } from '@/components/ui';
 import { shareFile } from '@/lib/files';
 import { short } from '@/lib/keys';
 import { capturePack, packName, signoffQr } from '@/lib/pack';
@@ -27,10 +27,10 @@ function Step({ done, warn, title, sub, last }: { done: boolean; warn?: boolean;
         {!last ? <View className={`w-0.5 flex-1 ${done ? 'bg-pass' : 'bg-line'}`} style={{ minHeight: 26 }} /> : null}
       </View>
       <View className="flex-1 pb-5">
-        <T w="semibold" className="text-[17px]">
+        <T w="semibold" className="text-[16px]">
           {title}
         </T>
-        <T className="mt-0.5 text-[15px] text-ink-2">{sub}</T>
+        <T className="mt-0.5 text-[14px] leading-[20px] text-ink-2">{sub}</T>
       </View>
     </View>
   );
@@ -68,25 +68,29 @@ export default function Record() {
   return (
     <Screen
       footer={
-        r.revised ? undefined : (
-          <View className="gap-2">
-            {req ? <Button label={`Start revision ${r.rev + 1} for the engineer`} icon={RotateCw} onPress={() => revise(req.checks)} /> : null}
-            {!r.approval && !req ? <Button label={r.sentAt ? 'Send pack again' : 'Send with Office Kit…'} icon={Send} onPress={resend} /> : null}
-            {!r.approval ? <Button label="Open the engineer’s file" icon={FileInput} kind="secondary" onPress={() => router.push('/received')} /> : null}
-            {!req ? <Button label={`Scan again as revision ${r.rev + 1}`} kind="secondary" onPress={() => revise([])} /> : null}
-          </View>
+        r.revised || r.approval ? undefined : req ? (
+          <Button label={`Scan again as rev ${r.rev + 1}`} icon={RotateCw} onPress={() => revise(req.checks)} />
+        ) : r.sentAt ? (
+          <>
+            <Button label="Open the engineer’s reply" icon={FileInput} onPress={() => router.push('/received')} />
+            <TextBtn label="Send again" onPress={resend} />
+          </>
+        ) : (
+          <>
+            <Button label="Send with Office Kit" icon={Send} onPress={resend} />
+            <TextBtn label="Open the engineer’s reply" onPress={() => router.push('/received')} />
+          </>
         )
       }
     >
-      <TopBar name={`${r.name} · rev ${r.rev}`} sub={KIND_LABEL[r.member]} />
-      <Title>Record</Title>
-      <T className="mt-1 text-[16px] text-ink-2">{statusOf(r)}</T>
-      <T className="mt-1 text-[15px] leading-[22px] text-ink-2">{tallyLine(fs)}</T>
+      <TopBar name={`Rev ${r.rev}`} sub={KIND_LABEL[r.member]} />
+      <Title>{r.name}</Title>
+      <Sub>{statusOf(r)}</Sub>
+      <T className="mt-1 text-[14px] text-ink-3">{tallyLine(fs)}</T>
       {err ? <Notice tone="fail" className="mt-4" title={err} /> : null}
       {newer ? <Notice className="mt-4" title={`Replaced by rev ${newer.rev}`}>This revision stays as history. Its signature and any approval apply only to it.</Notice> : null}
 
-      <H2 className="mt-7">Two keys</H2>
-      <View className="mt-4">
+      <View className="mt-7">
         <Step done title={`Captured and signed · ${r.capture.signer.name}`} sub={`${when(r.capture.at)} · key ${r.capture.signer.fp} · record ${short(r.capture.hash)}`} />
         <Step done={!!r.sentAt} title={r.sentAt ? 'Pack sent' : 'Pack not sent yet'} sub={r.sentAt ? `Confirmed sent ${when(r.sentAt)}` : 'Send it with Office Kit file transfer'} />
         <Step
@@ -94,27 +98,29 @@ export default function Record() {
           done={!!r.approval}
           warn={!!req && !r.approval}
           title={r.approval ? `Approved · ${r.approval.payload.e}` : req ? `Another view requested · ${req.e}` : 'Engineer approval'}
-          sub={r.approval ? `${when(r.approval.payload.t)} · fingerprint-confirmed on their phone · key ${r.approval.payload.f}` : req ? `${when(req.t)} · ${req.note || 'see the zones below'}` : 'Waiting. Open the approval file here when it comes back.'}
+          sub={r.approval ? `${when(r.approval.payload.t)} · fingerprint on their phone · key ${r.approval.payload.f}` : req ? `${when(req.t)} · ${req.note || 'see below'}` : 'Waiting for their reply'}
         />
       </View>
 
       {req && !r.approval ? (
         <Notice tone="warn" title="Scan these again">
-          {req.checks.map((c) => checkName(checksFor(r.member, r.spec).find((d) => d.id === c)!)).join(', ') || 'Any zone the engineer named'}. This record stays as it is; the new scan becomes revision {r.rev + 1}.
+          {req.checks.map((c) => checkName(checksFor(r.member, r.spec).find((d) => d.id === c)!)).join(', ') || 'Any zone the engineer named'}
         </Notice>
       ) : null}
 
       {r.approval ? (
-        <View className="mt-2 items-center rounded-card border border-line p-5">
-          <QR value={signoffQr(r.approval)} size={240} />
-          <T w="bold" className="mt-4 text-[20px]">
+        <View className="mt-2 items-center rounded-card bg-tile p-5">
+          <View className="rounded-xl bg-paper p-2">
+            <QR value={signoffQr(r.approval)} size={220} />
+          </View>
+          <T w="bold" className="mt-4 text-[18px]">
             Sign-off QR
           </T>
-          <T className="mt-1 text-center text-[15px] leading-[22px] text-ink-2">The owner or mason scans it to check offline that {r.approval.payload.e} approved this exact record. It is not a safety certificate.</T>
+          <T className="mt-1 text-center text-[14px] leading-[20px] text-ink-2">Proves offline that {r.approval.payload.e} approved this exact record. Not a safety certificate.</T>
         </View>
       ) : null}
 
-      <H2 className="mt-7">Locked evidence</H2>
+      <H2 className="mt-8">Evidence</H2>
       {locks.length ? (
         locks.map((l) => (
           <View key={l.id} className="mt-3">
@@ -125,7 +131,7 @@ export default function Record() {
               </View>
             ) : null}
             <View className="mt-2 flex-row items-center gap-2">
-              <T w="medium" className="text-[15px]">
+              <T w="medium" className="text-[14px]">
                 {TARGETS[r.member].find((t) => t.id === l.target)?.label} · {l.positions.length} bars ± {l.band} mm
               </T>
               <SourceTag source={l.source} />
@@ -136,13 +142,13 @@ export default function Record() {
         <T className="mt-2 text-[15px] text-ink-2">No camera locks in this revision.</T>
       )}
 
-      <H2 className="mt-7">Checks</H2>
-      <Outline className="mt-3">
+      <H2 className="mt-8">Checks</H2>
+      <Group className="mt-3">
         {fs.map((f, i) => (
           <FindingRow key={f.def.id} f={f} first={i === 0} corrected={r.corrected[f.def.id]} />
         ))}
-      </Outline>
-      <T className="mt-4 text-[13px] leading-[19px] text-ink-3">Measurements against the drawing with error bands. Not a safety certificate or pour permit.</T>
+      </Group>
+      {!r.revised && !req ? <TextBtn label={`Scan again as rev ${r.rev + 1}`} onPress={() => revise([])} /> : null}
     </Screen>
   );
 }
