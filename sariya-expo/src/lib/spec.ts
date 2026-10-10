@@ -2,7 +2,9 @@
 
 import type { Signed } from './store';
 
-export type MemberKind = 'slab' | 'beam';
+export type MemberKind = 'slab' | 'beam' | 'column';
+// Beams and columns are both checked as rings (ties) along the strip, split into a tight end zone and the rest.
+export const isLinked = (k: MemberKind) => k !== 'slab';
 
 export type FieldId =
   | 'dia'
@@ -45,12 +47,21 @@ export const FIELDS: Record<MemberKind, Field[]> = {
     { id: 'mid_spacing', label: 'Ring spacing mid-span', hint: 'Centre to centre', unit: 'mm', min: 25, max: 400 },
     { id: 'cover', label: 'Clear cover', hint: 'You will check it with a tape', unit: 'mm', min: 10, max: 75 },
   ],
+  // Same field ids as the beam, so the zone rules are shared. lo per IS 13920 7.6.1: at least the larger side, clear height / 6, and 450.
+  column: [
+    { id: 'stirrup_dia', label: 'Tie diameter', hint: 'Ties (rings) around the main bars', unit: 'mm', min: 6, max: 12, allowed: RING_DIA },
+    { id: 'end_spacing', label: 'Tie spacing near the ends', hint: 'Inside the confining zone lo, top and bottom', unit: 'mm', min: 25, max: 400 },
+    { id: 'end_length', label: 'Confining length lo', hint: 'From the floor or beam face, where the strip starts at 0', unit: 'mm', min: 100, max: 1500 },
+    { id: 'mid_spacing', label: 'Tie spacing in the middle', hint: 'Centre to centre', unit: 'mm', min: 25, max: 400 },
+    { id: 'cover', label: 'Clear cover', hint: 'You will check it with a tape', unit: 'mm', min: 10, max: 75 },
+  ],
 };
 
 // Half-scale stage props (BUILD-PLAN §7). Shown as DEMO PROP and always editable.
 export const PRESET: Record<MemberKind, Partial<Record<FieldId, number>>> = {
   slab: { dia: 8, main_count: 5, main_spacing: 50, dist_count: 5, dist_spacing: 50, cover: 20 },
   beam: { stirrup_dia: 8, end_spacing: 50, end_length: 150, mid_spacing: 75, cover: 25 },
+  column: { stirrup_dia: 8, end_spacing: 50, end_length: 150, mid_spacing: 75, cover: 25 },
 };
 
 export function validate(f: Field, v: number): string | null {
@@ -76,15 +87,15 @@ export type Spec = {
   issued?: Signed<SpecPayload>; // dropped as soon as the operator changes a value
 };
 
-export const KIND_LABEL: Record<MemberKind, string> = { slab: 'Slab', beam: 'Beam' };
+export const KIND_LABEL: Record<MemberKind, string> = { slab: 'Slab', beam: 'Beam', column: 'Column' };
 // Shown but not selectable until the strip and zone checks are validated on the props.
 export const COMING_SOON: MemberKind[] = ['beam'];
 export const isSoon = (k: MemberKind) => COMING_SOON.includes(k);
-export const KIND_HINT: Record<MemberKind, string> = { slab: 'Count and spacing both ways, cover', beam: 'Ring spacing by zone, cover' };
+export const KIND_HINT: Record<MemberKind, string> = { slab: 'Count and spacing both ways, cover', beam: 'Ring spacing by zone, cover', column: 'Tie spacing at both ends and the middle, cover' };
 
 // ---- scan targets: one Lock measures one family of bars ---------------------------
 
-export type TargetId = 'main' | 'dist' | 'stirrups';
+export type TargetId = 'main' | 'dist' | 'stirrups' | 'ties_top';
 export type MarkerId = 'card' | 'strip';
 
 export type Target = { id: TargetId; label: string; short: string; axis: 'x' | 'y'; marker: MarkerId };
@@ -95,6 +106,11 @@ export const TARGETS: Record<MemberKind, Target[]> = {
     { id: 'dist', label: 'Distribution bars', short: 'Distribution', axis: 'y', marker: 'card' },
   ],
   beam: [{ id: 'stirrups', label: 'Rings along the strip', short: 'Rings', axis: 'x', marker: 'strip' }],
+  // Both ends are confining zones, so each is its own scan with the strip's 0 end at that face.
+  column: [
+    { id: 'stirrups', label: 'Ties from the bottom', short: 'Bottom', axis: 'x', marker: 'strip' },
+    { id: 'ties_top', label: 'Ties from the top', short: 'Top', axis: 'x', marker: 'strip' },
+  ],
 };
 
 // Printed fiducials. `marker` is the ArUco marker side, used for the too-far gate.
@@ -105,7 +121,7 @@ export const MARKERS: Record<MarkerId, { w: number; h: number; marker: number; n
 
 // ---- checks ---------------------------------------------------------------------
 
-export type CheckId = 'main_count' | 'main_spacing' | 'dist_count' | 'dist_spacing' | 'end_spacing' | 'mid_spacing' | 'cover' | 'diameter' | 'hook';
+export type CheckId = 'main_count' | 'main_spacing' | 'dist_count' | 'dist_spacing' | 'end_spacing' | 'top_spacing' | 'mid_spacing' | 'cover' | 'diameter' | 'hook';
 export type ReadingKind = 'tape' | 'scale' | 'template';
 
 export type CheckDef = { id: CheckId; label: string; zone?: string; target?: TargetId; reading?: ReadingKind };
@@ -121,12 +137,21 @@ export function checksFor(member: MemberKind, spec: Spec | null): CheckDef[] {
       { id: 'diameter', label: 'Bar size', reading: 'scale' },
     ];
   }
-  const beam: CheckDef[] = [
-    { id: 'end_spacing', label: 'Ring spacing', zone: 'End zone', target: 'stirrups' },
-    { id: 'mid_spacing', label: 'Ring spacing', zone: 'Mid-span', target: 'stirrups' },
-    { id: 'cover', label: 'Clear cover', reading: 'tape' },
-    { id: 'diameter', label: 'Ring size', reading: 'scale' },
-  ];
+  const beam: CheckDef[] =
+    member === 'column'
+      ? [
+          { id: 'end_spacing', label: 'Tie spacing', zone: 'Bottom end', target: 'stirrups' },
+          { id: 'top_spacing', label: 'Tie spacing', zone: 'Top end', target: 'ties_top' },
+          { id: 'mid_spacing', label: 'Tie spacing', zone: 'Middle', target: 'stirrups' },
+          { id: 'cover', label: 'Clear cover', reading: 'tape' },
+          { id: 'diameter', label: 'Tie size', reading: 'scale' },
+        ]
+      : [
+          { id: 'end_spacing', label: 'Ring spacing', zone: 'End zone', target: 'stirrups' },
+          { id: 'mid_spacing', label: 'Ring spacing', zone: 'Mid-span', target: 'stirrups' },
+          { id: 'cover', label: 'Clear cover', reading: 'tape' },
+          { id: 'diameter', label: 'Ring size', reading: 'scale' },
+        ];
   // Hooks are checked only where the drawing asks for them (Bengaluru is Zone II: IS 13920 is advisory).
   if (spec?.hooks135) beam.push({ id: 'hook', label: 'Hook angle', reading: 'template' });
   return beam;

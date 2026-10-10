@@ -86,11 +86,12 @@ function EngineLine({ feed }: { feed: LiveFeed }) {
   return <>{frame && frame.accel !== 'none' ? `${frame.model} · ${frame.accel}${frame.inferMs >= 0 ? ` ${frame.inferMs} ms` : ''}` : LIVE.title}</>;
 }
 
-type ReadoutProps = { feed: LiveFeed; view: 'live' | 'locking'; markerName: string; spec: LiveSpec; lockProgress: number; onLock: () => void; onManual: () => void; bottom: number };
+// turn: slab mesh only. Rings and ties cross the strip, so they run across the screen when the strip runs up it.
+type ReadoutProps = { feed: LiveFeed; view: 'live' | 'locking'; markerName: string; turn: boolean; spec: LiveSpec; lockProgress: number; onLock: () => void; onManual: () => void; bottom: number };
 
 // Status, the live headline and the Lock button. Subscribes to the feed on its own, so only this part re-renders
 // with each frame. The headline is what the rules judge: bar count against the drawing and the widest single gap.
-function LiveReadout({ feed, view, markerName, spec, lockProgress, onLock, onManual, bottom }: ReadoutProps) {
+function LiveReadout({ feed, view, markerName, turn, spec, lockProgress, onLock, onManual, bottom }: ReadoutProps) {
   const live = useLive(feed);
   useEffect(() => {
     if (live.status === 'ready' && view === 'live') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -132,7 +133,7 @@ function LiveReadout({ feed, view, markerName, spec, lockProgress, onLock, onMan
           </T>
         </View>
       ) : null}
-      {turnHint(live.frame) ? (
+      {turn && turnHint(live.frame) ? (
         <T w="semibold" className="mt-1 text-[14px] text-[#FFC043]">
           Turn the phone so the bars run up the screen
         </T>
@@ -346,7 +347,13 @@ export default function Scan() {
   };
 
   const marking = corners.length < 4;
-  const barWord = target.marker === 'card' ? (target.axis === 'x' ? 'main bar' : 'distribution bar') : 'ring';
+  const barWord = target.marker === 'card' ? (target.axis === 'x' ? 'main bar' : 'distribution bar') : cur.member === 'column' ? 'tie' : 'ring';
+  const place = {
+    main: 'Lay card S flat on the bars, edges along the bars.',
+    dist: 'Lay card S flat on the bars, edges along the bars.',
+    stirrups: cur.member === 'column' ? 'Tape strip_300 up the column face, 0 end at the floor.' : 'Lay strip_300 along the beam, 0 end at the column face.',
+    ties_top: 'Tape strip_300 down the column face, 0 end at the beam bottom.',
+  }[target.id];
   let manualLabel = 'Tap the bars';
   if (marking) manualLabel = 'Mark the corners first';
   else if (taps.length) manualLabel = `Lock ${taps.length} bar${taps.length > 1 ? 's' : ''}`;
@@ -482,7 +489,7 @@ export default function Scan() {
       {help && view === 'live' ? (
         <Animated.View entering={FadeIn} exiting={FadeOut} className="absolute inset-x-4 rounded-card bg-paper p-4" style={[{ top: i.top + 132 }, SHADOW.float]}>
           <T w="semibold" className="text-[16px] leading-[22px]">
-            {target.marker === 'card' ? 'Lay card S flat on the bars, edges along the bars.' : 'Lay strip_300 along the beam, 0 end at the column face.'} Torch on, about 30 cm away. Keep the whole {marker.name} in view.
+            {place} Torch on, about 30 cm away. Keep the whole {marker.name} in view.
           </T>
           <T className="mt-2 text-[14px] leading-[20px] text-ink-2">{LIVE.note}</T>
         </Animated.View>
@@ -515,7 +522,7 @@ export default function Scan() {
 
       {/* live readout + lock */}
       {(view === 'live' || view === 'locking') && perm?.granted ? (
-        <LiveReadout feed={feed} view={view} markerName={marker.name} spec={spec} lockProgress={lockProgress} onLock={doLock} onManual={startManual} bottom={i.bottom + 24} />
+        <LiveReadout feed={feed} view={view} markerName={marker.name} turn={target.marker === 'card'} spec={spec} lockProgress={lockProgress} onLock={doLock} onManual={startManual} bottom={i.bottom + 24} />
       ) : null}
 
       {/* manual marking instructions */}

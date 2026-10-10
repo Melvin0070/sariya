@@ -213,6 +213,16 @@ export function evaluate(r: Inspection): Finding[] {
   const lock = (t: TargetId) => activeLock(r, t);
   const L = val('end_length');
   const zones = beamZones(lock('stirrups'), L);
+  // A column's top scan has its own end zone; its middle gaps count only when the bottom scan saw none.
+  const top = beamZones(lock('ties_top'), L);
+  const midFrom: TargetId = !zones.mid?.gaps.length && top.mid?.gaps.length ? 'ties_top' : 'stirrups';
+
+  // With no end-zone length, the end check reports every ring gap as a plain measurement.
+  const endZone = (def: CheckDef, t: TargetId, z: Zone | null) =>
+    spacing(def, lock(t), L == null ? null : val('end_spacing'), z, (zz, i, sp) => {
+      const found = lock(t)!.positions.filter((p) => p <= L!).length;
+      return { kind: 'add_rings_zone', n: Math.max(1, r0(L! / sp) - found), zoneMm: L!, gapMm: r0(zz.gaps[i]), spec: sp };
+    });
 
   const out = checksFor(r.member, r.spec).map((def): Finding => {
     switch (def.id) {
@@ -224,17 +234,13 @@ export function evaluate(r: Inspection): Finding[] {
         return spacing(def, lock('main'), val('main_spacing'), null, slabFix);
       case 'dist_spacing':
         return spacing(def, lock('dist'), val('dist_spacing'), null, slabFix);
-      case 'end_spacing': {
-        const s = val('end_spacing');
-        // With no end-zone length, the end check reports every ring gap as a plain measurement.
-        return spacing(def, lock('stirrups'), L == null ? null : s, zones.end, (z, i, sp) => {
-          const found = lock('stirrups')!.positions.filter((p) => p <= L!).length;
-          return { kind: 'add_rings_zone', n: Math.max(1, r0(L! / sp) - found), zoneMm: L!, gapMm: r0(z.gaps[i]), spec: sp };
-        });
-      }
+      case 'end_spacing':
+        return endZone(def, 'stirrups', zones.end);
+      case 'top_spacing':
+        return endZone(def, 'ties_top', top.end);
       case 'mid_spacing':
         if (L == null && lock('stirrups')) return { def, outcome: 'not_seen', reason: 'No end-zone length on the drawing, so the zones cannot be split' };
-        return spacing(def, lock('stirrups'), val('mid_spacing'), zones.mid, addInGap);
+        return spacing(def, lock(midFrom), val('mid_spacing'), midFrom === 'ties_top' ? top.mid : zones.mid, addInGap);
       case 'cover':
         return physical(def, r, val('cover'));
       case 'diameter':

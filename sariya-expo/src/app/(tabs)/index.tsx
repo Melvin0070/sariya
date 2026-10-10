@@ -11,7 +11,7 @@ import { Badge, C, Enter, Group, H2, Hairline, HERO, Illo, Meter, Notice, Num, P
 import { buildInbox, type InboxItem, type InboxState, type SiteGroup } from '@/lib/inbox';
 import { pourIn, pourLabel } from '@/lib/pour';
 import { evaluate, tally } from '@/lib/rules';
-import { isSoon, KIND_HINT, KIND_LABEL } from '@/lib/spec';
+import { isSoon, KIND_HINT, KIND_LABEL, type MemberKind } from '@/lib/spec';
 import { openRecord, statusOf } from '@/lib/status';
 import { ROLE_LABEL, useStore, when, type Inspection, type Role } from '@/lib/store';
 
@@ -124,7 +124,7 @@ function Operator() {
   const otherDrafts = drafts.filter((r) => r !== current);
   const open = [...requests, ...otherDrafts, ...waiting].slice(0, RECENT);
   const iconOf = (r: Inspection) => (r.status === 'draft' ? Clock : r.request ? MessageSquareWarning : Send);
-  const start = (k: 'slab' | 'beam') => router.push({ pathname: '/inspect/new', params: { kind: k } });
+  const start = (k: MemberKind) => router.push({ pathname: '/inspect/new', params: { kind: k } });
 
   return (
     <>
@@ -140,6 +140,9 @@ function Operator() {
           {(['slab', 'beam'] as const).map((k) => (
             <StartTile key={k} illo={k} title={KIND_LABEL[k]} sub={KIND_HINT[k]} soon={isSoon(k)} onPress={() => start(k)} />
           ))}
+        </View>
+        <View className="mt-3">
+          <StartTile wide illo="column" title={KIND_LABEL.column} sub={KIND_HINT.column} soon={isSoon('column')} onPress={() => start('column')} />
         </View>
       </Enter>
 

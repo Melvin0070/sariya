@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 
 import { loadDeviceKey, type DeviceKey } from './keys';
 import { FS } from './native';
-import type { CheckId, MemberKind, ReadingKind, Spec, SpecPayload, TargetId } from './spec';
+import { isLinked, type CheckId, type MemberKind, type ReadingKind, type Spec, type SpecPayload, type TargetId } from './spec';
 
 export type Role = 'operator' | 'engineer' | 'verifier';
 export type Lang = 'hi' | 'kn' | 'en';
@@ -234,7 +234,7 @@ export const actions = {
     const p = issued.payload;
     const had = state.records.find((r) => r.origin === 'local' && r.spec?.issued?.sig === issued.sig);
     if (had) return had.key;
-    const spec: Spec = { rev: 1, at: Date.now(), values: p.values, hooks135: p.m === 'beam' && p.hooks, preset: false, noDrawing: false, issued };
+    const spec: Spec = { rev: 1, at: Date.now(), values: p.values, hooks135: isLinked(p.m) && p.hooks, preset: false, noDrawing: false, issued };
     return actions.newInspection(p.m, p.n, spec, { site: p.s, pourAt: p.p });
   },
 

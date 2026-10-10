@@ -3,7 +3,7 @@ import { useState, useSyncExternalStore } from 'react';
 import type { VisionFrame } from '../../modules/sariya-vision';
 import { apply, convex, dist, homography, type Pt } from './homography';
 import { FIELD_FLOOR_MM, gapsOf } from './rules';
-import { MARKERS, type Spec, type Target } from './spec';
+import { MARKERS, type MemberKind, type Spec, type Target } from './spec';
 import { actions, uid, type Accel, type Coverage, type Lock, type Overlay } from './store';
 
 // The live engine: segmentation model v2 on the phone (NPU, else GPU, else CPU) finds the bars, the printed card or
@@ -256,7 +256,7 @@ export function turnHint(f: VisionFrame | null) {
   return across > (f.bars.length + f.weak.length) / 2;
 }
 
-export function barDiaFor(spec: Spec | null, member: 'slab' | 'beam') {
+export function barDiaFor(spec: Spec | null, member: MemberKind) {
   const v = spec?.noDrawing ? undefined : member === 'slab' ? spec?.values.dia : spec?.values.stirrup_dia;
   return v ?? 10;
 }

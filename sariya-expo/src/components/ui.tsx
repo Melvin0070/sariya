@@ -181,6 +181,7 @@ export function Enter({ children, i = 0, className = '' }: { children: ReactNode
 const ILLO = {
   slab: require('../../assets/images/gen/slab.webp'),
   beam: require('../../assets/images/gen/beam.webp'),
+  column: require('../../assets/images/gen/beam.webp'), // ponytail: beam art stands in until a column illustration is drawn
   card: require('../../assets/images/gen/card.webp'),
   tape: require('../../assets/images/gen/tape.webp'),
   phone: require('../../assets/images/gen/phone.webp'),

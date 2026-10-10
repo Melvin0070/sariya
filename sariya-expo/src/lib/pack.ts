@@ -2,7 +2,7 @@ import { readEvidenceBase64, storeEvidence } from './files';
 import { canon, fingerprint, sha256Hex, signText, verifyText } from './keys';
 import { LIVE } from './measure';
 import { RULEBOOK } from './rules';
-import { FIELDS, isSoon, KIND_LABEL, validate, type CheckId, type MemberKind, type Spec, type SpecPayload, type SpecValues } from './spec';
+import { FIELDS, isLinked, isSoon, KIND_LABEL, validate, type CheckId, type MemberKind, type Spec, type SpecPayload, type SpecValues } from './spec';
 import { actions, getState, keyOf, ROLE_LABEL, when, type ApprovalPayload, type Capture, type Inspection, type Peer, type RequestPayload, type Role, type Signed } from './store';
 
 // Packs move between phones as JSON files through Office Kit. The laptop only carries them; it holds no key.
@@ -84,7 +84,7 @@ export function makeRequest(r: Inspection, checks: CheckId[], note: string) {
 
 export function makeSpec(m: MemberKind, n: string, values: SpecValues, hooks: boolean, site?: string, pourAt?: number) {
   const s = getState();
-  return sign<SpecPayload>({ k: 'spec', m, n, values, hooks: m === 'beam' && hooks, t: Date.now(), e: s.name, f: s.me!.fp, s: site?.trim() || undefined, p: pourAt });
+  return sign<SpecPayload>({ k: 'spec', m, n, values, hooks: isLinked(m) && hooks, t: Date.now(), e: s.name, f: s.me!.fp, s: site?.trim() || undefined, p: pourAt });
 }
 
 export const specFile = (q: Signed<SpecPayload>) => JSON.stringify({ format: SPEC, ...q });
@@ -99,7 +99,7 @@ export function specOrigin(spec: Spec | null, member: MemberKind, myFp?: string)
   if (!is) return { kind: 'typed', title: 'Drawing values typed on site', sub: 'The operator entered them. Check each one against your drawing before approving.' };
   const p = is.payload;
   const valid = verifyText(canon(p), is.sig, is.signer.pub) && p.f === fingerprint(is.signer.pub);
-  const same = p.m === member && canon(p.values) === canon(spec.values) && (p.m === 'beam' && p.hooks) === spec.hooks135;
+  const same = p.m === member && canon(p.values) === canon(spec.values) && (isLinked(p.m) && p.hooks) === spec.hooks135;
   if (!valid || !same) return { kind: 'changed', title: 'Drawing values differ from the issued ones', sub: `They no longer match what ${p.e} signed on ${when(p.t)}. Ask for a new scan against the issued values.` };
   if (p.f !== myFp) return { kind: 'other', title: `Drawing values issued by ${p.e}, not by you`, sub: `Key ${p.f} · ${when(p.t)}. Check them against your drawing before approving.` };
   return { kind: 'mine', title: 'Drawing values issued by you · unchanged', sub: `Signed ${when(p.t)} · key ${p.f}` };

@@ -10,6 +10,7 @@ export type Said = { head: string; body: string[]; action: string };
 const NOUN: Record<MemberKind, Record<Lang, [string, string]>> = {
   slab: { en: ['bar', 'bars'], hi: ['सरिया', 'सरिया'], kn: ['ಸರಳು', 'ಸರಳು'] },
   beam: { en: ['ring', 'rings'], hi: ['रिंग', 'रिंग'], kn: ['ರಿಂಗ್', 'ರಿಂಗ್'] },
+  column: { en: ['tie', 'ties'], hi: ['रिंग', 'रिंग'], kn: ['ರಿಂಗ್', 'ರಿಂಗ್'] },
 };
 
 function en(f: Fix, noun: (n: number) => string): [string[], string] {
@@ -25,7 +26,7 @@ function en(f: Fix, noun: (n: number) => string): [string[], string] {
     case 'respace':
       return [[`${noun(2)[0].toUpperCase()}${noun(2).slice(1)} are about ${f.mean} mm apart.`, `Drawing says ${f.spec} mm.`], `Re-space them at ${f.spec} mm.`];
     case 'add_rings_zone':
-      return [[`Rings are at ${f.gapMm} mm.`, `Drawing says ${f.spec} mm for the first ${f.zoneMm} mm.`], `Add ${f.n} ${f.n === 1 ? 'ring' : 'rings'}.`];
+      return [[`${noun(2)[0].toUpperCase()}${noun(2).slice(1)} are at ${f.gapMm} mm.`, `Drawing says ${f.spec} mm for the first ${f.zoneMm} mm.`], `Add ${f.n} ${noun(f.n)}.`];
     case 'cover_low':
       return [[`Cover is ${f.value} mm.`, `Drawing says ${f.spec} mm.`], 'Put cover blocks under the bars.'];
     case 'cover_high':

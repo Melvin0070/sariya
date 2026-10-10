@@ -4,10 +4,11 @@ import { C, Illo, Overline, Press, T, Tile } from "@/components/ui";
 import { pourPresets } from "@/lib/pour";
 import { isSoon, KIND_LABEL, type MemberKind } from "@/lib/spec";
 
-export const KINDS: MemberKind[] = ["slab", "beam"];
+export const KINDS: MemberKind[] = ["slab", "beam", "column"];
 const EXAMPLE: Record<MemberKind, string> = {
   slab: "Slab S1, first floor",
   beam: "Beam B2, grid C",
+  column: "Column C3, ground floor",
 };
 
 // Kind is usually preselected, so the tiles stay compact and the name field carries the screen.
@@ -37,7 +38,7 @@ export function MemberPick({
   return (
     <>
       {fixed ? null : (
-        <View className="mt-6 flex-row gap-3">
+        <View className="mt-6 flex-row flex-wrap gap-3">
           {KINDS.map((k) => {
             const soon = isSoon(k);
             return (
@@ -45,7 +46,7 @@ export function MemberPick({
                 key={k}
                 on={kind === k}
                 onPress={soon ? undefined : () => onKind(k)}
-                className="flex-1 flex-row items-center gap-2 py-2 pl-2 pr-3"
+                className="min-w-[45%] flex-1 flex-row items-center gap-2 py-2 pl-2 pr-3"
               >
                 <View style={{ opacity: soon ? 0.45 : 1 }}>
                   <Illo name={k} size={60} />

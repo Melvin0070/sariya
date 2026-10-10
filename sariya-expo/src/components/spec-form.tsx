@@ -3,7 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { Switch, View } from 'react-native';
 
 import { Badge, Button, C, Enter, Group, Hairline, Illo, Meter, Num, Overline, Press, Row, Screen, Sub, T, TextBtn, Title } from '@/components/ui';
-import { FIELDS, PRESET, validate, type FieldId, type MemberKind } from '@/lib/spec';
+import { FIELDS, isLinked, PRESET, validate, type FieldId, type MemberKind } from '@/lib/spec';
 
 const ADVANCE_MS = 180;
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
@@ -81,7 +81,7 @@ export function SpecForm({
               first
               illo={member}
               title="Stage prop values"
-              sub={member === 'slab' ? '8 mm bars, 5 each way at 50 c/c' : '8 mm rings, 50 end zone, 75 mid'}
+              sub={member === 'slab' ? '8 mm bars, 5 each way at 50 c/c' : member === 'column' ? '8 mm ties, 50 in the first 150 at each end, 75 mid' : '8 mm rings, 50 end zone, 75 mid'}
               right={<Badge>DEMO</Badge>}
               onPress={() => {
                 const v: Vals = {};
@@ -203,7 +203,7 @@ export function SpecForm({
     vals,
     preset,
     noDrawing,
-    hooks: member === 'beam' && hooks,
+    hooks: isLinked(member) && hooks,
   };
   const missing = !noDrawing && fields.some((f) => vals[f.id] === undefined);
 
@@ -259,7 +259,7 @@ export function SpecForm({
             </Enter>
           );
         })}
-        {member === 'beam' && !noDrawing ? (
+        {isLinked(member) && !noDrawing ? (
           <View className="min-h-[60px] flex-row items-center gap-3 px-4 py-3">
             <Hairline />
             <View className="flex-1">
