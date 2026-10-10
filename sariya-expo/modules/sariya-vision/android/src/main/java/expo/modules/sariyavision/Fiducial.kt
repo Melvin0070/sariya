@@ -34,7 +34,10 @@ object Fiducial {
     DetectorParameters().apply {
       set_cornerRefinementMethod(Objdetect.CORNER_REFINE_SUBPIX)
       set_cornerRefinementWinSize(5)
-      set_minMarkerPerimeterRate(0.02)
+      // 0.03 of 1920 px = 14 px marker sides: still finds card S well beyond the "move closer" gate (~22 px at
+      // 1080p), while skipping the smallest candidates. Aruco3 searches on a downscaled image first.
+      set_minMarkerPerimeterRate(0.03)
+      set_useAruco3Detection(true)
     }
   }
   private val cardBoard by lazy {

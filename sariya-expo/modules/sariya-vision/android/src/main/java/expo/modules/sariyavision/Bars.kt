@@ -22,6 +22,8 @@ object Bars {
   private const val MAX_CONT_GAP_BIN_MM = 5.0
   private const val ACCEPT_CONTINUITY = 0.5
   private const val WEAK_CONTINUITY = 0.2
+  // Peaks are tried tallest first; real bars are always among the first few dozen, the long tail is mask noise.
+  private const val MAX_CANDIDATES = 40
 
   /**
    * axis "x": positions are plane x, bars run along y (main bars, stirrups on the strip). axis "y": the reverse.
@@ -76,22 +78,26 @@ object Bars {
     val half = barDia / 2 + 2.0
     val bars = ArrayList<Bar>()
     val weak = ArrayList<Bar>()
+    val ts = DoubleArray(n) // reused per candidate: no boxed Doubles, no per-frame garbage
+    var tried = 0
     for (p in cand) {
+      if (tried >= MAX_CANDIDATES) break
       val c0 = lo + p + 0.5
       if (taken.any { abs(it - c0) < nms }) continue
       taken.add(c0)
+      tried++
       // Refine the centre on the points inside the bar's width, then measure its extent and continuity along t.
       var sum = 0.0; var cnt = 0
       for (i in 0 until n) if (abs(off[i] - c0) <= half) { sum += off[i]; cnt++ }
       if (cnt < 30) continue
       val c = sum / cnt
-      val ts = ArrayList<Double>(cnt)
-      for (i in 0 until n) if (abs(off[i] - c) <= half) ts.add(t[i])
-      ts.sort()
-      val t0 = ts[(ts.size * 0.02).toInt()]
-      val t1 = ts[min(ts.size - 1, (ts.size * 0.98).toInt())]
+      var m = 0
+      for (i in 0 until n) if (abs(off[i] - c) <= half) ts[m++] = t[i]
+      java.util.Arrays.sort(ts, 0, m)
+      val t0 = ts[(m * 0.02).toInt()]
+      val t1 = ts[min(m - 1, (m * 0.98).toInt())]
       if (t1 - t0 < minLenMm) continue
-      val cont = continuity(ts, t0, t1, c, nx, ny, dx, dy, shadow, crossings, barDia / 2 + 5)
+      val cont = continuity(ts, m, t0, t1, c, nx, ny, dx, dy, shadow, crossings, barDia / 2 + 5)
       if (cont < WEAK_CONTINUITY) continue
       val pa = doubleArrayOf(c * nx + t0 * dx, c * ny + t0 * dy)
       val pb = doubleArrayOf(c * nx + t1 * dx, c * ny + t1 * dy)
@@ -103,7 +109,7 @@ object Bars {
         val tr = (ref - c * nx) / dx
         c * ny + tr * dy
       }
-      (if (cont >= ACCEPT_CONTINUITY) bars else weak).add(Bar(pos, pa, pb, cnt))
+      (if (cont >= ACCEPT_CONTINUITY) bars else weak).add(Bar(pos, pa, pb, m))
     }
     bars.sortBy { it.pos }
     weak.sortBy { it.pos }
@@ -154,10 +160,10 @@ object Bars {
   }
 
   // Occupied fraction of 5 mm bins along the bar, not counting bins in the card's shadow or on a crossing bar.
-  private fun continuity(ts: List<Double>, t0: Double, t1: Double, c: Double, nx: Double, ny: Double, dx: Double, dy: Double, exclude: Array<DoubleArray>, crossings: List<Double>, crossHalf: Double): Double {
+  private fun continuity(ts: DoubleArray, m: Int, t0: Double, t1: Double, c: Double, nx: Double, ny: Double, dx: Double, dy: Double, exclude: Array<DoubleArray>, crossings: List<Double>, crossHalf: Double): Double {
     val nb = max(1, ceil((t1 - t0) / MAX_CONT_GAP_BIN_MM).toInt())
     val occ = BooleanArray(nb)
-    for (v in ts) if (v in t0..t1) occ[min(nb - 1, floor((v - t0) / MAX_CONT_GAP_BIN_MM).toInt())] = true
+    for (k in 0 until m) { val v = ts[k]; if (v in t0..t1) occ[min(nb - 1, floor((v - t0) / MAX_CONT_GAP_BIN_MM).toInt())] = true }
     var seen = 0; var total = 0
     for (k in 0 until nb) {
       val tm = t0 + (k + 0.5) * MAX_CONT_GAP_BIN_MM
