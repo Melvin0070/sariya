@@ -1,5 +1,18 @@
 # Sariya session state
 
+## Session note (11 Oct, 00:10): column member (`bfa9f5a`)
+- **Done:** Column is a third member type, live (not "soon"). It reuses the beam strip path.
+  - **Fields:** tie diameter, tie spacing in lo, lo length, tie spacing in the middle, cover.
+  - **Scans:** two, both with strip_300 on the column face. The bottom scan has its 0 end at the floor; the top scan (`ties_top`) has its 0 end at the beam bottom.
+  - **Checks:** bottom end, top end, middle (taken from whichever scan saw gaps past lo), cover, tie size, and hooks if the drawing asks for 135°.
+  - **Other:** "ties" wording in English fixes (Hindi and Kannada keep रिंग / ರಿಂಗ್); the turn-phone hint now shows for slab only; the home screen has a wide Column tile; the beam illustration stands in for a column one.
+  - **Verified:** tsc and lint pass, and `bun test src/lib/column.test.ts` passes. Run each test file alone, because their store mocks clash.
+- **Open:**
+  - Not yet installed or tested on the iQOO (the phone dropped off adb).
+  - No column prop has been scanned yet, so the side view of the ties (the far face showing through the cage) is untested.
+  - IS 13920 lo/spacing hints are not shown when the drawing is silent.
+  - The teammate's column md file is not in the repo.
+
 ## Session note (10 Oct): "Open with Sariya"
 - Android VIEW intent filter for `content://` files typed `application/json` or `application/octet-stream` (`app.json` → prebuild). `src/app/+native-intent.tsx` rewrites the URI to `/received?uri=…`, which reads it with `readText` and runs the same `receive()` checks; the root layout keeps `(tabs)` underneath for a cold open.
 - Release APK (v3 / 0.3) built from this tree, including the scan result drawer, and installed in place on the iQOO with data kept (Gradle needs `JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home`). `query-activities` lists Sariya for a JSON file. Not yet tried by hand from Files, WhatsApp or Office Kit (phone was locked). Any JSON file now offers Sariya; non-Sariya files get "Not a Sariya file".
