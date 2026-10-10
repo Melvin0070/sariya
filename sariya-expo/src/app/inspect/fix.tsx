@@ -1,10 +1,10 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { Check as CheckIcon, Play, Square } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import Svg, { Line, Rect } from 'react-native-svg';
 
-import { Button, Chip, H2, Notice, Screen, T, TextBtn, Title, TopBar, tap } from '@/components/ui';
+import { Button, Chip, Enter, H2, Illo, Notice, Num, Press, Screen, Segmented, T, TextBtn, Title, TopBar } from '@/components/ui';
 import { speak, stopSpeaking, voices, type Voices } from '@/lib/device';
 import { LANG_LABEL, say, spoken } from '@/lib/fix';
 import { evaluate } from '@/lib/rules';
@@ -84,6 +84,13 @@ export default function Fix() {
     else router.push('/inspect/readings');
   };
 
+  const toggle = () => {
+    if (speaking) {
+      stopSpeaking();
+      setSpeaking(false);
+    } else play();
+  };
+
   return (
     <Screen
       footer={
@@ -99,42 +106,37 @@ export default function Fix() {
         <Chip outcome="outside" small />
       </View>
 
-      <View className="mt-5 flex-row rounded-full bg-pill p-1">
-        {(['hi', 'kn', 'en'] as Lang[]).map((l) => (
-          <Pressable
-            key={l}
-            onPress={() => {
-              tap();
-              stopSpeaking();
-              setSpeaking(false);
-              setLang(l);
-              actions.setLang(l);
-            }}
-            className={`h-11 flex-1 items-center justify-center rounded-full ${lang === l ? 'bg-paper' : ''}`}
-          >
-            <T w={lang === l ? 'bold' : 'medium'} className={`text-[16px] ${lang === l ? '' : 'text-ink-2'}`}>
-              {LANG_LABEL[l]}
-            </T>
-          </Pressable>
-        ))}
+      <View className="mt-5">
+        <Segmented
+          items={(['hi', 'kn', 'en'] as Lang[]).map((l) => ({ key: l, label: LANG_LABEL[l] }))}
+          value={lang}
+          onChange={(l) => {
+            stopSpeaking();
+            setSpeaking(false);
+            setLang(l);
+            actions.setLang(l);
+          }}
+        />
       </View>
 
       {/* subtitles are the primary channel; audio is for the mason */}
-      <View className="mt-4 rounded-card bg-ink p-5">
-        <T w="medium" className="text-[15px] text-white/60">
-          {s.head}
-        </T>
-        {s.body.map((line) => (
-          <T key={line} w="semibold" className="mt-2 text-[22px] leading-[32px] text-white">
-            {line}
+      <Enter key={lang}>
+        <View className="mt-4 rounded-card bg-ink p-5">
+          <T w="medium" className="text-[15px] text-white/60">
+            {s.head}
           </T>
-        ))}
-        <View className="mt-5 rounded-xl bg-accent px-4 py-4">
-          <T w="bold" className="text-[24px] leading-[32px] text-white">
-            {s.action}
-          </T>
+          {s.body.map((line) => (
+            <T key={line} w="semibold" className="mt-2 text-[24px] leading-[34px] text-white">
+              {line}
+            </T>
+          ))}
+          <View className="mt-5 rounded-xl bg-accent px-4 py-4">
+            <T w="bold" className="text-[26px] leading-[34px] text-white">
+              {s.action}
+            </T>
+          </View>
         </View>
-      </View>
+      </Enter>
       {lang !== 'en' ? <T className="mt-3 text-[15px] leading-[22px] text-ink-2">{[...en.body, en.action].join(' ')}</T> : null}
 
       {v && !hasVoice ? (
@@ -142,14 +144,31 @@ export default function Fix() {
           Show the subtitles to the mason. Add the voice in Settings › Text-to-speech to hear it offline.
         </Notice>
       ) : (
-        <View className="mt-3">
-          <Button label={speaking ? 'Stop' : 'Play again'} icon={speaking ? Square : Play} kind="secondary" disabled={!v} onPress={() => (speaking ? (stopSpeaking(), setSpeaking(false)) : play())} />
+        <View className="mt-4 flex-row items-center gap-3 rounded-card bg-tile py-2 pl-2 pr-3">
+          <Illo name="speak" size={72} />
+          <View className="flex-1">
+            <T w="bold" className="text-[17px]">
+              {speaking ? 'Speaking…' : 'Play to the mason'}
+            </T>
+            <T className="text-[14px] text-ink-2">{LANG_LABEL[lang]}</T>
+          </View>
+          <Press
+            feel="impact"
+            scale={0.92}
+            disabled={!v}
+            accessibilityRole="button"
+            accessibilityLabel={speaking ? 'Stop' : 'Play again'}
+            onPress={toggle}
+            className={`h-[72px] w-[72px] items-center justify-center rounded-full bg-ink ${v ? '' : 'opacity-35'}`}
+          >
+            {speaking ? <Square size={26} color="#fff" fill="#fff" /> : <Play size={30} color="#fff" fill="#fff" style={{ marginLeft: 4 }} />}
+          </Press>
         </View>
       )}
 
       {showDiagram && lock ? (
         <>
-          <H2 className="mt-7">Now vs drawing</H2>
+          <H2 className="mt-8">Now vs drawing</H2>
           <View className="mt-3 rounded-card bg-tile p-3">
             <Diagram positions={lock.positions} spec={spec} />
             <View className="flex-row justify-between px-2">
@@ -163,7 +182,9 @@ export default function Fix() {
           </View>
         </>
       ) : null}
-      <T className="mt-4 text-[13px] leading-[19px] text-ink-3">From the record: {f.value}</T>
+      <Num w="regular" className="mt-4 text-[13px] leading-[19px] text-ink-3">
+        From the record: {f.value}
+      </Num>
     </Screen>
   );
 }

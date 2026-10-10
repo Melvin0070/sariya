@@ -10,12 +10,12 @@ export function statusOf(r: Inspection) {
   }
   if (r.origin === 'received') {
     if (r.approval) return `You approved · ${when(r.approval.payload.t)}`;
-    if (r.request) return 'You asked for another view';
+    if (r.request) return 'You asked for a fix and re-scan';
     return r.trustedSigner ? 'Waiting for your review' : 'Unknown signer · view only';
   }
   if (r.revised) return 'Replaced by a newer revision';
   if (r.approval) return `Approved by ${r.approval.payload.e} · ${when(r.approval.payload.t)}`;
-  if (r.request) return 'Engineer asked for another view';
+  if (r.request) return 'Engineer asked for a fix and re-scan';
   if (r.sentAt) return 'Sent · waiting for approval';
   return 'Signed · not sent yet';
 }

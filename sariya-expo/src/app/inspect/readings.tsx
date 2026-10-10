@@ -1,22 +1,37 @@
 import { Redirect, router } from 'expo-router';
 import { Pencil } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
 
-import { Button, Chip, Screen, SourceTag, Sub, T, Title, TopBar, tap } from '@/components/ui';
+import { Button, C, Chip, Enter, Illo, Num, Press, Screen, SourceTag, Sub, T, Title, TopBar } from '@/components/ui';
 import { evaluate, massBand, sizeClass, type Finding } from '@/lib/rules';
 import { checksFor, KIND_LABEL, type CheckDef } from '@/lib/spec';
 import { actions, getState, useDraft, when, type Reading } from '@/lib/store';
 
 const num = (s: string) => s.replace(/[^0-9.]/g, '').slice(0, 6);
 
-function Field({ value, onChange, unit, placeholder }: { value: string; onChange: (s: string) => void; unit: string; placeholder: string }) {
+// Big tabular entry with the unit small and grey, readable at arm's length.
+function Field({ value, onChange, unit, placeholder, label }: { value: string; onChange: (s: string) => void; unit: string; placeholder: string; label: string }) {
   return (
-    <View className="h-14 flex-1 flex-row items-center rounded-xl bg-tile px-4">
-      <TextInput value={value} onChangeText={(t) => onChange(num(t))} keyboardType="numeric" placeholder={placeholder} placeholderTextColor="#8A8A8A" className="flex-1 font-bold text-[22px] text-ink" />
-      <T w="medium" className="text-[17px] text-ink-2">
-        {unit}
+    <View className="flex-1">
+      <T w="medium" className="mb-1.5 text-[13px] text-ink-2">
+        {label}
       </T>
+      <View className="h-16 flex-row items-center rounded-2xl border-2 border-ink bg-paper px-4">
+        <TextInput
+          value={value}
+          onChangeText={(t) => onChange(num(t))}
+          keyboardType="numeric"
+          placeholder={placeholder}
+          placeholderTextColor={C.ink4}
+          accessibilityLabel={`${label} in ${unit}`}
+          className="flex-1 font-bold text-[30px] text-ink"
+          style={{ fontVariant: ['tabular-nums'] }}
+        />
+        <T w="medium" className="text-[18px] text-ink-3">
+          {unit}
+        </T>
+      </View>
     </View>
   );
 }
@@ -29,7 +44,7 @@ const ASK = {
 };
 
 // One physical reading. Saving records the value, its source and who entered it; nothing here is a camera measurement.
-function ReadingCard({ def, f, drawing, saved, first }: { def: CheckDef; f: Finding; drawing: number | null; saved?: Reading; first: boolean }) {
+function ReadingCard({ def, f, drawing, saved }: { def: CheckDef; f: Finding; drawing: number | null; saved?: Reading }) {
   const kind = def.reading!;
   const [editing, setEditing] = useState(!saved);
   const [v, setV] = useState(saved?.value != null ? String(saved.value) : '');
@@ -49,79 +64,101 @@ function ReadingCard({ def, f, drawing, saved, first }: { def: CheckDef; f: Find
 
   const kgm = Number(mass) > 0 && Number(len) > 0 ? Number(mass) / Number(len) : null;
   const cls = kgm ? sizeClass(kgm) : null;
-  const valid = kind === 'scale' ? !!kgm : kind === 'template' ? deg != null : Number(v) > 0;
+  let valid = Number(v) > 0;
+  if (kind === 'scale') valid = !!kgm;
+  else if (kind === 'template') valid = deg != null;
+  const unit = kind === 'template' ? '°' : ' mm';
 
   return (
-    <View className="mt-4 rounded-card border border-line p-4">
+    <View className={`mt-4 rounded-card p-4 ${editing ? 'border-2 border-ink bg-paper' : 'bg-tile'}`}>
       <View className="flex-row items-center gap-2">
-        <T w="semibold" className="flex-1 text-[18px]">
+        <T w="bold" className="flex-1 text-[18px] leading-[24px]">
           {def.label}
         </T>
-        <SourceTag source={kind} />
+        {editing ? <SourceTag source={kind} /> : <Chip outcome={f.outcome} small />}
       </View>
       <T className="mt-0.5 text-[14px] text-ink-2">
         {TITLE[kind]}
-        {drawing != null ? ` · drawing ${drawing}${kind === 'template' ? '°' : ' mm'}` : ' · not on drawing'}
+        {drawing != null ? ` · drawing ${drawing}${unit}` : ' · not on drawing'}
       </T>
 
       {editing ? (
         <>
-          <T className="mt-1 text-[14px] leading-[20px] text-ink-3">{ASK[kind]}</T>
+          <T className="mt-3 text-[15px] leading-[21px]">{ASK[kind]}</T>
           {kind === 'tape' ? (
             <View className="mt-3 flex-row">
-              <Field value={v} onChange={setV} unit="mm" placeholder="0" />
+              <Field label="Cover" value={v} onChange={setV} unit="mm" placeholder="0" />
             </View>
           ) : null}
           {kind === 'scale' ? (
             <>
               <View className="mt-3 flex-row gap-2">
-                <Field value={len} onChange={setLen} unit="mm" placeholder="200" />
-                <Field value={mass} onChange={setMass} unit="g" placeholder="0" />
+                <Field label="Length" value={len} onChange={setLen} unit="mm" placeholder="200" />
+                <Field label="Mass" value={mass} onChange={setMass} unit="g" placeholder="0" />
               </View>
-              <T className="mt-2 text-[14px] text-ink-2">
+              <Num w="medium" className="mt-3 text-[14px] leading-[20px] text-ink-2">
                 {kgm ? `${kgm.toFixed(3)} kg/m · ${cls ? `${cls} mm size band` : 'outside every IS 1786 size band'}` : 'Length of the offcut, then its mass'}
                 {drawing ? ` · ${drawing} mm band ${massBand(drawing)[0].toFixed(3)}–${massBand(drawing)[1].toFixed(3)} kg/m` : ''}
-              </T>
-              <T className="mt-1 text-[12px] text-ink-3">Size class only. A weigh test says nothing about steel grade or brand.</T>
+              </Num>
+              <T className="mt-1 text-[13px] text-ink-3">Size class only. A weigh test says nothing about steel grade or brand.</T>
             </>
           ) : null}
           {kind === 'template' ? (
             <View className="mt-3 flex-row gap-2">
-              {[135, 90].map((d) => (
-                <Pressable key={d} onPress={() => (tap(), setDeg(d))} className={`h-14 flex-1 items-center justify-center rounded-xl ${deg === d ? 'bg-ink' : 'bg-tile'}`}>
-                  <T w="semibold" className={`text-[18px] ${deg === d ? 'text-white' : ''}`}>
-                    {d}° hook
-                  </T>
-                </Pressable>
-              ))}
+              {[135, 90].map((d) => {
+                const on = deg === d;
+                return (
+                  <Press
+                    key={d}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: on }}
+                    accessibilityLabel={`${d} degree hook`}
+                    onPress={() => setDeg(d)}
+                    className={`h-16 flex-1 items-center justify-center rounded-2xl ${on ? 'bg-ink' : 'bg-tile'}`}
+                  >
+                    <View className="flex-row items-baseline">
+                      <Num className={`text-[26px] ${on ? 'text-white' : ''}`}>{d}°</Num>
+                      <T w="medium" className={`ml-1.5 text-[15px] ${on ? 'text-white/70' : 'text-ink-3'}`}>
+                        hook
+                      </T>
+                    </View>
+                  </Press>
+                );
+              })}
             </View>
           ) : null}
-          <View className="mt-3 flex-row gap-2">
+          <View className="mt-4 flex-row gap-2">
             <View className="flex-1">
               <Button label="Not visible" kind="secondary" onPress={() => save(true)} />
             </View>
-            <View className="flex-[2]">
+            <View className="flex-1">
               <Button label="Save" disabled={!valid} onPress={() => save()} />
             </View>
           </View>
         </>
       ) : (
-        <Pressable onPress={() => (tap(), setEditing(true))} className="mt-2 flex-row items-center">
+        <Press accessibilityRole="button" accessibilityLabel={`Edit ${def.label}`} onPress={() => setEditing(true)} scale={0.98} className="mt-3 min-h-[48px] flex-row items-center gap-3">
           <View className="flex-1">
-            <View className="flex-row items-start gap-2">
-              <T w="medium" className="flex-1 text-[16px]">
-                {f.value ?? f.reason}
+            {f.value ? (
+              <Num className={kind === 'scale' ? 'text-[17px] leading-[24px]' : 'text-[24px] leading-[30px]'}>{f.value}</Num>
+            ) : (
+              <T w="medium" className="text-[16px]">
+                {f.reason}
               </T>
-              <Chip outcome={f.outcome} small />
-            </View>
+            )}
             {saved ? (
               <T className="mt-0.5 text-[13px] text-ink-3">
                 {saved.by} · {when(saved.at)}
               </T>
             ) : null}
           </View>
-          <Pencil size={16} color="#8A8A8A" />
-        </Pressable>
+          <View className="h-11 flex-row items-center gap-1.5 rounded-full bg-paper px-4">
+            <Pencil size={15} color={C.ink} />
+            <T w="semibold" className="text-[14px]">
+              Edit
+            </T>
+          </View>
+        </Press>
       )}
     </View>
   );
@@ -142,11 +179,18 @@ export default function Readings() {
   return (
     <Screen footer={<Button label="Done" onPress={() => router.back()} />}>
       <TopBar name={cur.name} sub={KIND_LABEL[cur.member]} />
-      <Title>Readings by hand</Title>
-      <Sub>What the camera can’t see.</Sub>
-      <View className="mt-2">
+      <View className="flex-row items-center">
+        <View className="flex-1">
+          <Title>Readings by hand</Title>
+          <Sub>What the camera can’t see.</Sub>
+        </View>
+        <Illo name="tape" size={88} />
+      </View>
+      <View className="mt-1">
         {defs.map((d, i) => (
-          <ReadingCard key={d.id} first={i === 0} def={d} f={fs.find((f) => f.def.id === d.id)!} drawing={drawingOf(d)} saved={cur.readings[d.id]} />
+          <Enter key={d.id} i={i}>
+            <ReadingCard def={d} f={fs.find((f) => f.def.id === d.id)!} drawing={drawingOf(d)} saved={cur.readings[d.id]} />
+          </Enter>
         ))}
       </View>
     </Screen>

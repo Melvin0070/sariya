@@ -35,6 +35,8 @@ export function captureBody(r: Inspection, engine = r.capture ? (r.capture.engin
     parent: r.parent,
     name: r.name,
     member: r.member,
+    site: r.site,
+    pourAt: r.pourAt,
     createdAt: r.createdAt,
     spec: r.spec,
     locks,
@@ -80,9 +82,9 @@ export function makeRequest(r: Inspection, checks: CheckId[], note: string) {
   return sign<RequestPayload>({ k: 'request', h: r.capture!.hash, r: r.id, v: r.rev, n: r.name, checks, note: note.trim(), t: Date.now(), e: s.name, f: s.me!.fp });
 }
 
-export function makeSpec(m: MemberKind, n: string, values: SpecValues, hooks: boolean) {
+export function makeSpec(m: MemberKind, n: string, values: SpecValues, hooks: boolean, site?: string, pourAt?: number) {
   const s = getState();
-  return sign<SpecPayload>({ k: 'spec', m, n, values, hooks: m === 'beam' && hooks, t: Date.now(), e: s.name, f: s.me!.fp });
+  return sign<SpecPayload>({ k: 'spec', m, n, values, hooks: m === 'beam' && hooks, t: Date.now(), e: s.name, f: s.me!.fp, s: site?.trim() || undefined, p: pourAt });
 }
 
 export const specFile = (q: Signed<SpecPayload>) => JSON.stringify({ format: SPEC, ...q });
@@ -124,7 +126,7 @@ async function receiveCapture(p: CapturePack): Promise<Received> {
   if (!verifyText(p.hash, p.sig, p.signer.pub)) return fail('Signature does not verify', 'This pack was not signed by the key it names. Nothing was opened.');
   const fp = fingerprint(p.signer.pub);
   const done = s.processed[p.hash];
-  if (done) return fail('Rejected: already processed', `This exact record was ${done.decision === 'approved' ? 'approved' : 'sent back for another view'} on ${when(done.at)}. A new scan arrives as a new revision.`);
+  if (done) return fail('Rejected: already processed', `This exact record was ${done.decision === 'approved' ? 'approved' : 'sent back for a fix'} on ${when(done.at)}. A new scan arrives as a new revision.`);
   if (fp === s.me?.fp) return fail('Signed by this phone', 'Approval needs a second phone and key. Open this pack on the engineer’s phone.');
 
   const evidence: Record<string, string> = {};
@@ -145,6 +147,8 @@ async function receiveCapture(p: CapturePack): Promise<Received> {
     parent: b.parent,
     name: b.name,
     member: b.member,
+    site: b.site,
+    pourAt: b.pourAt,
     createdAt: b.createdAt,
     spec: b.spec,
     locks: b.locks.map((l) => ({ ...l, image: l.image ? { ...l.image, file: evidence[l.image.hash] } : undefined })),
@@ -178,7 +182,7 @@ async function receiveSigned(p: Signed<ApprovalPayload | RequestPayload>): Promi
     return { ok: true, key: rec.key, title: 'Approval attached', sub: `${eng.name} approved ${rec.name} rev ${rec.rev} on ${when(payload.t)}.` };
   }
   actions.attachRequest(rec.key, p as Signed<RequestPayload>);
-  return { ok: true, key: rec.key, title: 'Another view requested', sub: `${eng.name}: ${(payload as RequestPayload).note || 'scan the named zones again'}.` };
+  return { ok: true, key: rec.key, title: 'Fix requested', sub: `${eng.name}: ${(payload as RequestPayload).note || 'fix and scan the named zones again'}` };
 }
 
 function receiveSpec(p: Signed<SpecPayload>): Received {

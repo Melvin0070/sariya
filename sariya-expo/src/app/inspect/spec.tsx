@@ -43,27 +43,32 @@ export default function Spec() {
       init={init}
       allowNoDrawing
       confirmTop={(d) => {
+        // One notice: losing the engineer's values matters most, then a new revision, then the signed source.
         const same = isSame(d);
-        return (
-          <>
-            {existing?.issued ? (
-              same ? (
-                <Notice tone="pass" className="mt-4" title={`From ${existing.issued.payload.e}’s drawing · signed ${when(existing.issued.payload.t)}`}>
-                  Changing a value marks the drawing values as typed on site, and the engineer sees that in review.
-                </Notice>
-              ) : (
-                <Notice tone="warn" className="mt-4" title="No longer the engineer’s values">
-                  Saving keeps your values, marked as typed on site. The engineer is asked to check them against the drawing.
-                </Notice>
-              )
-            ) : null}
-            {existing && revOf(d) > existing.rev && cur.locks.some((l) => !l.superseded) ? (
-              <Notice tone="warn" className="mt-4" title={`Saving makes drawing rev ${revOf(d)}`}>
-                Scans so far stay as history; scan again against the new values.
-              </Notice>
-            ) : null}
-          </>
-        );
+        const issued = existing?.issued;
+        const bump = !!existing && revOf(d) > existing.rev && cur.locks.some((l) => !l.superseded);
+        if (issued && !same) {
+          return (
+            <Notice tone="warn" className="mt-4" title="No longer the engineer’s values">
+              {`Saved as typed on site; the engineer checks them against the drawing.${bump ? ` Scans so far stay as history; scan again against rev ${revOf(d)}.` : ''}`}
+            </Notice>
+          );
+        }
+        if (bump) {
+          return (
+            <Notice tone="warn" className="mt-4" title={`Saving makes drawing rev ${revOf(d)}`}>
+              Scans so far stay as history; scan again against the new values.
+            </Notice>
+          );
+        }
+        if (issued) {
+          return (
+            <Notice tone="pass" className="mt-4" title={`From ${issued.payload.e}’s drawing · signed ${when(issued.payload.t)}`}>
+              Changing a value marks it as typed on site for the engineer’s review.
+            </Notice>
+          );
+        }
+        return null;
       }}
       confirmFooter={(d, missing) => {
         const same = isSame(d);

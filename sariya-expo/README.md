@@ -23,7 +23,7 @@ Rebuild after changing native modules or native configuration. Use Java 17 on
 this Mac: Android Studio's bundled Java 25 failed the native CMake configuration.
 
 Live scan readings come from the local module `modules/sariya-vision` (CameraX + LiteRT 2.3 + OpenCV 4.10):
-card S / strip_300 pose by ChArUco/ArUco, bar mask by segmentation **model v2** (`models/seg/v2`, threshold 0.3,
+card S / strip_300 pose by ChArUco/ArUco, bar mask by segmentation **model v3** (`models/seg/v3`, threshold 0.3,
 copied into the APK at build time), bars as one parallel family in card mm. Locks are `AUTO` with the model,
 accelerator and inference time recorded. "By hand" marking stays as the fallback.
 
@@ -42,7 +42,7 @@ Bars the model only partly sees (usually under the card) are reported as *partly
 the evidence photo, never counted, and they turn a short count or a wide gap into **re-scan** instead of "outside".
 
 **New model round:** drop `unet_mbv3_1152.tflite` (+ `unet_mbv3_1152_sm8850_qairt250.tflite` for the NPU) into
-`models/seg/vN/`, then build with `-Psariya.model=vN -Psariya.threshold=0.x` (default v2 / 0.3). Missing NPU file =
+`models/seg/vN/`, then build with `-Psariya.model=vN -Psariya.threshold=0.x` (default v3 / 0.3). Missing NPU file =
 GPU fallback. The readiness screen shows the model and accelerator.
 
 **Release APK** (arm64 only, debug-signed for sideloading):

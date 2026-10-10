@@ -47,6 +47,8 @@ export type Inspection = {
   parent?: string; // capture hash of the revision this one replaces
   name: string;
   member: MemberKind;
+  site?: string;
+  pourAt?: number; // planned pour, ms
   createdAt: number;
   spec: Spec | null;
   locks: Lock[]; // superseded locks stay as history
@@ -85,6 +87,7 @@ type State = {
   me: DeviceKey | null;
   trusted: Peer[];
   records: Inspection[];
+  issued: Signed<SpecPayload>[]; // engineer: drawing values sent, so the inbox can show sites still awaiting a scan
   draftKey: string | null;
   processed: Record<string, { at: number; decision: 'approved' | 'requested'; key: string }>;
   verifications: Verification[];
@@ -129,6 +132,7 @@ let state: State = {
   name: '',
   trusted: [],
   records: [],
+  issued: [],
   draftKey: null,
   processed: {},
   verifications: [],
@@ -147,12 +151,17 @@ const set = (patch: Partial<State>) => {
   for (const l of listeners) l();
 };
 
+// Stable, so React doesn't unsubscribe and resubscribe on every render.
+const subscribe = (l: () => void) => {
+  listeners.add(l);
+  return () => {
+    listeners.delete(l);
+  };
+};
+
 export function useStore<T>(pick: (s: State) => T): T {
   return useSyncExternalStore(
-    (l) => {
-      listeners.add(l);
-      return () => listeners.delete(l);
-    },
+    subscribe,
     () => pick(state),
     () => pick(state),
   );
@@ -196,7 +205,7 @@ export const actions = {
     set({ trusted: state.trusted.filter((p) => p.fp !== fp) });
   },
 
-  newInspection(member: MemberKind, name: string, spec: Spec | null = null) {
+  newInspection(member: MemberKind, name: string, spec: Spec | null = null, where: { site?: string; pourAt?: number } = {}) {
     const seq = state.seq + 1;
     const prefix = (state.me?.fp ?? 'XX').slice(0, 2);
     const id = `R${prefix}-${seq}`;
@@ -206,6 +215,8 @@ export const actions = {
       rev: 1,
       name,
       member,
+      site: where.site?.trim() || undefined,
+      pourAt: where.pourAt,
       createdAt: Date.now(),
       spec,
       locks: [],
@@ -224,7 +235,11 @@ export const actions = {
     const had = state.records.find((r) => r.origin === 'local' && r.spec?.issued?.sig === issued.sig);
     if (had) return had.key;
     const spec: Spec = { rev: 1, at: Date.now(), values: p.values, hooks135: p.m === 'beam' && p.hooks, preset: false, noDrawing: false, issued };
-    return actions.newInspection(p.m, p.n, spec);
+    return actions.newInspection(p.m, p.n, spec, { site: p.s, pourAt: p.p });
+  },
+
+  addIssued(spec: Signed<SpecPayload>) {
+    set({ issued: [spec, ...state.issued.filter((x) => x.sig !== spec.sig)] });
   },
 
   openDraft(key: string) {
@@ -303,7 +318,7 @@ export const actions = {
       locks: old.locks.filter((l) => !l.superseded && !resetTargets.includes(l.target)),
       readings,
       corrected: {},
-      notice: old.request ? `Engineer asked: ${old.request.payload.note || 'another view'}` : undefined,
+      notice: old.request ? `Engineer asked: ${old.request.payload.note || 'fix and scan again'}` : undefined,
       status: 'draft',
       capture: undefined,
       sentAt: undefined,

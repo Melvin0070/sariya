@@ -1,5 +1,24 @@
 # Sariya session state
 
+## Session note (10 Oct, ~14:40): UI/UX pass (Uber × Swiggy)
+- **Design system** in `sariya-expo/src/components/ui.tsx`:
+  - New pieces: tokens (`C`, `SHADOW`, `SPRING`), `Num` (tabular numerals), `Press` (scale plus haptic, built on Animated.View responders because NativeWind won't style an animated Pressable), `Enter`, `Illo`, `Meter`, `Segmented`, `ActionBar` (the "View cart" bar), `Skeleton`, `Details`.
+  - The old SVG `art.tsx` is deleted.
+  - Brief: `notes/15-ui/UX-PLAN.md`; research: `notes/15-ui/DESIGN-RESEARCH.md`.
+- **Art:** 13 clay illustrations plus a hero photo, generated with Codex image_gen and stored as 512 px webp in `assets/images/gen/` (580 KB total). The new orange rebar-grid launcher icon and splash replace Expo's; this needed `expo prebuild` (no clean).
+- **UX cuts:**
+  - Home: the duplicate "New inspection" bar is gone; a "Continue" card resumes the last-opened draft; start tiles are illustrated.
+  - New check: the kind picker is hidden when Home already chose the kind.
+  - Drawing values: a standard bar size advances on one tap; "Start over" is dropped.
+  - Every screen shows at most one Notice.
+  - Hashes, keys, engine and frame counts are folded into Details.
+  - Checks is an order-tracking screen (progress, timeline, a tappable "outside limits · show the fix" banner, a sticky next-step bar).
+  - PIN is a glove-size keypad sheet; signing ends on a success state.
+- **Perf:** a stable `useStore` subscription (it used to resubscribe on every render); native-stack `ios_from_right` transitions.
+- **Phone:** the debug dev client (model v3 / 0.3, new icon) is installed for hot reload with Metro. **Rebuild the release APK (`-Psariya.model=v3 -Psariya.threshold=0.3`) before the demo.**
+- **Not checked on the device:** the engineer Review, Received, Issue and verifier QR screens (no received pack on the phone). The phone's role and name were changed mid-session (Engineer/Operator "Melly"), not by the agents.
+- Nothing is committed yet.
+
 ## Status (10 Oct 2026, 09:55, model lane): v3 trained, in the app, recommended
 - **v3** is in `models/seg/v3/` (`8aa92ef`); report: `notes/14-model/MODEL-V3.md`. It was trained from v2 plus 2,500 synthetic stirrup scenes.
 
@@ -15,6 +34,11 @@
   - **Fallback if it misses:** `/tmp/sariya-app-v1.apk` (v1, 0.5), installed with `adb install -r`, keeping data.
 - **Recommendation:** make v3 / 0.3 the module default once the prop check passes. That's a one-line change in the sariya-vision `build.gradle`, owned by the app lane.
 - **Round 4** (if the props still fail): venue photos of our bars (positives) plus venue clutter (negatives), starting from v3.
+
+## Session note (10 Oct, ~10:00): evaluation deck
+- Wrote `deck/eval-deck.html` (7 slides, images embedded; source with placeholders in `deck/eval-deck.src.html`), published as a private artifact: title, site visit, Japan's prior validation, what we built, model research, NPU/GPU/CPU benchmark, fine-tuning v1-v3.
+- **Site visit detail added (user-reported, 9 Oct, one site):** engineer visits quoted at ₹5,000-10,000 each, so small/mid houses skip them; the crew insisted any deviation from the drawing gets corrected and only the engineer clears the pour, yet the user saw errors the crew agreed the engineer would reject. Deck labels it "one site, not a statistic".
+- Next: G1 tape gate before Eval 2; update the deck's status chips once beam or tape results land.
 
 ## Session note (10 Oct, ~09:00): one UI for engineer and operator
 - Engineer "Send drawing values" now uses the operator's flow: member + name, then one value at a time on the keypad, then the check list (`components/member-pick.tsx`, `components/spec-form.tsx`). "No drawing" stays operator-only.
@@ -368,3 +392,13 @@ Workstream 2 (why-now evidence and news). It starts from the leads in VERDICT.md
 
 - 2026-10-10: Team workflow question: user is considering splitting end-to-end app issues among three people (UI/UX, AI, backend/integration) after model training. Recommendation: keep three owners, but split by vertical user-visible slices with package boundaries and a named integrator; validate the trained model artifact and establish the thin end-to-end mesh path first. Avoid three isolated lanes that meet only at the end. No assignment or scope decision made in this session.
 - 2026-10-10: Synced local `main` fast-forward to `origin/main` at `ba13987` (three commits: SM8850 precompiled NPU model and integration notes; round-2 hard-negative data/training updates; wire-negative cap). Preserved all pre-existing working-tree edits and untracked files through the update. No product decisions changed.
+
+- 2026-10-10: Prepared a copy-paste UI mockup prompt for the current slab-only flow: operator capture, uncertainty/re-scan, manual readings, spoken fixes, engineer review and PIN sign-off. Preserves the decluttered visual direction and separates illustrative data from validated results. No product scope changes. Next: generate mockups and choose the visual direction; device/tape validation remains open.
+
+- 2026-10-10: Dedicated research on missing features (multi-project engineers/architects), the iQOO CEO as a possible juror, and the business model: `reports/Sariya features jury and business.md` (notes in `research_notes/Sariya features jury and business/`). Proposals, not yet adopted: (1) build today: pour inbox sorted by pour time, approve / fix and re-scan / not approved with "was → now", one-tap PDF to WhatsApp with verify QR, copy signed spec to next floor, measured endurance tiles (NPU ms, battery temp and %, 0 bytes out); (2) lead pricing per signed pour record (brand-sponsored ₹99-149, engineer-bought ₹199-299) with seats as the enterprise wrapper, because brand seats cap near ₹12-19 Cr/yr; insurers and lenders Year 2+; (3) CEO pitch on "most buyers don't game: here is a professional who needs this phone". Open: no source confirms Nipun Marya on the Finale jury (user-reported; 9 Oct list doesn't name him). IDEA.md not changed pending the team's decision.
+- 2026-10-10 15:30: Built the pour inbox and the fix loop (user's call, from the research report). App changes: `lib/pour.ts` (pour presets and labels), `lib/inbox.ts` (inbox grouping), `components/fix-loop.tsx`, `brief`/`fixDelta` in `lib/rules.ts`; site and planned pour on `Inspection` and `SpecPayload` (optional, so older signed specs and captures still verify); the engineer keeps the specs it issued (`issued`) so unanswered ones show as "awaiting scan"; review's "Ask for another view" became "Fix and re-scan" with prefilled checks and fix text; FixLoop on review, operator record and draft summary. tsc and lint clean; a bun smoke test of the inbox order and fix deltas passes; **not yet run on the iQOO**. Built on top of the uncommitted UI work from the "APK update and UI/UX work" session; nothing committed. Demo: issue 2-3 specs with different sites and pour times so the inbox shows real rows, not seeded ones.
+- 2026-10-10: Fixed the two screenshot-reported UI defects: summary timeline connectors now share the circles' centered column, with opaque pending/active circles hiding the line; manual-reading actions now split the row equally so “Not visible” has room for its full label. Typecheck and Expo lint pass. No product scope change. Next: confirm both layouts on the iQOO; device visual verification remains open.
+- 2026-10-10: Rebuilt the Android release APK from the current local working tree, including the timeline and “Not visible” fixes, and installed it in place on connected iQOO I2501 (`10BFAX1C230010U`, package `in.sariya.app`). Installation succeeded and MainActivity launched; existing app data retained by `adb install -r`. Expo prebuild, release build, typecheck and lint succeeded. Next: on-phone flow/layout check and real-steel validation remain open.
+- 2026-10-10: Switched the default app model from v2 to v3 at threshold 0.3, per user request and MODEL-V3.md. Updated README and current spec; built and installed the release on iQOO `10BFAX1C230010U` in place and launched it. Verified both packaged model hashes against the v3 sources (float `26f6324ab4c4eaee`, NPU `02ea7d35912cbc98`); release build, typecheck and lint pass. Next: check live NPU readiness and detection on venue props; this installation does not establish prop accuracy.
+- 2026-10-10: At the user's explicit request, cleared Sariya's app data, uninstalled it, and freshly installed the latest v3 release on iQOO `10BFAX1C230010U`. Cleared data once more after installation to remove any restored state, then launched MainActivity successfully. Local records, settings and app keys reset; next step is fresh onboarding and key enrolment.
+- 2026-10-10: Publishing all current app, artwork, demo/deck, research and documentation changes to main at the user's request, including the UI refresh, pour inbox/fix loop and v3 default. Release build, typecheck and lint already passed for this working tree; changed-file secret-pattern and oversized-file checks found no flags. Integrating newer origin/main commits before pushing.

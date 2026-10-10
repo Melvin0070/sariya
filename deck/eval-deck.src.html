@@ -1,0 +1,431 @@
+<title>Sariya Evaluation Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: stacked 16:9 slides sized by container width, each topped by a tape-measure rule; phones get flowing slides. */
+:root {
+  --bg: #ECECEA;
+  --slide: #FFFFFF;
+  --ink: #0B0B0B;
+  --ink-2: #5A5A58;
+  --ink-3: #8C8C88;
+  --line: #E2E2DF;
+  --tile: #F4F4F2;
+  --accent: #FF6A13;
+  --accent-soft: #FFF0E6;
+  --accent-ink: #B5420A;
+  --pass: #05944F;
+  --fail: #E11900;
+  --display: "Inter Tight", "Inter", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E0E0D; --slide: #171716; --ink: #F3F3F1; --ink-2: #B4B4AF; --ink-3: #85857F;
+    --line: #2C2C2A; --tile: #20201E; --accent: #FF7A2B; --accent-soft: #2E1A0E; --accent-ink: #FFA36B;
+    --pass: #3CC27F; --fail: #FF5A44; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E0E0D; --slide: #171716; --ink: #F3F3F1; --ink-2: #B4B4AF; --ink-3: #85857F;
+  --line: #2C2C2A; --tile: #20201E; --accent: #FF7A2B; --accent-soft: #2E1A0E; --accent-ink: #FFA36B;
+  --pass: #3CC27F; --fail: #FF5A44; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); margin: 0; }
+.deck { display: grid; gap: 28px; padding-block: 28px 48px; padding-inline: 16px; max-width: 1280px; margin: 0 auto; }
+
+.slide {
+  container-type: inline-size;
+  background: var(--slide);
+  border-radius: 14px;
+  aspect-ratio: 16 / 9;
+  position: relative;
+  overflow: hidden;
+  scroll-margin-top: 16px;
+  box-shadow: 0 1px 0 var(--line), 0 10px 30px -18px rgb(0 0 0 / .25);
+}
+.in { position: absolute; inset: 0; padding: 4.4cqw 5cqw 3cqw; display: flex; flex-direction: column; gap: 1.6cqw; }
+
+/* tape-measure rule: 1 mm minor ticks scaled, 10 mm major */
+.tape {
+  position: absolute; left: 0; right: 0; top: 0; height: 1.5cqw;
+  background:
+    repeating-linear-gradient(90deg, var(--accent) 0 1.5px, transparent 1.5px 5cqw) 0 0 / 100% 100% no-repeat,
+    repeating-linear-gradient(90deg, var(--accent) 0 1px, transparent 1px 1cqw) 0 0 / 100% 55% no-repeat;
+  opacity: .9;
+}
+.foot { margin-top: auto; display: flex; justify-content: space-between; font: 500 0.95cqw/1 var(--mono); color: var(--ink-3); letter-spacing: .04em; text-transform: uppercase; }
+
+.eyebrow { font: 700 1.05cqw/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent-ink); }
+h1, h2 { font-family: var(--display); margin: 0; text-wrap: balance; letter-spacing: -0.02em; }
+h2 { font-weight: 800; font-size: 3.3cqw; line-height: 1.05; max-width: 70cqw; }
+p { margin: 0; }
+.lead { font-size: 1.55cqw; line-height: 1.45; color: var(--ink-2); max-width: 62cqw; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+b, strong { font-weight: 600; color: var(--ink); }
+
+/* 1 title */
+.title .in { justify-content: center; gap: 2.2cqw; }
+.title h1 { font-weight: 800; font-size: 9cqw; line-height: .9; letter-spacing: -0.045em; }
+.title h1 span { color: var(--accent); }
+.title .tag { font: 700 3cqw/1.1 var(--display); letter-spacing: -0.02em; max-width: 60cqw; }
+.title .sub { font-size: 1.6cqw; color: var(--ink-2); }
+.team { display: flex; gap: 3cqw; flex-wrap: wrap; font-size: 1.35cqw; color: var(--ink-2); }
+.team b { display: block; font-size: 1.6cqw; }
+.bigcard { position: absolute; right: 5cqw; top: 50%; transform: translateY(-50%) rotate(-6deg); width: 22cqw; aspect-ratio: 1; border: 1.4cqw solid var(--slide); outline: 1px solid var(--line); background: repeating-conic-gradient(var(--ink) 0 25%, var(--slide) 0 50%) 0 0 / calc(100% / 3) calc(100% / 3); }
+
+/* grids */
+.cols3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6cqw; }
+.cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 3cqw; min-height: 0; }
+.card { background: var(--tile); border-radius: 1cqw; padding: 1.8cqw; display: flex; flex-direction: column; gap: .9cqw; min-width: 0; }
+.card .k { font: 700 0.95cqw/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.card .big { font: 800 3.1cqw/1 var(--display); letter-spacing: -0.03em; }
+.card p { font-size: 1.3cqw; line-height: 1.45; color: var(--ink-2); }
+.card.hot { background: var(--accent-soft); }
+.card.hot .big { color: var(--accent-ink); }
+.verdict { display: flex; gap: 1.6cqw; align-items: baseline; border-top: 2px solid var(--ink); padding-top: 1.4cqw; font: 700 1.9cqw/1.25 var(--display); letter-spacing: -0.01em; }
+.verdict small { font: 500 1.05cqw/1.4 var(--body); color: var(--ink-3); margin-left: auto; max-width: 24cqw; text-align: right; }
+
+/* tables */
+table { border-collapse: collapse; width: 100%; font-size: 1.25cqw; }
+th { text-align: left; font: 700 .9cqw/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); padding: 0 1cqw .7cqw 0; border-bottom: 1px solid var(--line); }
+td { padding: .75cqw 1cqw .75cqw 0; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--ink-2); line-height: 1.35; }
+td:first-child { color: var(--ink); font-weight: 600; }
+tr.pick td { color: var(--ink); }
+tr.pick td:first-child { color: var(--accent-ink); }
+.tw { overflow-x: auto; min-width: 0; }
+
+/* loop */
+.loop { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1cqw; counter-reset: s; }
+.step { border-top: 3px solid var(--ink); padding-top: 1cqw; display: flex; flex-direction: column; gap: .6cqw; min-width: 0; }
+.step::before { counter-increment: s; content: counter(s); font: 700 1cqw/1 var(--mono); color: var(--accent-ink); }
+.step b { font: 700 1.45cqw/1.15 var(--display); }
+.step p { font-size: 1.12cqw; line-height: 1.4; color: var(--ink-2); }
+.step.ai { border-top-color: var(--accent); }
+.motto { font: 800 2.3cqw/1.1 var(--display); letter-spacing: -0.02em; }
+.motto span { color: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: .7cqw; }
+.chip { font-size: 1.1cqw; padding: .5cqw 1cqw; border-radius: 99px; background: var(--tile); color: var(--ink-2); }
+.chip.ok::before { content: "● "; color: var(--pass); }
+.chip.no::before { content: "○ "; color: var(--ink-3); }
+
+/* chart */
+.chart { display: grid; grid-template-columns: auto 1fr; gap: .8cqw 1.4cqw; align-items: center; position: relative; }
+.chart .lbl { font-size: 1.2cqw; color: var(--ink-2); text-align: right; white-space: nowrap; }
+.chart .lbl b { display: block; font-size: 1.3cqw; }
+.track { position: relative; height: 2.2cqw; }
+.bar { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink-3); border-radius: 0 .4cqw .4cqw 0; opacity: .55; }
+.bar.npu { background: var(--ink); opacity: 1; }
+.bar.best { background: var(--accent); opacity: 1; }
+.val { position: absolute; top: 50%; transform: translateY(-50%); font: 700 1.15cqw/1 var(--mono); padding-left: .6cqw; white-space: nowrap; color: var(--ink); }
+.overlay { grid-column: 2; grid-row: 1 / 7; position: relative; pointer-events: none; align-self: stretch; }
+.frame { position: absolute; top: 0; bottom: 0; border-left: 1.5px dashed var(--fail); }
+.frame span { position: absolute; top: -1.3cqw; left: .4cqw; font: 500 .9cqw/1 var(--mono); color: var(--fail); white-space: nowrap; }
+.axis { display: flex; justify-content: space-between; font: 500 .9cqw/1 var(--mono); color: var(--ink-3); grid-column: 2; }
+.stats { display: grid; gap: .8cqw; align-content: start; }
+.stat { border-left: 3px solid var(--line); padding-left: 1.2cqw; }
+.stat .n { font: 800 2.4cqw/1 var(--display); letter-spacing: -0.02em; }
+.stat .n.a { color: var(--accent-ink); }
+.stat p { font-size: 1.15cqw; color: var(--ink-2); line-height: 1.4; margin-top: .35cqw; }
+
+/* fine-tune: three rounds side by side, rows aligned across columns */
+.rounds { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: auto auto auto 1fr; column-gap: 2.2cqw; row-gap: 1.1cqw; flex: 1; min-height: 0; }
+.round { display: grid; grid-template-rows: subgrid; grid-row: span 4; min-width: 0; border-top: 3px solid var(--ink); padding-top: 1cqw; }
+.round.now { border-top-color: var(--accent); }
+.round h3 { font: 700 1.55cqw/1.2 var(--display); margin: 0; }
+.round h3 em { display: block; font: 700 1cqw/1 var(--mono); font-style: normal; color: var(--accent-ink); letter-spacing: .08em; margin-bottom: .5cqw; }
+.round p { font-size: 1.15cqw; line-height: 1.42; color: var(--ink-2); }
+.shots { display: grid; grid-template-columns: 1fr 1fr; gap: .7cqw; }
+.shots figure { margin: 0; min-width: 0; }
+.shots img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: .6cqw; }
+.shots.phone img { object-position: center 58%; }
+.shots figcaption { font: 500 .9cqw/1.3 var(--mono); margin-top: .45cqw; color: var(--ink-2); }
+.todo { background: var(--accent-soft); border-radius: .6cqw; padding: 1.3cqw 1.4cqw; margin: 0; list-style: none; display: grid; gap: .8cqw; align-content: start; }
+.todo li { font-size: 1.15cqw; line-height: 1.35; color: var(--ink); display: grid; grid-template-columns: 1.4cqw 1fr; }
+.todo li::before { content: "+"; font: 700 1.2cqw/1.2 var(--mono); color: var(--accent-ink); }
+.metric { display: flex; flex-direction: column; gap: .3cqw; }
+.metric .n { font: 800 2.4cqw/1 var(--display); letter-spacing: -0.02em; }
+.metric .n.a { color: var(--accent-ink); }
+.metric span { font-size: 1cqw; color: var(--ink-3); }
+.hint { text-align: center; font: 500 12px/1.4 var(--mono); color: var(--ink-3); letter-spacing: .04em; }
+
+/* phones: drop the 16:9 frame and let content flow */
+@media (max-width: 760px) {
+  .slide { aspect-ratio: auto; }
+  .in { position: static; padding: 30px 18px 18px; gap: 16px; }
+  .tape { height: 10px; background:
+    repeating-linear-gradient(90deg, var(--accent) 0 1.5px, transparent 1.5px 40px) 0 0 / 100% 100% no-repeat,
+    repeating-linear-gradient(90deg, var(--accent) 0 1px, transparent 1px 8px) 0 0 / 100% 55% no-repeat; }
+  .foot, .eyebrow, .card .k, th, .cap, .round h3 em, .frame span, .axis { font-size: 11px; }
+  h2 { font-size: 26px; max-width: none; }
+  .lead, .title .sub { font-size: 16px; max-width: none; }
+  .title h1 { font-size: 64px; }
+  .title .tag { font-size: 24px; max-width: none; }
+  .team, .team b { font-size: 14px; }
+  .bigcard { display: none; }
+  .cols3, .cols2, .rounds, .loop { grid-template-columns: 1fr; }
+  .rounds { grid-template-rows: none; row-gap: 24px; }
+  .round { grid-template-rows: none; grid-row: auto; display: flex; flex-direction: column; gap: 10px; padding-top: 10px; }
+  .todo li, .metric span { font-size: 14px; }
+  .todo li { grid-template-columns: 16px 1fr; }
+  .metric .n { font-size: 26px; }
+  .shots figcaption { font-size: 11px; }
+  .card { padding: 16px; gap: 8px; border-radius: 10px; }
+  .card .big { font-size: 28px; }
+  .card p, td, .step p, .round p, .stat p, .chip, .chart .lbl { font-size: 14px; }
+  table { font-size: 14px; }
+  td { padding: 8px 10px 8px 0; }
+  .step { padding-top: 8px; }
+  .step::before { font-size: 11px; }
+  .step b, .round h3, .chart .lbl b { font-size: 17px; }
+  .motto { font-size: 22px; }
+  .verdict { font-size: 18px; flex-wrap: wrap; }
+  .verdict small { font-size: 12px; margin-left: 0; text-align: left; max-width: none; }
+  .track { height: 18px; }
+  .val { font-size: 12px; }
+  .stat .n { font-size: 24px; }
+  .chip { padding: 4px 10px; }
+  .chart { gap: 10px 12px; }
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<main class="deck" id="deck">
+
+<!-- 1 -->
+<section class="slide title" tabindex="-1" aria-label="Title">
+  <div class="tape"></div>
+  <div class="bigcard" aria-hidden="true"></div>
+  <div class="in">
+    <div class="eyebrow">iQOO Hackathon 2026 · Grand Finale · Evaluation round</div>
+    <h1>Sariya<span>.</span></h1>
+    <p class="tag">Check the steel before the concrete hides it.</p>
+    <p class="sub">One phone, one printed card, offline. Measured on the iQOO 15's Snapdragon NPU.</p>
+    <div class="team">
+      <div><b>Alwin</b>UI and UX</div>
+      <div><b>Sabari</b>Vision and AI</div>
+      <div><b>Melvin</b>Rules, trust, integration</div>
+    </div>
+    <div class="foot"><span>Bengaluru · 10 Oct 2026</span><span>1 / 7</span></div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="slide" tabindex="-1" aria-label="Site visit">
+  <div class="tape"></div>
+  <div class="in">
+    <div class="eyebrow">Site visit · small to mid-size house · 9 Oct</div>
+    <h2>Everyone agrees the steel must match the drawing. Between visits, nobody checks.</h2>
+    <div class="cols3">
+      <div class="card hot">
+        <div class="k">The cost</div>
+        <div class="big num">₹5–10k</div>
+        <p><b>per engineer visit</b>, as quoted on site. Published fee guides run ₹5,000–30,000. Small and mid-size houses skip the visit, or stretch one visit across many pours.</p>
+      </div>
+      <div class="card">
+        <div class="k">What the crew told us</div>
+        <div class="big">"Exactly as drawn"</div>
+        <p>They were sure that any small error or deviation from the engineer's drawing gets corrected until it matches exactly. <b>Only the engineer clears the pour.</b></p>
+      </div>
+      <div class="card">
+        <div class="k">What I saw</div>
+        <div class="big">Errors on site</div>
+        <p>I spotted mistakes in their steel that the crew themselves said the engineer would not accept. Nobody had measured it yet.</p>
+      </div>
+    </div>
+    <div class="verdict">The rule is right; the check is missing. Sariya is that check, and it sends the engineer the evidence.
+      <small>One site, first-hand. We do not quote it as a statistic.</small></div>
+    <div class="foot"><span>Sariya · why this problem</span><span>2 / 7</span></div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="slide" tabindex="-1" aria-label="Japan">
+  <div class="tape"></div>
+  <div class="in">
+    <div class="eyebrow">Prior art we lean on</div>
+    <h2>Japan already validated the method. We didn't have to.</h2>
+    <p class="lead">Japan's construction ministry (MLIT) has accepted camera-based rebar measurement since July 2023: bar count, diameter and spacing, with a 5 mm guide on spacing. Vendors such as IHI report ±1 mm diameter and ±5 mm spacing from photos; AIJO reports 70% time saved with a plain tablet camera.</p>
+    <div class="tw">
+      <table>
+        <thead><tr><th></th><th>Japan's systems</th><th>Sariya</th></tr></thead>
+        <tbody>
+          <tr><td>Who checks</td><td>Contractor QA teams on large sites</td><td>Site engineer the evening before a self-built pour; remote engineer signs off</td></tr>
+          <tr><td>Where it runs</td><td>Tablet or PC, cloud workflow</td><td>One phone, fully offline, on the NPU</td></tr>
+          <tr><td>Rules</td><td>Japanese codes</td><td>IS 456 and IS 13920, with an error band on every number</td></tr>
+          <tr><td>Bar sizes</td><td>3 mm steps (D10, D13, D16)</td><td>2 mm steps (8, 10, 12), so diameter comes from a 200 mm offcut weighed against IS 1786 bands</td></tr>
+          <tr class="pick"><td>Language</td><td>Japanese</td><td>Fix spoken to the mason in Hindi or Kannada</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="foot"><span>Sariya · validation for free</span><span>3 / 7</span></div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="slide" tabindex="-1" aria-label="What we built">
+  <div class="tape"></div>
+  <div class="in">
+    <div class="eyebrow">What we built · running on the iQOO 15</div>
+    <p class="motto">AI finds the bars. <span>Maths measures them.</span> Rules decide.</p>
+    <div class="loop">
+      <div class="step"><b>Engineer sends the drawing</b><p>Bar size and spacing, signed with a PIN. The app never invents a value.</p></div>
+      <div class="step ai"><b>Operator scans</b><p>Live line on every bar, mm between them, scaled by the printed card. Lock fuses ~1.2 s of sharp frames.</p></div>
+      <div class="step"><b>Re-scan, never guess</b><p>A value within its own error of the limit says "re-scan". Blur and half-seen bars do too.</p></div>
+      <div class="step"><b>What a camera can't see</b><p>Cover by tape, diameter by weighing an offcut, hooks by template.</p></div>
+      <div class="step"><b>Fix for the mason</b><p>Spoken in Hindi or Kannada, with subtitles, offline.</p></div>
+      <div class="step"><b>Signed record</b><p>Ed25519 signed. Engineer reviews and approves with a PIN. Sign-off QR checks offline. Tampering and replays are rejected.</p></div>
+    </div>
+    <div class="cols2">
+      <div class="card">
+        <div class="k">Geometry on a known mesh</div>
+        <p><span class="num"><b>50.1 / 49.9 / 64.9 mm</b></span> measured against <span class="num"><b>50 / 50 / 65 mm</b></span> truth. The app never says "safe" or "permit"; it shows numbers, bands and evidence.</p>
+      </div>
+      <div class="card">
+        <div class="k">Status</div>
+        <div class="chips">
+          <span class="chip ok">Slab mesh, end to end</span>
+          <span class="chip ok">Model live on the NPU</span>
+          <span class="chip ok">Signed engineer loop</span>
+          <span class="chip no">Beam stirrups: next</span>
+          <span class="chip no">Tape gate on real steel: today</span>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>Sariya · the product</span><span>4 / 7</span></div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="slide" tabindex="-1" aria-label="AI research">
+  <div class="tape"></div>
+  <div class="in">
+    <div class="eyebrow">AI research · what we compared before training</div>
+    <h2>One model in the camera loop, picked for thin bars.</h2>
+    <div class="cols2" style="grid-template-columns: 1.35fr 1fr;">
+      <div class="tw">
+        <table>
+          <thead><tr><th>Segmentation model</th><th>NPU, published</th><th>Verdict</th></tr></thead>
+          <tbody>
+            <tr><td>YOLO26n-seg</td><td class="num">2.2–2.7 ms</td><td>Masks at ¼ resolution; AGPL licence</td></tr>
+            <tr><td>DeepLabV3+ MobileNet</td><td class="num">1.6–4.4 ms</td><td>Output stride smears 9-pixel bars</td></tr>
+            <tr><td>MobileSAM</td><td class="num">500–750 ms</td><td>Too slow for a live overlay</td></tr>
+            <tr class="pick"><td>U-Net + MobileNetV3</td><td class="num">12.2 ms, ours</td><td>Full-resolution mask; MIT and Apache weights. Chosen</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Speech, word error</th><th>Hindi</th><th>Kannada</th></tr></thead>
+          <tbody>
+            <tr class="pick"><td>IndicConformer</td><td class="num">8.2%</td><td class="num">21.4%</td></tr>
+            <tr><td>Gemma 4 E4B audio</td><td class="num">11.2%</td><td class="num">34.8%</td></tr>
+          </tbody>
+        </table>
+        <p class="cap" style="margin-top:1cqw">Voice of India benchmark, Apr 2026. Language model researched: Gemma 4 E2B on the GPU, since no SM8850 NPU build exists. Card pose, lines, mm and verdicts are plain maths, so they never hallucinate.</p>
+      </div>
+    </div>
+    <div class="foot"><span>Sariya · model choice</span><span>5 / 7</span></div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="slide" tabindex="-1" aria-label="NPU GPU CPU benchmark">
+  <div class="tape"></div>
+  <div class="in">
+    <div class="eyebrow">Benchmark · iQOO 15 · Snapdragon 8 Elite Gen 5 · one 1152 × 640 frame</div>
+    <h2>The NPU runs our model 19× faster than the CPU.</h2>
+    <div class="cols2" style="grid-template-columns: 1.7fr 1fr; flex: 1;">
+      <div class="chart" role="img" aria-label="Milliseconds per frame: CPU 234.6, NPU default 73.3, GPU 19.8, NPU high performance 16.9, NPU burst 12.2, NPU pre-compiled 11.6">
+        <div class="lbl"><b>CPU</b>XNNPACK</div><div class="track"><div class="bar" style="width:93.84%"></div><span class="val" style="left:93.84%">234.6</span></div>
+        <div class="lbl"><b>NPU</b>default mode</div><div class="track"><div class="bar npu" style="width:29.32%;opacity:.45"></div><span class="val" style="left:29.32%">73.3</span></div>
+        <div class="lbl"><b>GPU</b>OpenCL</div><div class="track"><div class="bar" style="width:7.92%"></div><span class="val" style="left:7.92%">19.8</span></div>
+        <div class="lbl"><b>NPU</b>high performance</div><div class="track"><div class="bar npu" style="width:6.76%"></div><span class="val" style="left:6.76%">16.9</span></div>
+        <div class="lbl"><b>NPU</b>burst</div><div class="track"><div class="bar best" style="width:4.88%"></div><span class="val" style="left:4.88%">12.2</span></div>
+        <div class="lbl"><b>NPU</b>pre-compiled</div><div class="track"><div class="bar best" style="width:4.64%"></div><span class="val" style="left:4.64%">11.6</span></div>
+        <div class="overlay" aria-hidden="true"><div class="frame" style="left:13.33%"><span>33 ms = one camera frame at 30 fps</span></div></div>
+        <div></div><div class="axis"><span>0</span><span>50</span><span>100</span><span>150</span><span>200</span><span>250 ms</span></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="n a num">160 / 160</div><p>layers on the Hexagon NPU, one partition, float model, no quantisation yet</p></div>
+        <div class="stat"><div class="n num">12.8 ms</div><p>average over 60 s sustained (4,692 runs). Skin 32.7 → 39.8 °C, no throttling</p></div>
+        <div class="stat"><div class="n num">53 s → 133 ms</div><p>start-up: on-phone compile replaced by a pre-compiled NPU file</p></div>
+        <div class="stat"><div class="n num">~65 ms</div><p>whole frame in the app: camera, card pose, model, geometry</p></div>
+      </div>
+    </div>
+    <div class="foot"><span>Sariya · LiteRT 2.3 · QAIRT 2.50</span><span>6 / 7</span></div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="slide" tabindex="-1" aria-label="Fine-tuning">
+  <div class="tape"></div>
+  <div class="in">
+    <div class="eyebrow">Fine-tuning · Kaggle T4 · timestamped logs and dataset hashes</div>
+    <h2>Three rounds of fine-tuning.</h2>
+    <div class="rounds">
+      <div class="round">
+        <h3><em>V1 · DONE</em>ImageNet start, tuned on 1,555 real rebar photos</h3>
+        <div class="shots">
+          <figure><img src="{{MESH}}" alt="Mesh on a green floor, every bar marked green"><figcaption>Mesh: IoU 0.94</figcaption></figure>
+          <figure><img src="{{STIR}}" alt="Stirrups seen side-on, parts missed in blue"><figcaption>Thin stirrups: IoU 0.65</figcaption></figure>
+        </div>
+        <div class="metric"><span class="n a num">0.847</span><span>test IoU on scenes never seen in training (F1 0.917)</span></div>
+        <p>10,481 labelled bars, 50 epochs. The exported phone model matches PyTorch on 100% of mask pixels.</p>
+      </div>
+      <div class="round">
+        <h3><em>V2 · DONE</em>Added 1,100 images with no rebar in them</h3>
+        <div class="shots phone">
+          <figure><img src="{{V1}}" alt="V1 on a desk with no rebar: cables, keyboard and screen text marked as bars"><figcaption>V1: cables read as bars</figcaption></figure>
+          <figure><img src="{{V2}}" alt="V2 on the same desk: nothing marked"><figcaption>V2: nothing marked</figcaption></figure>
+        </div>
+        <div class="metric"><span class="n a num">80% → 0%</span><span>false alarms on images with no rebar</span></div>
+        <p>Cables, keyboards and rooms as negatives. The cost: recall fell from 0.93 to 0.85, and it misses rusty bars on wood.</p>
+      </div>
+      <div class="round now">
+        <h3><em>V3 · TRAINING NOW</em>Win back recall, keep the false alarms at zero</h3>
+        <ul class="todo">
+          <li>Our own bar photos, rusty bars on wood and concrete</li>
+          <li>The printed card lying on the bars, labelled to its edge</li>
+          <li>Synthetic stirrups for the thin legs V1 misses</li>
+        </ul>
+        <div class="metric"><span class="n num">11.6 ms</span><span>V1 and V2 per frame on the NPU; V3 keeps the same network and file format</span></div>
+        <p>The app swaps rounds with one build setting, so V3 drops in without code changes.</p>
+      </div>
+    </div>
+    <div class="foot"><span>Sariya · the model</span><span>7 / 7</span></div>
+  </div>
+</section>
+
+<p class="hint">Arrow keys or space to move between slides</p>
+</main>
+
+<script>
+(() => {
+  const slides = [...document.querySelectorAll(".slide")];
+  const current = () => {
+    const mid = window.innerHeight / 2;
+    let best = 0, d = Infinity;
+    slides.forEach((s, i) => {
+      const r = s.getBoundingClientRect();
+      const dist = Math.abs(r.top + r.height / 2 - mid);
+      if (dist < d) { d = dist; best = i; }
+    });
+    return best;
+  };
+  const go = (i) => {
+    const s = slides[Math.max(0, Math.min(slides.length - 1, i))];
+    s.scrollIntoView({ block: "center" });
+  };
+  document.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (["ArrowRight", "ArrowDown", "PageDown", " "].includes(e.key)) { e.preventDefault(); go(current() + 1); }
+    else if (["ArrowLeft", "ArrowUp", "PageUp"].includes(e.key)) { e.preventDefault(); go(current() - 1); }
+    else if (e.key === "Home") { e.preventDefault(); go(0); }
+    else if (e.key === "End") { e.preventDefault(); go(slides.length - 1); }
+  });
+})();
+</script>

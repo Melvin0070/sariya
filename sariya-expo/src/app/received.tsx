@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
-import { Check, FileInput, X } from 'lucide-react-native';
+import { Check, FileInput, TriangleAlert, X } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import Animated, { ReduceMotion, ZoomIn } from 'react-native-reanimated';
 
-import { Button, Screen, T, Title, TopBar } from '@/components/ui';
+import { Button, C, Details, Enter, Illo, Screen, SHADOW, Sub, T, TextBtn, Title, TopBar, success } from '@/components/ui';
 import { pickText } from '@/lib/files';
 import { receive, type Received } from '@/lib/pack';
 import { getState, useStore, type Role } from '@/lib/store';
@@ -34,6 +35,7 @@ export default function ReceivedFile() {
           if (router.canGoBack()) router.back();
           return;
         }
+        if (out.res.ok) success();
         setFile(out.file);
         setRes(out.res);
       }),
@@ -51,47 +53,57 @@ export default function ReceivedFile() {
     openRecord(r);
   };
 
+  const again = () => {
+    setBusy(true);
+    setRes(null);
+    pick();
+  };
+
+  const mark = res?.ok ? { bg: 'bg-pass', icon: Check } : res?.viewOnly ? { bg: 'bg-warn', icon: TriangleAlert } : { bg: 'bg-fail', icon: X };
+  const Mark = mark.icon;
+
   return (
     <Screen
       footer={
         res ? (
-          <View className="gap-2">
-            {res.key ? <Button label={role === 'engineer' ? (res.viewOnly ? 'View (approval off)' : 'Review') : 'Open record'} onPress={open} /> : null}
-            <Button
-              label="Choose another file"
-              icon={FileInput}
-              kind="secondary"
-              onPress={() => {
-                setBusy(true);
-                setRes(null);
-                pick();
-              }}
-            />
-          </View>
+          res.key ? (
+            <>
+              <Button label={role === 'engineer' ? (res.viewOnly ? 'View (approval off)' : 'Review') : 'Open record'} onPress={open} />
+              <TextBtn label="Choose another file" onPress={again} />
+            </>
+          ) : (
+            <Button label="Choose another file" icon={FileInput} onPress={again} />
+          )
         ) : undefined
       }
     >
       <TopBar />
-      <Title>{role === 'engineer' ? 'Received pack' : 'Received file'}</Title>
       {busy ? (
-        <View className="mt-10 items-center">
-          <ActivityIndicator color="#000" />
-          <T className="mt-3 text-[16px] text-ink-2">Choose the file in the picker…</T>
-        </View>
+        <Enter className="mt-6 items-center">
+          <Illo name="records" size={180} />
+          <Title className="mt-4 text-center">{role === 'engineer' ? 'Received pack' : 'Received file'}</Title>
+          <View className="mt-4 flex-row items-center gap-2">
+            <ActivityIndicator color={C.ink} />
+            <T className="text-[16px] text-ink-2">Choose the file in the picker…</T>
+          </View>
+        </Enter>
       ) : null}
       {res ? (
-        <View className="mt-6 rounded-card border border-line p-5">
-          <View className="flex-row items-center gap-3">
-            <View className={`h-12 w-12 items-center justify-center rounded-full ${res.ok ? 'bg-pass' : res.viewOnly ? 'bg-warn' : 'bg-fail'}`}>
-              {res.ok ? <Check size={26} color="#fff" strokeWidth={3} /> : <X size={26} color="#fff" strokeWidth={3} />}
-            </View>
-            <T w="bold" className="flex-1 text-[24px] tracking-[-0.5px]">
-              {res.title}
-            </T>
+        <Enter className="mt-6 items-center">
+          <View className="h-[180px] w-[180px]">
+            <Illo name={res.ok ? 'verify' : 'empty'} size={180} />
+            <Animated.View entering={ZoomIn.springify().damping(12).stiffness(220).reduceMotion(ReduceMotion.System)} className={`absolute bottom-0 right-0 h-16 w-16 items-center justify-center rounded-full border-4 border-paper ${mark.bg}`} style={SHADOW.float}>
+              <Mark size={30} color="#fff" strokeWidth={3} />
+            </Animated.View>
           </View>
-          <T className="mt-3 text-[16px] leading-[23px] text-ink-2">{res.sub}</T>
-          {file ? <T className="mt-3 text-[13px] text-ink-3">{file}</T> : null}
-        </View>
+          <Title className="mt-6 text-center">{res.title}</Title>
+          <Sub className="text-center">{res.sub}</Sub>
+        </Enter>
+      ) : null}
+      {res && file ? (
+        <Details label="File">
+          <T className="text-[14px] text-ink-2">{file}</T>
+        </Details>
       ) : null}
     </Screen>
   );

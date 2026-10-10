@@ -1,0 +1,491 @@
+<title>Sariya End to End</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column (~72ch) with wide tables allowed to scroll; a sticky section index on wide screens. */
+:root {
+  --bg: #F3F4F2;          /* concrete */
+  --surface: #FFFFFF;
+  --ink: #15171A;
+  --ink-2: #4A4F57;
+  --ink-3: #7B818A;
+  --line: #D9DCD8;
+  --rust: #A8471F;        /* rebar rust: the one accent */
+  --rust-soft: #F4E4DA;
+  --pass: #1F7A4A; --pass-soft: #E1F1E7;
+  --warn: #9A6A00; --warn-soft: #F7EDD2;
+  --fail: #B42318; --fail-soft: #F9E1DE;
+  --code: #ECEEEB;
+  --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121416; --surface: #1A1D20; --ink: #ECEDEB; --ink-2: #B5BAC1; --ink-3: #868C95; --line: #2E3337;
+  --rust: #E07A4A; --rust-soft: #3A2419; --pass: #5BC48A; --pass-soft: #17301F; --warn: #E0B24A; --warn-soft: #33290F;
+  --fail: #F07A6E; --fail-soft: #3A1A17; --code: #23272B; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #121416; --surface: #1A1D20; --ink: #ECEDEB; --ink-2: #B5BAC1; --ink-3: #868C95; --line: #2E3337;
+  --rust: #E07A4A; --rust-soft: #3A2419; --pass: #5BC48A; --pass-soft: #17301F; --warn: #E0B24A; --warn-soft: #33290F;
+  --fail: #F07A6E; --fail-soft: #3A1A17; --code: #23272B; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.6; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 96px; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 48px; }
+@media (max-width: 900px) { .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; padding-inline: 16px; } nav.toc { display: none; } }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 13.5px; }
+nav.toc a { display: block; color: var(--ink-2); text-decoration: none; padding: 5px 0 5px 12px; border-left: 2px solid var(--line); }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--ink); border-left-color: var(--rust); outline: none; }
+nav.toc .lbl { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+main { min-width: 0; }
+main > section { max-width: 78ch; }
+main > section.wide { max-width: none; }
+
+h1 { font-family: var(--f-display); font-weight: 800; font-size: clamp(34px, 5vw, 52px); line-height: 1.04; letter-spacing: -0.02em; margin: 0 0 14px; text-wrap: balance; }
+h2 { font-family: var(--f-display); font-weight: 750; font-size: 28px; letter-spacing: -0.01em; line-height: 1.15; margin: 64px 0 10px; text-wrap: balance; scroll-margin-top: 24px; }
+h3 { font-family: var(--f-display); font-weight: 650; font-size: 19px; margin: 32px 0 6px; text-wrap: balance; }
+p { margin: 0 0 14px; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--rust); margin-bottom: 14px; }
+.lede { font-size: 19px; line-height: 1.55; color: var(--ink-2); max-width: 64ch; }
+.thesis { font-family: var(--f-display); font-weight: 650; font-size: 22px; line-height: 1.3; border-left: 3px solid var(--rust); padding-left: 16px; margin: 26px 0; max-width: 60ch; }
+.mono, code { font-family: var(--f-mono); font-size: .88em; }
+code { background: var(--code); padding: 1px 5px; border-radius: 4px; }
+ul, ol { padding-left: 22px; margin: 0 0 14px; }
+li { margin-bottom: 6px; }
+a { color: var(--rust); }
+strong { font-weight: 650; }
+
+.meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--f-mono); font-size: 12.5px; color: var(--ink-3); margin-top: 18px; }
+
+/* the loop strip */
+.loop { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0; margin: 28px 0 8px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.loop div { padding: 14px 14px 16px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); min-width: 0; }
+.loop .n { font-family: var(--f-mono); font-size: 11px; color: var(--rust); letter-spacing: .06em; }
+.loop .t { font-weight: 650; font-size: 15px; margin: 2px 0 4px; }
+.loop .d { font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+.loop .who { font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); margin-top: 6px; }
+
+/* tables */
+.tbl { overflow-x: auto; margin: 16px 0 22px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; line-height: 1.5; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--f-mono); font-weight: 500; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); background: var(--bg); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.t, td.time { font-family: var(--f-mono); font-size: 13px; white-space: nowrap; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+td:first-child { font-weight: 600; }
+td.t, td.time { font-weight: 400; }
+.tbl.min table { min-width: 760px; }
+
+/* outcome pills */
+.pill { display: inline-block; font-family: var(--f-mono); font-size: 11.5px; padding: 1px 8px; border-radius: 999px; white-space: nowrap; font-weight: 500; }
+.p-pass { background: var(--pass-soft); color: var(--pass); }
+.p-warn { background: var(--warn-soft); color: var(--warn); }
+.p-fail { background: var(--fail-soft); color: var(--fail); }
+.p-neu { background: var(--code); color: var(--ink-2); }
+
+/* step blocks */
+.step { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 14px; padding: 22px 0; border-top: 1px solid var(--line); }
+.step:first-of-type { border-top: 0; }
+.step .num { font-family: var(--f-mono); font-size: 13px; color: var(--rust); padding-top: 4px; }
+.step h3 { margin: 0 0 8px; }
+.step .why { background: var(--rust-soft); border-radius: 8px; padding: 10px 14px; font-size: 14.5px; margin-top: 10px; }
+.step .why b { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--rust); display: block; margin-bottom: 2px; font-weight: 500; }
+.screen { font-family: var(--f-mono); font-size: 12.5px; color: var(--ink-3); }
+
+/* story cards */
+.stories { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin: 18px 0; }
+.story { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; min-width: 0; }
+.story .role { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--rust); }
+.story p.as { font-weight: 600; margin: 6px 0 8px; line-height: 1.4; }
+.story ul { font-size: 14px; color: var(--ink-2); margin: 0; }
+
+.callout { border: 1px solid var(--line); border-left: 3px solid var(--warn); background: var(--surface); border-radius: 8px; padding: 14px 16px; margin: 18px 0; font-size: 15px; }
+.callout.fail { border-left-color: var(--fail); }
+.callout h4 { margin: 0 0 6px; font-size: 15px; }
+
+pre.mermaid { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; overflow-x: auto; margin: 18px 0; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.cols > div { min-width: 0; }
+footer { margin-top: 64px; font-size: 13px; color: var(--ink-3); font-family: var(--f-mono); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+html { scroll-behavior: smooth; }
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="Sections">
+  <div class="lbl">Contents</div>
+  <a href="#loop">The loop in one screen</a>
+  <a href="#cast">People and phones</a>
+  <a href="#workflow">End-to-end workflow</a>
+  <a href="#outcomes">The five answers</a>
+  <a href="#scenarios">Every scenario</a>
+  <a href="#stories">User stories</a>
+  <a href="#rationale">Why it is built this way</a>
+  <a href="#demo">The demo</a>
+  <a href="#failures">When the demo breaks</a>
+  <a href="#risks">Open before Sunday</a>
+</nav>
+
+<main>
+<section id="top">
+  <div class="eyebrow">iQOO Grand Finale · Bengaluru · as built 10 Oct 2026</div>
+  <h1>Sariya, end to end</h1>
+  <p class="lede">The whole product loop, every branch the app actually handles, who it is for, why each design choice is there, and how to show it to a cold jury in 3 minutes 30.</p>
+  <p class="thesis">The steel inside an Indian house is visible for a day or two, then the concrete hides it for good. Sariya checks it with one phone and a printed card, offline, and leaves a record the responsible engineer signs.</p>
+  <p>The pitch line that carries the architecture: <strong>AI finds the bars, maths measures them, rules decide.</strong> Only one stage is a neural network (bar pixels, on the NPU). Every millimetre on screen comes from the card's geometry, and every verdict comes from a versioned rule file you can read.</p>
+  <div class="meta"><span>Build: slab only (beam "coming soon")</span><span>Approval: app PIN</span><span>Model: seg v2 on NPU, ~20 ms</span><span>Rulebook v0.1.1</span></div>
+</section>
+
+<section id="loop" class="wide">
+  <h2>The loop in one screen</h2>
+  <div class="loop">
+    <div><div class="n">1 · SPEC</div><div class="t">Engineer issues drawing values</div><div class="d">Signed on their phone, sent over Office Kit.</div><div class="who">P2 → P1</div></div>
+    <div><div class="n">2 · SCAN</div><div class="t">Live lines on every bar</div><div class="d">Card gives the scale; "~50 mm" between lines.</div><div class="who">P1, operator</div></div>
+    <div><div class="n">3 · LOCK</div><div class="t">Frames fused into value ± band</div><div class="d">Only a locked value gets a verdict.</div><div class="who">P1</div></div>
+    <div><div class="n">4 · BY HAND</div><div class="t">Tape and scale</div><div class="d">Cover by tape, size by weighing an offcut.</div><div class="who">P1</div></div>
+    <div><div class="n">5 · DECIDE</div><div class="t">Rulebook, five answers</div><div class="d">Within, outside, re-scan, needs a reading, not seen.</div><div class="who">P1, deterministic</div></div>
+    <div><div class="n">6 · TELL</div><div class="t">Fix spoken to the mason</div><div class="d">Hindi or Kannada audio, subtitles, offline.</div><div class="who">P1 → mason</div></div>
+    <div><div class="n">7 · SIGN</div><div class="t">Operator signs the capture</div><div class="d">Ed25519 over values, spec, photo hashes.</div><div class="who">P1 → P2</div></div>
+    <div><div class="n">8 · APPROVE</div><div class="t">Engineer reviews and signs</div><div class="d">Own key, own PIN, or asks for another view.</div><div class="who">P2 on the laptop mirror</div></div>
+    <div><div class="n">9 · VERIFY</div><div class="t">Anyone checks the QR</div><div class="d">Offline, against enrolled keys. Replays rejected.</div><div class="who">P3</div></div>
+  </div>
+
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  participant E as Engineer (P2)
+  participant OK as Office Kit (laptop)
+  participant O as Operator (P1)
+  participant M as Mason
+  participant V as Verifier (P3)
+  E->>OK: sariya.spec/1 (signed drawing values)
+  OK->>O: file via picker
+  O->>O: check signature vs enrolled engineer key, open inspection
+  O->>O: scan + Lock main bars, then distribution bars
+  O->>O: tape cover, weigh offcut
+  O->>O: rulebook: five answers per check
+  O->>M: fix in Hindi / Kannada with subtitles
+  M-->>O: bar moved, operator re-scans that zone
+  O->>OK: sariya.capture/1 (signed, with evidence photos)
+  OK->>E: file via picker
+  E->>E: hash, signature, photo hashes, replay list, spec origin
+  alt approve
+    E->>E: tick reviewed (+ spec match if typed), PIN, sign approval
+    E-->>V: sign-off QR, verified offline
+    E->>OK: sariya.approval/1
+    OK->>O: approval attaches to that exact revision
+  else ask for another view
+    E->>OK: sariya.request/1 (named checks + note)
+    OK->>O: operator opens rev n+1, re-scans only those checks
+  end
+</pre>
+</section>
+
+<section id="cast">
+  <h2>People and phones</h2>
+  <p>Four humans, three phones and a laptop. Each phone is set to one role at setup, and the role decides which files it will open. This is a product decision, not a demo convenience: the person being checked must never be the person who sets the bar or the person who approves.</p>
+  <div class="tbl"><table>
+    <tr><th>Who</th><th>In the real world</th><th>Does in Sariya</th><th>Never does</th></tr>
+    <tr><td>Designer</td><td>Structural engineer who wrote the drawing and bar-bending schedule</td><td>Their numbers are the spec. Often the same person as the engineer below.</td><td>Sariya never creates or edits a drawing.</td></tr>
+    <tr><td>Engineer (P2)</td><td>Responsible engineer, usually the designer or owner's engineer. Carries the liability, can't attend every pour.</td><td>Issues signed drawing values. Reviews the capture from their desk. Approves with their own key and PIN, or asks for another view.</td><td>Approves a capture signed by their own phone.</td></tr>
+    <tr><td>Operator (P1)</td><td>Whoever is paid to check the steel the evening before the pour: site engineer, owner's inspector, builder QC, brand technical engineer.</td><td>Scans, locks, takes tape and scale readings, plays the fix, signs the capture.</td><td>Sets the values they are checked against (if they type them, the engineer sees "typed on site").</td></tr>
+    <tr><td>Mason</td><td>Ties and fixes the steel</td><td>Hears the fix with the number, in Hindi or Kannada.</td><td>Holds the phone. Sariya is not a tool for policing masons.</td></tr>
+    <tr><td>Verifier (P3)</td><td>Owner, lender's valuer, builder's payments desk, the mason keeping proof</td><td>Scans the sign-off QR and gets valid / invalid, offline.</td><td>Needs the network or the full pack.</td></tr>
+    <tr><td>Laptop</td><td>The engineer's desk</td><td>Office Kit mirror of P2 and file mover between phones.</td><td>Hold a key. There is no backend.</td></tr>
+  </table></div>
+</section>
+
+<section id="workflow">
+  <h2>End-to-end workflow</h2>
+  <p>Each stage below says what the user sees, what the app enforces, and the reason. Screen names in grey match the app's routes so the team can find them.</p>
+
+  <div class="step"><div class="num">0</div><div>
+    <h3>Setup and key enrolment (once per phone)</h3>
+    <p class="screen">setup.tsx · keys.tsx · qr.tsx?mode=enrol</p>
+    <p>Pick a role (operator, engineer, verifier), enter a name, set a PIN. The phone makes an Ed25519 key pair kept in SecureStore. A readiness screen checks camera, Hindi and Kannada voices, the signing key, storage, and which accelerator the model loaded on (NPU, else GPU, else CPU, with the reason). Then phones scan each other's key QR under Settings › Trusted phones; trusting a key asks for the PIN.</p>
+    <div class="why"><b>Why</b>Trust is explicit and local. A key that arrives inside a file is never trusted on its own, so a forged pack can't bring its own "engineer". The readiness screen exists so a GPU fallback or a missing voice is found in the pit, not on stage. PIN replaced fingerprint because the loaners have none enrolled; a device-bound biometric key is the product version.</div>
+  </div></div>
+
+  <div class="step"><div class="num">1</div><div>
+    <h3>Spec in: the engineer sets the bar</h3>
+    <p class="screen">P2: issue.tsx (Send drawing values) · P1: received.tsx → new inspection</p>
+    <p>On P2 the engineer picks Slab, names the member ("Slab S1"), and enters six fields: bar diameter, main count and spacing, distribution count and spacing, bottom cover. Empty means "not on the drawing" and is never filled with a default. P2 signs a <code>sariya.spec/1</code> file and shares it through Office Kit. P1 opens it from the system file picker; it is accepted only if signed by an enrolled engineer key, is complete, in range, and for a member this build supports. Opening the same file twice returns the same inspection.</p>
+    <p><strong>Fallbacks on P1:</strong> type the values (the review then says "typed on site" and the engineer must also tick "the drawing values match my drawing"), use the DEMO PROP preset (marked as such), or choose no drawing for measure-only mode: values, no verdicts.</p>
+    <div class="why"><b>Why</b>Without this, the operator types the spec they are judged against and could loosen it. With it, any edit drops the signature, and if values differ from what the engineer signed, approval is blocked outright. A judge will ask "who sets the spec?"; this is the answer on screen.</div>
+  </div></div>
+
+  <div class="step"><div class="num">2</div><div>
+    <h3>Live scan</h3>
+    <p class="screen">inspect/summary.tsx → inspect/scan.tsx</p>
+    <p>The operator lays card S (90 mm ChArUco) flat on the mesh, torch on, phone at about 30 cm, and picks a target: main bars, then distribution bars. Every frame: OpenCV finds the card and computes a homography (pixels to millimetres on the card plane); the U-Net on the NPU marks bar pixels; the mask is warped onto the card plane and summed into a profile whose peaks are bar centrelines; gaps are drawn back onto the preview as lines with "~50" labels. Status chips guide the hand: "Find card S", "Show all of card S", "Blurred: hold still", "Turn the phone so the bars run up the screen", then "Ready to lock" with a haptic.</p>
+    <p>Bars seen only in part (usually under the card) are drawn dashed amber and never counted.</p>
+    <div class="why"><b>Why</b>A single camera has no scale. The printed card supplies it to millimetre level; ARCore tracks to centimetres and was dropped. Live lines make the system legible: the jury watches a line follow a bar the judge moves, which is more convincing than any accuracy slide. The "~" says this is guidance, not a measurement.</div>
+  </div></div>
+
+  <div class="step"><div class="num">3</div><div>
+    <h3>Lock</h3>
+    <p class="screen">scan.tsx Lock button → frozen evidence + lock sheet</p>
+    <p>Holding Lock collects about 1.2 s of frames. Frames under 70% of the sharpest are dropped; the most common bar count wins; each bar takes its median position. The band is the larger of 5 mm and 2 × √(frame scatter² + mask-edge error² + 1% scale). The frozen frame is saved with the model's own lines, a coverage map (frame footprint, card outline, bars used, partly seen bars, in card mm) and the engine string (<code>seg v2 7ad05e742fad · NPU · 20 ms</code>).</p>
+    <p>If fewer than the minimum sharp, agreeing frames exist, the lock carries a <strong>gate</strong>: a reason in words and an action ("Only 4 sharp, steady frames agreed on the bars (3 blurred). Hold still until it says Ready to lock"). If detection stays shaky, <strong>mark by hand</strong>: freeze a frame, tap the card corners and each bar; same geometry, same gates, labelled "marked by hand".</p>
+    <div class="why"><b>Why</b>Verdicts only from immutable, quality-gated evidence. The band is not divided by √15 because frames from one hold share the same systematic error; pretending otherwise would shrink the band dishonestly. The 5 mm floor stays until tape checks justify less.</div>
+  </div></div>
+
+  <div class="step"><div class="num">4</div><div>
+    <h3>Readings by hand</h3>
+    <p class="screen">inspect/readings.tsx</p>
+    <p><strong>Cover:</strong> tape reading entered on the phone; within if between the drawing value and +10 mm. <strong>Bar size:</strong> a 200 mm offcut on a kitchen scale; mass per metre is matched to IS 1786 bands (10 mm: 0.574–0.660 kg/m, 12 mm: 0.844–0.932). Each can be marked "not visible". Hooks (135° template) appear only for beams whose drawing asks for them, so not in this build.</p>
+    <div class="why"><b>Why</b>A camera at arm's length can't separate 10 from 12 mm reliably, and bottom cover is hidden. Prompting for a cheap physical reading is more honest than a confident guess, and the weigh test also catches underweight or fake steel, which passes every geometry check.</div>
+  </div></div>
+
+  <div class="step"><div class="num">5</div><div>
+    <h3>Decide</h3>
+    <p class="screen">lib/rules.ts · inspect/summary.tsx checks sheet</p>
+    <p>Six checks for a slab: count and spacing for each bar family, cover, size. Proposed limits (an engineer must confirm, since IS 456 gives no placement tolerance): mean spacing ≤ spec + max(10 mm, 5%), any single gap ≤ spec + max(15 mm, 25%), count equals the drawing. At the stage spec of 50 mm: mean ≤ 60, any gap ≤ 65. A value is <em>outside</em> only if its whole band clears the limit, <em>within</em> only if its whole band is under it, otherwise <em>re-scan</em>. There is no overall badge; the summary is a tally such as "4 of 6 within limits · 1 outside · 1 needs a reading".</p>
+    <div class="why"><b>Why</b>Deterministic rules are auditable: each finding carries its rule ID, the exact numbers and the rulebook version. No model is allowed to decide, word, or recompute a verdict. "Never PASS, never safe" keeps liability where it belongs, with the engineer who signs.</div>
+  </div></div>
+
+  <div class="step"><div class="num">6</div><div>
+    <h3>Tell the mason, fix, re-scan</h3>
+    <p class="screen">inspect/fix.tsx</p>
+    <p>For each outside finding the rule engine produces a typed fix (add bars, move bar, add in gap, respace, cover low/high, size). A template turns it into a sentence in Hindi, Kannada or English, played with the offline system voice, auto-played once, with stop and repeat and subtitles always on. Example (F2): "Teesra gap assi millimetre hai. Drawing mein pachaas hai. Is sariya ko andar khiskao." After the fix, the operator re-locks that target; the newer lock supersedes the old one.</p>
+    <div class="why"><b>Why</b>The number is the instruction. A mason who hears "gap 3 is 80, drawing says 50, slide this bar in" can act without reading English or a drawing. The fix logic tells a moved bar (one wide gap next to one narrow, summing to two spacings) from a missing bar, so it says "move" rather than "add steel".</div>
+  </div></div>
+
+  <div class="step"><div class="num">7</div><div>
+    <h3>Sign and send the capture</h3>
+    <p class="screen">inspect/sign.tsx → share sheet / folder</p>
+    <p>The operator signs. The signed payload is exactly: active locks with values, bands and image hashes; the spec revision (including the engineer's signed issue if present); manual readings; rulebook version; engine. Anything still unchecked is recorded as "not checked before signing", never as within. The <code>.sariya.json</code> pack, with evidence photos embedded, goes to the system share sheet (Office Kit is a share target). Android can't report delivery, so the app asks the operator to confirm it arrived.</p>
+    <div class="why"><b>Why</b>Signing locks the evidence, not a screen. Any change to a value, the spec or a photo changes the hash and breaks the signature.</div>
+  </div></div>
+
+  <div class="step"><div class="num">8</div><div>
+    <h3>Engineer review and decision</h3>
+    <p class="screen">P2: received.tsx → review/[key].tsx</p>
+    <p>On open, P2 checks in order: pack complete → hash matches body → signature matches named key → not already processed → not signed by this phone → every evidence photo matches its hash → signer enrolled as an operator. Only then does the review open. It shows the frozen frames with lines, the coverage map, each value ± band with its source, readings, and a spec-origin banner: <em>issued by you · unchanged</em>, <em>issued by another engineer</em>, <em>typed on site</em>, or <em>differ from the issued ones</em> (approval blocked).</p>
+    <p>Approve needs "I reviewed" ticked, plus "the drawing values match my drawing" when someone else set them, then the PIN. The sign-off QR appears on P2 immediately; the approval file goes back to P1. Or <strong>Ask for another view</strong>: pick checks, add a note, sign a request.</p>
+    <div class="why"><b>Why</b>Two phones, two keys: the same key can't capture and approve. The engineer signs the capture hash, so the approval can only ever attach to that exact revision. Remote review is the point: the engineer who can't attend every pour can still look at the actual frames.</div>
+  </div></div>
+
+  <div class="step"><div class="num">9</div><div>
+    <h3>Close the loop</h3>
+    <p class="screen">P1: received.tsx → record/[key].tsx · P3: qr.tsx?mode=verify</p>
+    <p>P1 opens the approval: it attaches only if a record with that exact capture hash exists, and the record now shows "Approved by Er. … " with the QR. If a request comes back, P1 opens rev n+1 carrying everything except the requested checks, which must be scanned again; the old revision stays as history with its own signature. P3 scans any sign-off QR and gets "Valid · Er. name · Slab S1 · rev 1 · approved …" against its enrolled engineer keys, with no network.</p>
+    <div class="why"><b>Why</b>The record has to be checkable by people who will never open the app on a laptop: the owner, a lender's valuer, the mason who wants proof the fix was approved.</div>
+  </div></div>
+</section>
+
+<section id="outcomes">
+  <h2>The five answers</h2>
+  <p>Every check returns exactly one. Two internal states also exist: <span class="pill p-neu">not checked yet</span> while drafting and <span class="pill p-neu">measured</span> in no-drawing mode.</p>
+  <div class="tbl"><table>
+    <tr><th>Answer</th><th>Means</th><th>Stage example (spec 50, any-gap limit 65)</th></tr>
+    <tr><td><span class="pill p-pass">within limits</span></td><td>The whole band is inside the limit</td><td>Widest gap 52 ± 5 → 47–57, under 65</td></tr>
+    <tr><td><span class="pill p-fail">outside limits</span></td><td>The whole band clears the limit</td><td>Gap 80 ± 5 → 75–85, all above 65. Count 4 vs 5</td></tr>
+    <tr><td><span class="pill p-warn">re-scan</span></td><td>Band straddles the limit, a quality gate failed, or a partly seen bar might explain the miss</td><td>Gap 63 ± 5 → 58–68. Card too small. A short count with a dashed bar under the card</td></tr>
+    <tr><td><span class="pill p-warn">needs a reading</span></td><td>The camera can't see this; a tape or scale reading is missing</td><td>Bottom cover with no tape entry</td></tr>
+    <tr><td><span class="pill p-neu">not seen</span></td><td>Operator marked it not visible, or it was never checked before signing</td><td>Cover blocked by formwork</td></tr>
+  </table></div>
+</section>
+
+<section id="scenarios" class="wide">
+  <h2>Every scenario the build handles</h2>
+  <p style="max-width:78ch">Grouped by where they happen. "App does" is what the current code does, checked against <code>lib/rules.ts</code>, <code>lib/pack.ts</code> and <code>lib/measure.ts</code>.</p>
+
+  <h3>A. Measurement on the slab</h3>
+  <div class="tbl min"><table>
+    <tr><th>Situation</th><th>App does</th><th>Answer</th><th>Why this behaviour</th></tr>
+    <tr><td>Correct mesh (CONTROL)</td><td>5 bars, gaps ~50, band 5</td><td><span class="pill p-pass">within</span></td><td>The boring case must be boring. Shows no false alarm.</td></tr>
+    <tr><td>One bar pulled out (F1)</td><td>Count 4 vs 5, no partly seen bars</td><td><span class="pill p-fail">outside</span> "add 1 bar"</td><td>Missing steel is the most consequential error.</td></tr>
+    <tr><td>Bar slid to open an 80 mm gap (F2)</td><td>Wide gap next to a narrow one summing to ~100</td><td><span class="pill p-fail">outside</span> "move bar in by 30"</td><td>Distinguishes a moved bar from a missing one, so the fix is right.</td></tr>
+    <tr><td>Gap just past limit (72)</td><td>72 ± 5 → 67–77</td><td><span class="pill p-fail">outside</span></td><td>Called only because the whole band clears 65.</td></tr>
+    <tr><td>Gap right at limit (63)</td><td>58–68 straddles 65</td><td><span class="pill p-warn">re-scan</span> "move closer, lock again"</td><td>The phone would rather abstain than guess. The headline honesty feature.</td></tr>
+    <tr><td>Spacing loose everywhere (all gaps ~68)</td><td>Mean 68 ± 5 clears the 60 mean limit</td><td><span class="pill p-fail">outside</span> "respace"</td><td>Uniformly loose spacing is a different error from one bad gap.</td></tr>
+    <tr><td>Bar hidden under the card</td><td>Bar seen in 20–50% continuity → dashed, not counted</td><td><span class="pill p-warn">re-scan</span> "slide the card"</td><td>Never tell a mason to add steel that is already there.</td></tr>
+    <tr><td>Extra bar</td><td>Count 6 vs 5</td><td><span class="pill p-fail">outside</span> "extra bars"</td><td>Reported, not hidden; the engineer decides if it matters.</td></tr>
+    <tr><td>Blurred hand</td><td>"Blurred: hold still"; blurred frames dropped from Lock</td><td><span class="pill p-warn">re-scan</span> if too few sharp frames</td><td>Sharpness is relative to the best recent frame, so no per-camera threshold.</td></tr>
+    <tr><td>Phone too far</td><td>Card markers below minimum px</td><td><span class="pill p-warn">re-scan</span> "move to about 30 cm"</td><td>Fewer pixels per mm means a band the rule can't trust. (Threshold not yet validated on the 1080p stream.)</td></tr>
+    <tr><td>Card not found / half covered</td><td>"Find card S" / "Show all of card S"; Lock disabled</td><td>no lock</td><td>No scale, no measurement.</td></tr>
+    <tr><td>Model sees no bars (e.g. v2 on rusty bars on wood)</td><td>Lock gate "did not see the bars and the card together"</td><td><span class="pill p-warn">re-scan</span> or mark by hand</td><td>A model miss becomes an abstention, not a false "outside".</td></tr>
+    <tr><td>Bars cross the short side of the screen</td><td>Hint "turn the phone so the bars run up the screen"</td><td>guidance</td><td>More visible bar length, better continuity.</td></tr>
+    <tr><td>Marked by hand</td><td>Corner taps → homography; wrong corner order gated</td><td>same rules, labelled "marked by hand"</td><td>The demo and the product survive a model failure; the record says so.</td></tr>
+    <tr><td>No drawing</td><td>Values and bands only</td><td><span class="pill p-neu">measured</span></td><td>Useful for an owner with no drawing, without inventing a spec.</td></tr>
+  </table></div>
+
+  <h3>B. Readings by hand</h3>
+  <div class="tbl min"><table>
+    <tr><th>Situation</th><th>App does</th><th>Answer</th><th>Why</th></tr>
+    <tr><td>Cover not entered</td><td>Asks for a tape reading</td><td><span class="pill p-warn">needs a reading</span></td><td>Hidden values are never guessed.</td></tr>
+    <tr><td>Cover 15 vs drawing 20</td><td>Below spec</td><td><span class="pill p-fail">outside</span> "cover low"</td><td>Low cover means corrosion; the fix says raise the bars on blocks.</td></tr>
+    <tr><td>Cover 35 vs 20</td><td>Above spec + 10</td><td><span class="pill p-fail">outside</span> "cover high"</td><td>Too much cover loses lever arm.</td></tr>
+    <tr><td>"12" offcut weighs 123 g / 200 mm</td><td>0.615 kg/m → 10 mm band</td><td><span class="pill p-fail">outside</span> "this is 10, not 12"</td><td>Catches substitution and underweight steel.</td></tr>
+    <tr><td>Weight in no band at all</td><td>"outside every size band"</td><td><span class="pill p-fail">outside</span></td><td>Likely fake or badly rolled steel. Show the engineer.</td></tr>
+    <tr><td>Marked not visible</td><td>Recorded with source</td><td><span class="pill p-neu">not seen</span></td><td>An honest gap in the record beats a fake entry.</td></tr>
+  </table></div>
+
+  <h3>C. Spec and trust</h3>
+  <div class="tbl min"><table>
+    <tr><th>Situation</th><th>App does</th><th>Why</th></tr>
+    <tr><td>Spec from enrolled engineer, unchanged</td><td>Review: "issued by you · unchanged"</td><td>The clean path. One tick, PIN, done.</td></tr>
+    <tr><td>Operator edits an issued value</td><td>Signature dropped; review: "differ from the issued ones"; <strong>approval blocked</strong></td><td>The person checked can't loosen the bar.</td></tr>
+    <tr><td>Operator typed the spec</td><td>Review: "typed on site"; extra tick required</td><td>Allowed (sites without the app on the engineer's phone), but visible.</td></tr>
+    <tr><td>Spec issued by another engineer</td><td>Extra tick required</td><td>The approver confirms values they didn't set.</td></tr>
+    <tr><td>Spec file from an unknown key</td><td>"Unknown engineer key", not opened</td><td>No self-trusting files.</td></tr>
+    <tr><td>Beam spec file</td><td>"Beam checks are coming soon"</td><td>The build doesn't claim what isn't validated.</td></tr>
+    <tr><td>Incomplete or out-of-range spec</td><td>"Drawing values incomplete"</td><td>Never borrow a default.</td></tr>
+    <tr><td>Capture pack edited after signing</td><td>"Edited or damaged pack. Nothing was opened."</td><td>Hash mismatch.</td></tr>
+    <tr><td>Evidence photo swapped</td><td>"Evidence image does not match"</td><td>Each photo is hashed into the signed body.</td></tr>
+    <tr><td>Signature doesn't match the named key</td><td>"Signature does not verify"</td><td>A pack can't claim someone else's name.</td></tr>
+    <tr><td>Pack from an unenrolled operator</td><td>Opens view-only; approval off</td><td>The engineer can read it but can't sign it until they enrol that phone.</td></tr>
+    <tr><td>Engineer opens their own capture</td><td>"Approval needs a second phone and key"</td><td>No self-approval, even for a solo engineer.</td></tr>
+    <tr><td>Same pack sent again (replay)</td><td>"Rejected: already processed" with the date</td><td>A record is approved once. A new scan of unchanged steel comes as a new revision and is allowed.</td></tr>
+    <tr><td>Approval for a different revision</td><td>"No matching record… cannot attach to another revision"</td><td>Approvals bind to a hash, not a name.</td></tr>
+    <tr><td>File opened on the wrong role's phone</td><td>"Open it on the engineer's phone"</td><td>Roles are per phone.</td></tr>
+    <tr><td>Engineer asks for another view</td><td>P1 gets rev n+1 with those checks cleared; old rev kept</td><td>Re-scan only what's in doubt; history is preserved.</td></tr>
+    <tr><td>QR from unenrolled engineer / altered QR</td><td>"Unknown engineer key" / "Invalid signature. Do not rely on this record."</td><td>The verifier needs no network, only the enrolled key.</td></tr>
+    <tr><td>Wrong PIN five times</td><td>Locked for 30 s</td><td>Slows a guesser holding the engineer's phone.</td></tr>
+  </table></div>
+
+  <div class="callout"><h4>What the trust layer does not prove</h4>It is tamper-evident, not tamper-proof. It doesn't prove which physical slab was scanned or what was finally poured, and a key in an app is not a professional licence. Say this before a judge does.</div>
+</section>
+
+<section id="stories" class="wide">
+  <h2>User stories</h2>
+  <p style="max-width:78ch">Each story lists the acceptance criteria the current build meets. The last two are the payer stories that shape the business, not the demo.</p>
+  <div class="stories">
+    <div class="story"><div class="role">Responsible engineer</div><p class="as">As the engineer who signs, I want to send the drawing values myself, so the person being checked can't set a looser bar.</p><ul><li>Signed spec file, accepted only from my enrolled key</li><li>Any edit shows on my review; changed values block approval</li></ul></div>
+    <div class="story"><div class="role">Responsible engineer</div><p class="as">As an engineer who can't attend every pour, I want to see the actual frames with the measured gaps, so I can approve from my desk.</p><ul><li>Frozen frame with model lines and gap labels; coverage map</li><li>Value ± band with source (camera, hand-marked, tape, scale)</li><li>Approve with PIN or ask for another view of named checks</li></ul></div>
+    <div class="story"><div class="role">Operator</div><p class="as">As the site engineer the evening before the pour, I want count and spacing measured in seconds, so I can check every critical patch, not a sample.</p><ul><li>Live lines and ~mm, Lock in about 1.2 s</li><li>Works offline in airplane mode</li><li>Hand-marking fallback if the model is unsure</li></ul></div>
+    <div class="story"><div class="role">Operator</div><p class="as">As the operator, I want the phone to tell me when it isn't sure and what to do, so I never sign a guess.</p><ul><li>Re-scan with a reason and an action in words</li><li>Partly seen bars never counted</li><li>Unchecked items recorded as such at signing</li></ul></div>
+    <div class="story"><div class="role">Mason</div><p class="as">As the mason, I want the fix in my language with the number, so I can correct the steel without reading a drawing.</p><ul><li>Hindi or Kannada audio, subtitles, repeat</li><li>"Move this bar" vs "add a bar" correctly told apart</li></ul></div>
+    <div class="story"><div class="role">Operator</div><p class="as">As the operator, I want to catch wrong-size or underweight steel without a lab, so substitution is found before it's buried.</p><ul><li>200 mm offcut on a kitchen scale → IS 1786 size band</li></ul></div>
+    <div class="story"><div class="role">Owner / verifier</div><p class="as">As the house owner, I want to check that a real engineer approved this exact record, without an account or internet.</p><ul><li>QR verified offline against enrolled engineer keys</li><li>Altered or unknown-key QR is called out</li></ul></div>
+    <div class="story"><div class="role">Engineer (protection)</div><p class="as">As an engineer exposed to liability, I want a dated, signed pre-pour record that can't be silently edited or re-used.</p><ul><li>Hash-bound evidence, two keys, replay rejection, revisions kept</li></ul></div>
+    <div class="story"><div class="role">Steel or cement brand (payer)</div><p class="as">As a brand's technical services lead, I want each free slab visit to produce a signed, measured report, so one engineer covers more sites and the visit builds trust in the brand.</p><ul><li>Roadmap: branded report, slab-date leads, rib-mark brand check</li></ul></div>
+    <div class="story"><div class="role">Builder / lender (payer)</div><p class="as">As a builder releasing stage payments, or a lender releasing a tranche, I want evidence that the steel matched the drawing before I pay.</p><ul><li>Roadmap: QR on the stage-payment or tranche form; lenders buy the evidence layer only</li></ul></div>
+  </div>
+</section>
+
+<section id="rationale">
+  <h2>Why it is built this way</h2>
+  <div class="tbl"><table>
+    <tr><th>Decision</th><th>Reason</th><th>Rejected alternative</th></tr>
+    <tr><td>Printed card for scale</td><td>Gives millimetre scale and tilt from one RGB camera; the loaner has no LiDAR or ToF</td><td>ARCore (centimetre tracking, no torch or capture in the Viro view), learned depth (no metric guarantee)</td></tr>
+    <tr><td>AI only for bar pixels</td><td>Every number is reproducible geometry; every verdict is a readable rule. Easy to audit and to defend in Q&A.</td><td>End-to-end model that outputs "pass/fail"</td></tr>
+    <tr><td>NPU, offline</td><td>Live guidance needs ~20 ms per frame; sites have weak signal; no photos of homes leave the phone; zero marginal cost</td><td>Cloud inference (latency, privacy, cost)</td></tr>
+    <tr><td>Lock before verdict</td><td>Fused, sharpness-gated evidence is far less noisy than one frame, and it freezes what was signed</td><td>Verdict on live frames</td></tr>
+    <tr><td>Band-aware abstention</td><td>The phone says re-scan rather than guess near the limit. Trust is earned by declining.</td><td>A single threshold on the point value</td></tr>
+    <tr><td>Tape and scale prompts</td><td>Cheap, exact, and covers what a camera can't: cover, size, fake steel</td><td>Pretending to classify 10 vs 12 mm from a sweep</td></tr>
+    <tr><td>Never "safe" or "PASS"</td><td>The engineer carries the liability; the app records evidence</td><td>A green badge that implies certification</td></tr>
+    <tr><td>Engineer issues the spec</td><td>Separates the person who sets the bar from the person checked</td><td>Operator types the spec (kept as a flagged fallback)</td></tr>
+    <tr><td>Two phones, two keys, PIN</td><td>No self-approval; approval binds the capture hash</td><td>One shared key; fingerprint (not enrolled on loaners)</td></tr>
+    <tr><td>Office Kit as the desk</td><td>Real use of the event's laptop link, scored by HackTracker; no backend to break on stage</td><td>A server or cloud sync</td></tr>
+    <tr><td>Slab only in this build</td><td>Beam zones aren't validated on the prop; showing them risks a broken beat</td><td>Demoing an unvalidated beam</td></tr>
+    <tr><td>Hindi first, Kannada one tap</td><td>Hindi is the demo default; Kannada is one tap away for local crews (which language crews actually want is unverified)</td><td>English-only output</td></tr>
+  </table></div>
+</section>
+
+<section id="demo" class="wide">
+  <h2>The demo</h2>
+  <p style="max-width:78ch">3:30, cold jury, airplane mode, half-scale props: 28 × 28 cm 5 × 5 mesh of 8 mm bars at 50 c/c both ways, every bar movable; card S on the mesh; a "12" labelled 10 mm offcut and a kitchen scale; gloves. Three roles on stage: <strong>A</strong> presents and never touches a phone, <strong>B</strong> operates P1, <strong>C</strong> is the engineer on P2 with the laptop mirror. <strong>J</strong> is a judge who volunteers.</p>
+
+  <h3>Why this order</h3>
+  <ul style="max-width:78ch">
+    <li><strong>Product quality (30) and demo (10)</strong> are judged cold, so the first minute is a real fault, made by a judge, found by the phone, confirmed by a tape. A judge's own hands are the strongest proof that nothing is staged.</li>
+    <li><strong>Novelty (20)</strong> lands on the abstention beat and the two-key sign-off: the things other camera tools don't show.</li>
+    <li><strong>Technical depth (15)</strong> is the numbers screen and the trust checks shown working, not described.</li>
+    <li><strong>Phone use (15) and Office Kit (10)</strong> are scored by device data, but the jury should also see camera, voice, NPU and the Office Kit desk in action.</li>
+  </ul>
+
+  <h3>Pre-flight (T-60 to T-2)</h3>
+  <ol style="max-width:78ch">
+    <li>Install the <strong>release</strong> build on P1, P2, P3. Clear app data from earlier tests (P1 holds test drafts).</li>
+    <li>Set roles: P1 operator, P2 engineer ("Er. C"), P3 verifier. Set PINs. Enrol keys both ways (P1↔P2, P3 trusts P2).</li>
+    <li>Readiness on every phone: model on <strong>NPU</strong>, Hindi voice present, key present.</li>
+    <li>T-50: on P2, send drawing values for "Slab S1" (8 mm, 5 bars @ 50 both ways, cover 20). Open on P1. Confirm it reads "Drawing values received".</li>
+    <li>Prepare the replay: one earlier capture already approved on P2, with its pack file in the laptop's transfer folder.</li>
+    <li>Run the CONTROL scan once: all within. Torch on, check glare on the card under the hall lights.</li>
+    <li>Airplane mode on all phones; Office Kit mirror of P2 on the projector; P3 charged as hot spare.</li>
+  </ol>
+
+  <h3>The 3:30 run (current build)</h3>
+  <div class="tbl min"><table>
+    <tr><th>Time</th><th>Who</th><th>Action and words</th><th>Screen</th><th>Why this beat</th></tr>
+    <tr><td class="time">0:00</td><td>A</td><td>"In an Indian house this steel is visible for a day, maybe two. Then concrete covers it for good, and in most self-built homes nobody measures it first. Japan has accepted camera checks of rebar since 2023. We built that for India, on one phone, offline. Half-scale props; the app checks whatever the drawing says."</td><td>Home</td><td>The one-day window is the whole problem in one sentence. Japan proves the physics so the jury doesn't doubt it.</td></tr>
+    <tr><td class="time">0:20</td><td>A</td><td>"The site engineer scans the evening before the pour. The responsible engineer, who can't be at every pour, sent the drawing values and signs from their desk."</td><td>P1 shows Slab S1, "issued by Er. C"</td><td>Names the user and the payer-adjacent role before the jury guesses "mason app".</td></tr>
+    <tr><td class="time">0:30</td><td>A, J</td><td>"Pick a card, do what it says, don't tell us." J draws F1 (pull a bar) or F2 (slide a bar to ~80).</td><td>Home</td><td>The judge creates the fault, so the result can't be pre-recorded.</td></tr>
+    <tr><td class="time">0:45</td><td>B</td><td>Airplane mode visible. Scan main bars at ~30 cm. Lines snap onto bars; ask J to nudge a bar and watch its line and number follow. Lock.</td><td>Live lines, "~50", engine "NPU 20 ms"</td><td>Live tracking is the most memorable moment and shows on-device AI working.</td></tr>
+    <tr><td class="time">0:55</td><td>—</td><td>Silence. Let the phone speak.</td><td>Checks: "Gap 3: 80 ± 5, limit 65. Outside." Fix screen plays Hindi with subtitles.</td><td>The verdict and the fix in the mason's language, with the number.</td></tr>
+    <tr><td class="time">1:05</td><td>A, J</td><td>"The phone drew the gap it measured. Tape it, centre to centre." J reads ~80.</td><td>Highlighted gap on the frozen frame</td><td>Ground truth from the jury's own tape. Never cut this beat.</td></tr>
+    <tr><td class="time">1:25</td><td>A, B</td><td>"Now the hard case." B opens a gap to ~72, scans from 0.8 m → re-scan, too far. Then 0.3 m → outside. <em>Only if the far-gate and the 72 band were validated today; otherwise skip to 2:10.</em></td><td>"Re-scan: card too small" then "72 ± 5, outside"</td><td>The phone refusing to guess is the trust moment. Show it only if it is rehearsed and reliable.</td></tr>
+    <tr><td class="time">2:10</td><td>A, B</td><td>"A camera can't tell a 10 from a 12 at arm's length, so we don't. Twenty centimetres, a kitchen scale." 123 g.</td><td>"200 mm weighs 123 g → 10 mm size band"</td><td>Answers the obvious accuracy objection and adds fake-steel detection cheaply.</td></tr>
+    <tr><td class="time">2:25</td><td>B</td><td>Sign on P1, share the pack via Office Kit.</td><td>"Signed"</td><td>Office Kit used for the real job: moving evidence to the desk.</td></tr>
+    <tr><td class="time">2:30</td><td>C</td><td>"I'm the engineer. The record arrives on my desk, checked against the values I sent." Open on P2.</td><td>Mirror: "Signature valid", review with frames, "issued by you · unchanged"</td><td>The jury sees the remote engineer reading the actual frames.</td></tr>
+    <tr><td class="time">2:40</td><td>C</td><td>"I sign with my own key, not the operator's." Tick reviewed, PIN.</td><td>"You approved", sign-off QR on P2</td><td>Two keys, visibly.</td></tr>
+    <tr><td class="time">2:48</td><td>A</td><td>"The owner's phone checks it, offline." P3 scans P2's QR.</td><td>"Valid · Er. C · Slab S1 · rev 1"</td><td>Anyone can verify without the app's backend; there is none.</td></tr>
+    <tr><td class="time">2:52</td><td>C</td><td>"Now yesterday's record, sent again."</td><td>"Rejected: already processed on …"</td><td>Shows the trust layer resisting the obvious cheat. First to cut if late.</td></tr>
+    <tr><td class="time">3:00</td><td>A</td><td>"Segmentation on the NPU: [p50] ms. [N] scans this weekend. Our bands against the tape on the props: [k] of [n] inside."</td><td>Numbers screen (stored timings, error table)</td><td>Measured, not claimed. Only say numbers that are on screen.</td></tr>
+    <tr><td class="time">3:15</td><td>A</td><td>"Who pays: steel and cement brands who already send free engineers to slab pours. A missing bar sells steel; a signed record sells trust. We want one brand's technical team in Bengaluru for a 60-pour pilot from November."</td><td>Last slide: the ask</td><td>Ends on a concrete, small, believable ask.</td></tr>
+  </table></div>
+  <p style="max-width:78ch"><strong>Hard cuts:</strong> behind at 1:25, skip the far/near beat. Behind at 2:30, cut the replay. Behind at 3:00, say only the NPU time and the ask. Never cut the tape or the PIN approval.</p>
+  <p style="max-width:78ch"><strong>Words never to say:</strong> PASS, safe, certify, permit, tamper-proof, first, replaces the engineer, any "N of M sites" statistic (none exists), any link between a named collapse and reinforcement.</p>
+
+  <h3>Checkpoint versions</h3>
+  <ul style="max-width:78ch">
+    <li><strong>Eval 2 (today, Sat 19:00), 90 s:</strong> spec issued from P2 → scan and lock F2 → Hindi fix → tape → sign → P2 approves with PIN → P3 QR. The full loop is the message: "it works end to end".</li>
+    <li><strong>Eval 3 (Sun 09:00), 90 s:</strong> the pitch compressed: fault, lock, tape, approve, numbers, ask.</li>
+  </ul>
+</section>
+
+<section id="failures" class="wide">
+  <h2>When the demo breaks</h2>
+  <p style="max-width:78ch">The rule: name it, show the fallback, move on. Never debug on stage. Each recovery under 20 s.</p>
+  <div class="tbl min"><table>
+    <tr><th>What breaks</th><th>Say</th><th>Do</th></tr>
+    <tr><td>Card not detected (glare)</td><td>"It's telling us why: glare. That's the honest failure."</td><td>Tilt the board, wipe the card. After 15 s, mark by hand on a frozen frame, or show this morning's rehearsal scan and say so.</td></tr>
+    <tr><td>Model misses bars</td><td>"The model missed a bar; the phone says re-scan rather than call it."</td><td>Mark by hand. The record is labelled "marked by hand". Continue to the tape.</td></tr>
+    <tr><td>Wrong verdict vs tape</td><td>"That's a miss. That's why the engineer signs, not the phone. It goes in tonight's error table."</td><td>Show both numbers, move on.</td></tr>
+    <tr><td>Engine shows GPU, not NPU</td><td>"It fell back to the GPU this run; the readiness screen says why."</td><td>Continue; quote the stored NPU timing on the numbers screen.</td></tr>
+    <tr><td>TTS silent</td><td>"Subtitles are the primary channel."</td><td>Tap repeat once; else A reads the Hindi line.</td></tr>
+    <tr><td>Office Kit transfer fails</td><td>nothing</td><td>Quick Share. Else open the identical rehearsal pack already on P2 and say so.</td></tr>
+    <tr><td>Office Kit mirror drops</td><td>"The record is on my phone."</td><td>C holds P2 to the jury; PIN still happens on P2.</td></tr>
+    <tr><td>P1 crashes or overheats</td><td>"Hot spare."</td><td>Repeat the beat from the scan on the spare. It must be set up as an operator and enrolled with P2 in pre-flight; P3 can't be both spare and verifier.</td></tr>
+    <tr><td>Judge tapes clear gap, gets 72 not 80</td><td>"That's the clear gap; add one bar width, 8, and it's 80. The drawing is centre to centre."</td><td>Nothing else.</td></tr>
+    <tr><td>Judge does something unsupported (moves the card)</td><td>"Good one. Here's what this scan can see."</td><td>Re-place the card, run F2 yourselves.</td></tr>
+    <tr><td>Steel refused at the stage door</td><td>"Our board stayed at security; this is the rehearsal video."</td><td>Play the 08:00 recording.</td></tr>
+  </table></div>
+
+  <h3>The five hostile questions most likely to come</h3>
+  <div class="tbl"><table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>"So you certify it's safe?"</td><td>No. It measures what's visible and records it; the engineer signs.</td></tr>
+    <tr><td>"Japan already does this."</td><td>Yes, which is why we trust the physics. We built it for India's self-built pour: offline on a phone, IS-code rules that abstain, the fix in Hindi or Kannada, a signed record.</td></tr>
+    <tr><td>"Who sets the spec?"</td><td>The engineer signs the drawing values and sends them. If the operator changes one, approval is blocked.</td></tr>
+    <tr><td>"Scan a good cage, pour a bad one?"</td><td>Duplicate records are rejected and the engineer can ask for another view, but nothing proves what is poured. Tamper-evident, not tamper-proof.</td></tr>
+    <tr><td>"What needs the NPU?"</td><td>Live lines every frame: ~20 ms on the NPU in the app, 235 ms on the CPU in the benchmark. The readiness screen shows which ran.</td></tr>
+  </table></div>
+</section>
+
+<section id="risks">
+  <h2>Open before Sunday</h2>
+  <div class="callout fail"><h4>Not yet shown, and the demo depends on it</h4>
+    <ul>
+      <li><strong>G1 tape gate:</strong> 10 tape-checked locks on the real prop, 8 of 10 inside the band. Until then, "± 5 mm" is a floor, not a measured claim.</li>
+      <li><strong>v2 on the props:</strong> v2 marked 0% of bars on a synthetic card mesh and missed rusty bars on wood. If it misses on the prop, build with <code>-Psariya.model=v1</code> or round 3.</li>
+      <li><strong>Two-phone path on real phones:</strong> spec issue, PIN approval, QR verify and replay are tested in code only.</li>
+      <li><strong>Too-far gate at 0.6 and 0.8 m:</strong> the marker-px threshold is scaled from 4K and unvalidated on the 1080p stream. Decides whether the 1:25 beat stays.</li>
+    </ul>
+  </div>
+  <div class="callout"><h4>Housekeeping</h4>
+    <ul>
+      <li>Release build on all three phones; clear app data (P1 has test drafts and S1 revisions).</li>
+      <li>demo-script.md still says fingerprint and BiometricPrompt, and lists beam F3 and lower-layer F12. Read as PIN; F3 is cut; F12 only if validated.</li>
+      <li>Hindi and Kannada lines need one native speaker's check.</li>
+      <li>"Engineer issues the spec" mirrors pour cards on organised projects; for self-built homes it is a new behaviour. Confirm with one engineer before calling it current practice.</li>
+    </ul>
+  </div>
+</section>
+
+<footer>Sources: IDEA.md v4, STATE.md (10 Oct 07:45), notes/08-demo/demo-script.md and UX-TECH-WALKTHROUGH.md, sariya-expo/src/lib/{rules,pack,measure,spec}.ts.</footer>
+</main>
+</div>

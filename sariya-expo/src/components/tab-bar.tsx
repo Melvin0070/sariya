@@ -5,7 +5,7 @@ import { Pressable, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { T, tap } from './ui';
+import { SHADOW, SPRING, T, tap } from './ui';
 import { useStore, type Role } from '@/lib/store';
 
 type Item = { label: string; icon: LucideIcon };
@@ -26,7 +26,6 @@ const HIDDEN: Record<Role, string[]> = { operator: [], engineer: [], verifier: [
 
 const TAB_W = 84;
 const GAP = 4;
-const SPRING = { damping: 20, stiffness: 220, mass: 0.8 };
 
 // Floating pill tab bar, as in the Uber app.
 export function TabBar({ state, navigation }: BottomTabBarProps) {
@@ -45,9 +44,9 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
     <View pointerEvents="box-none" className="absolute inset-x-0 items-center" style={{ bottom: Math.max(i.bottom, 12) + 2 }}>
       <View
         className="flex-row gap-1 rounded-full border border-line bg-paper p-1"
-        style={{ shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 10 }}
+        style={SHADOW.float}
       >
-        <Animated.View className="absolute left-1 top-1 h-[54px] rounded-full bg-pill" style={[{ width: TAB_W }, pill]} />
+        <Animated.View className="absolute left-1 top-1 h-[54px] rounded-full bg-ink" style={[{ width: TAB_W }, pill]} />
         {visible.map((r) => {
           const item = r.name === 'index' ? HOME[role] : OTHER[r.name];
           const on = r.key === state.routes[state.index].key;
@@ -65,10 +64,10 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
               style={{ width: TAB_W }}
             >
               <View>
-                <Icon size={20} color={on ? '#000' : '#5E5E5E'} strokeWidth={on ? 2.4 : 1.8} />
+                <Icon size={21} color={on ? '#fff' : '#5E5E5E'} strokeWidth={on ? 2.4 : 1.9} />
                 {r.name === 'settings' && unenrolled ? <View className="absolute -right-1.5 -top-1 h-2.5 w-2.5 rounded-full border-2 border-paper bg-accent" /> : null}
               </View>
-              <T w={on ? 'bold' : 'regular'} className={`mt-0.5 text-[11px] ${on ? '' : 'text-ink-2'}`}>
+              <T w={on ? 'bold' : 'medium'} className={`mt-0.5 text-[12px] ${on ? 'text-white' : 'text-ink-2'}`}>
                 {item.label}
               </T>
             </Pressable>

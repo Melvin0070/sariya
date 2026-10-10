@@ -4,33 +4,38 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { FindingRow } from '@/components/finding';
-import { DrawingValues, EvidenceList, SignoffCard } from '@/components/record-parts';
-import { Button, Group, H2, Notice, Screen, Sub, T, TextBtn, Title, TopBar } from '@/components/ui';
+import { FixLoop } from '@/components/fix-loop';
+import { DrawingValues, EvidenceList, Footnote, Head, SignoffCard, Tally } from '@/components/record-parts';
+import { Button, C, Details, Enter, Group, H2, KV, Notice, Row, Screen, Sub, T, TextBtn, Title, TopBar } from '@/components/ui';
 import { shareFile } from '@/lib/files';
 import { short } from '@/lib/keys';
 import { capturePack, packName } from '@/lib/pack';
-import { evaluate, tallyLine } from '@/lib/rules';
+import { evaluate } from '@/lib/rules';
 import { checksFor, checkName, KIND_LABEL, type TargetId } from '@/lib/spec';
 import { statusOf } from '@/lib/status';
 import { actions, getState, useRecord, when } from '@/lib/store';
 
-function Step({ done, warn, title, sub, last }: { done: boolean; warn?: boolean; title: string; sub: string; last?: boolean }) {
-  const bg = warn ? 'bg-warn' : done ? 'bg-pass' : 'bg-pill';
+type StepState = 'done' | 'warn' | 'todo';
+const DOT: Record<StepState, string> = { done: 'bg-pass', warn: 'bg-warn', todo: 'bg-pill' };
+
+function Step({ state, title, sub, last, i }: { state: StepState; title: string; sub: string; last?: boolean; i: number }) {
   return (
-    <View className="flex-row gap-4">
+    <Enter i={i} className="flex-row gap-4">
       <View className="items-center">
-        <View className={`h-8 w-8 items-center justify-center rounded-full ${bg}`}>
-          {warn ? <MessageSquareWarning size={16} color="#fff" /> : done ? <Check size={16} color="#fff" strokeWidth={3} /> : <Clock size={16} color="#5E5E5E" />}
+        <View className={`h-8 w-8 items-center justify-center rounded-full ${DOT[state]}`}>
+          {state === 'warn' ? <MessageSquareWarning size={16} color="#fff" /> : null}
+          {state === 'done' ? <Check size={16} color="#fff" strokeWidth={3} /> : null}
+          {state === 'todo' ? <Clock size={16} color={C.ink2} /> : null}
         </View>
-        {!last ? <View className={`w-0.5 flex-1 ${done ? 'bg-pass' : 'bg-line'}`} style={{ minHeight: 26 }} /> : null}
+        {!last ? <View className={`w-0.5 flex-1 ${state === 'done' ? 'bg-pass' : 'bg-line'}`} style={{ minHeight: 22 }} /> : null}
       </View>
       <View className="flex-1 pb-5">
-        <T w="semibold" className="text-[16px]">
+        <T w="semibold" className="text-[16px] leading-[22px]">
           {title}
         </T>
         <T className="mt-0.5 text-[14px] leading-[20px] text-ink-2">{sub}</T>
       </View>
-    </View>
+    </Enter>
   );
 }
 
@@ -62,55 +67,68 @@ export default function Record() {
     router.push('/inspect/summary');
   };
 
+  // One notice: a failed send first, then a newer revision, then the engineer's request.
+  const pending = req && !r.approval;
+  const notice = err ? (
+    <Notice tone="fail" className="mt-4" title={err} />
+  ) : newer ? (
+    <Notice className="mt-4" title={`Replaced by rev ${newer.rev}`}>
+      This revision stays as history. Its signature and any approval apply only to it.
+    </Notice>
+  ) : pending ? (
+    <Notice tone="warn" className="mt-4" title={req.note || 'Fix, then scan these again'}>
+      {req.checks.map((c) => checkName(checksFor(r.member, r.spec).find((d) => d.id === c)!)).join(', ') || 'Any zone the engineer named'}
+    </Notice>
+  ) : null;
+
+  const footer =
+    r.revised || r.approval ? undefined : req ? (
+      <Button label={`Scan again as rev ${r.rev + 1}`} icon={RotateCw} onPress={() => revise(req.checks)} />
+    ) : r.sentAt ? (
+      <>
+        <Button label="Open the engineer’s reply" icon={FileInput} onPress={() => router.push('/received')} />
+        <TextBtn label="Send again" onPress={resend} />
+      </>
+    ) : (
+      <>
+        <Button label="Send with Office Kit" icon={Send} onPress={resend} />
+        <TextBtn label="Open the engineer’s reply" onPress={() => router.push('/received')} />
+      </>
+    );
+
   return (
-    <Screen
-      footer={
-        r.revised || r.approval ? undefined : req ? (
-          <Button label={`Scan again as rev ${r.rev + 1}`} icon={RotateCw} onPress={() => revise(req.checks)} />
-        ) : r.sentAt ? (
-          <>
-            <Button label="Open the engineer’s reply" icon={FileInput} onPress={() => router.push('/received')} />
-            <TextBtn label="Send again" onPress={resend} />
-          </>
-        ) : (
-          <>
-            <Button label="Send with Office Kit" icon={Send} onPress={resend} />
-            <TextBtn label="Open the engineer’s reply" onPress={() => router.push('/received')} />
-          </>
-        )
-      }
-    >
+    <Screen footer={footer}>
       <TopBar name={`Rev ${r.rev}`} sub={KIND_LABEL[r.member]} />
-      <Title>{r.name}</Title>
-      <Sub>{statusOf(r)}</Sub>
-      <T className="mt-1 text-[14px] text-ink-3">{tallyLine(fs)}</T>
-      {err ? <Notice tone="fail" className="mt-4" title={err} /> : null}
-      {newer ? <Notice className="mt-4" title={`Replaced by rev ${newer.rev}`}>This revision stays as history. Its signature and any approval apply only to it.</Notice> : null}
+      <Head illo={r.approval ? 'approve' : r.member}>
+        <Title>{r.name}</Title>
+        <Sub>{statusOf(r)}</Sub>
+      </Head>
+      {notice ? <Enter i={1}>{notice}</Enter> : null}
+
+      {r.approval ? <SignoffCard approval={r.approval} title="Sign-off QR" sub={`Proves offline that ${r.approval.payload.e} approved this exact record.`} /> : null}
 
       <View className="mt-7">
-        <Step done title={`Captured and signed · ${r.capture.signer.name}`} sub={`${when(r.capture.at)} · key ${r.capture.signer.fp} · record ${short(r.capture.hash)}`} />
-        <Step done={!!r.sentAt} title={r.sentAt ? 'Pack sent' : 'Pack not sent yet'} sub={r.sentAt ? `Confirmed sent ${when(r.sentAt)}` : 'Send it with Office Kit file transfer'} />
+        <Step i={2} state="done" title={`Captured and signed · ${r.capture.signer.name}`} sub={when(r.capture.at)} />
+        <Step i={3} state={r.sentAt ? 'done' : 'todo'} title={r.sentAt ? 'Pack sent' : 'Pack not sent yet'} sub={r.sentAt ? `Confirmed sent ${when(r.sentAt)}` : 'Send it with Office Kit file transfer'} />
         <Step
+          i={4}
           last
-          done={!!r.approval}
-          warn={!!req && !r.approval}
-          title={r.approval ? `Approved · ${r.approval.payload.e}` : req ? `Another view requested · ${req.e}` : 'Engineer approval'}
-          sub={r.approval ? `${when(r.approval.payload.t)} · PIN on their phone · key ${r.approval.payload.f}` : req ? `${when(req.t)} · ${req.note || 'see below'}` : 'Waiting for their reply'}
+          state={r.approval ? 'done' : pending ? 'warn' : 'todo'}
+          title={r.approval ? `Approved · ${r.approval.payload.e}` : req ? `Fix requested · ${req.e}` : 'Engineer approval'}
+          sub={r.approval ? `${when(r.approval.payload.t)} · PIN on their phone` : req ? `${when(req.t)} · ${req.note || 'see the note above'}` : 'Waiting for their reply'}
         />
       </View>
 
-      {req && !r.approval ? (
-        <Notice tone="warn" title="Scan these again">
-          {req.checks.map((c) => checkName(checksFor(r.member, r.spec).find((d) => d.id === c)!)).join(', ') || 'Any zone the engineer named'}
-        </Notice>
-      ) : null}
+      <Tally fs={fs} i={5} />
 
-      {r.approval ? <SignoffCard approval={r.approval} title="Sign-off QR" sub={`Proves offline that ${r.approval.payload.e} approved this exact record. Not a safety certificate.`} /> : null}
+      <FixLoop r={r} />
 
       <H2 className="mt-8">Checks</H2>
       <Group className="mt-3">
         {fs.map((f, i) => (
-          <FindingRow key={f.def.id} f={f} first={i === 0} corrected={r.corrected[f.def.id]} />
+          <Enter key={f.def.id} i={i}>
+            <FindingRow f={f} first={i === 0} corrected={r.corrected[f.def.id]} />
+          </Enter>
         ))}
       </Group>
 
@@ -119,7 +137,21 @@ export default function Record() {
 
       <H2 className="mt-8">Drawing</H2>
       <DrawingValues r={r} />
-      {!r.revised && !req ? <TextBtn label={`Scan again as rev ${r.rev + 1}`} onPress={() => revise([])} /> : null}
+
+      {!r.revised && !req ? (
+        <Group className="mt-6">
+          <Row first icon={RotateCw} title={`Scan again as rev ${r.rev + 1}`} sub="This revision stays as history" onPress={() => revise([])} />
+        </Group>
+      ) : null}
+
+      <Details label="Record details">
+        <Group>
+          <KV first k="Record" v={short(r.capture.hash)} />
+          <KV k="Capture key" v={r.capture.signer.fp} />
+          {r.approval ? <KV k="Engineer key" v={r.approval.payload.f} /> : null}
+        </Group>
+      </Details>
+      <Footnote />
     </Screen>
   );
 }

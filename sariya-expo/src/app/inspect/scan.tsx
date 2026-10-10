@@ -11,7 +11,7 @@ import Svg, { Circle, Line, Polygon, Text as SvgText } from 'react-native-svg';
 import { VisionView, type VisionFrame, type VisionViewRef } from '../../../modules/sariya-vision';
 
 import { Evidence } from '@/components/evidence';
-import { Button, Chip, Hairline, Notice, SourceTag, T, TextBtn, tap } from '@/components/ui';
+import { Button, Chip, Details, Group, Hairline, Illo, KV, Notice, Num, Overline, Press, SHADOW, SourceTag, T, TextBtn, tap } from '@/components/ui';
 import { keepEvidence } from '@/lib/files';
 import type { Pt } from '@/lib/homography';
 import { autoLock, barDiaFor, flushTimings, LIVE, LIVE_COPY, manualLock, TAP_ERROR_PX, turnHint, useVisionLive } from '@/lib/measure';
@@ -54,30 +54,60 @@ function LiveOverlay({ frame, w, h }: { frame: VisionFrame | null; w: number; h:
   );
 }
 
+const SHUTTER = 108;
+const RING_R = 49;
+
 function LockRing({ progress }: { progress: number }) {
-  const r = 42;
-  const c = 2 * Math.PI * r;
+  const c = 2 * Math.PI * RING_R;
+  const m = SHUTTER / 2;
   return (
-    <Svg width={96} height={96} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
-      <Circle cx={48} cy={48} r={r} stroke="rgba(255,255,255,0.3)" strokeWidth={5} fill="none" />
-      <Circle cx={48} cy={48} r={r} stroke="#3AD07A" strokeWidth={5} fill="none" strokeDasharray={`${c * progress} ${c}`} strokeLinecap="round" />
+    <Svg width={SHUTTER} height={SHUTTER} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
+      <Circle cx={m} cy={m} r={RING_R} stroke="rgba(255,255,255,0.3)" strokeWidth={5} fill="none" />
+      <Circle cx={m} cy={m} r={RING_R} stroke="#3AD07A" strokeWidth={5} fill="none" strokeDasharray={`${c * progress} ${c}`} strokeLinecap="round" />
     </Svg>
   );
 }
 
-function RoundBtn({ children, onPress, on, label }: { children: ReactNode; onPress?: () => void; on?: boolean; label?: string }) {
+// Legible over any scene: bright sky, dark formwork, wet steel.
+const OVER_CAMERA = { textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 10, textShadowOffset: { width: 0, height: 1 } };
+
+// Round glass control, camera-app style. `on` lifts it to white (torch on, help open).
+function GlassBtn({ children, onPress, on, label, caption, size = 48, disabled }: { children: ReactNode; onPress?: () => void; on?: boolean; label: string; caption?: string; size?: number; disabled?: boolean }) {
   return (
     <View className="items-center">
-      <Pressable
-        onPress={() => {
-          tap();
-          onPress?.();
-        }}
-        className={`h-12 w-12 items-center justify-center rounded-full ${on ? 'bg-white' : 'bg-black/55'}`}
+      <Press
+        onPress={onPress}
+        disabled={disabled}
+        scale={0.9}
+        hitSlop={6}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={on === undefined ? undefined : { selected: on }}
+        className={`items-center justify-center rounded-full ${on ? 'bg-white' : 'bg-black/50'} ${disabled ? 'opacity-40' : ''}`}
+        style={{ width: size, height: size }}
       >
         {children}
-      </Pressable>
-      {label ? <T className="mt-1 text-[12px] text-white">{label}</T> : null}
+      </Press>
+      {caption ? (
+        <T w="semibold" className="mt-1.5 text-[13px] text-white" style={OVER_CAMERA}>
+          {caption}
+        </T>
+      ) : null}
+    </View>
+  );
+}
+
+// Big number with a small grey unit, for the result sheet.
+function Stat({ value, unit, caption }: { value: string | number; unit: string; caption: string }) {
+  return (
+    <View>
+      <View className="flex-row items-end">
+        <Num className="text-[44px] leading-[48px] tracking-[-1.5px]">{value}</Num>
+        <T w="medium" className="mb-1.5 ml-1 text-[17px] text-ink-2">
+          {unit}
+        </T>
+      </View>
+      <T className="text-[13px] text-ink-2">{caption}</T>
     </View>
   );
 }
@@ -134,7 +164,6 @@ export default function Scan() {
   if (!cur || !target) return <Redirect href="/" />;
   const marker = MARKERS[target.marker];
   const barDia = barDiaFor(cur.spec, cur.member);
-  const engineLine = live.frame && live.frame.accel !== 'none' ? `${live.frame.accel}${live.frame.inferMs >= 0 ? ` ${live.frame.inferMs} ms` : ''}` : LIVE.title;
 
   const snap = async (): Promise<Frozen | null> => {
     try {
@@ -217,6 +246,28 @@ export default function Scan() {
     setTape('');
   };
 
+  // Presentation only: same lock gate as before, the shutter just shows it plainly.
+  const locking = view === 'locking';
+  const canLock = live.status === 'ready' || live.status === 'steady';
+  const lit = canLock || locking;
+  const statusColor = locking ? '#3AD07A' : LIVE_COPY[live.status].color;
+  let statusText = LIVE_COPY[live.status].label;
+  if (locking) statusText = 'Locking… hold still';
+  else if (live.status === 'searching') statusText = `Find ${marker.name}`;
+  else if (live.status === 'partial') statusText = `Show all of ${marker.name}`;
+  const liveMm = live.positions.length >= 2 ? Math.round(gapsOf(live.positions).reduce((a, g) => a + g, 0) / (live.positions.length - 1)) : null;
+  const weakCount = live.frame?.weak.length ?? 0;
+
+  const marking = corners.length < 4;
+  const barWord = target.marker === 'card' ? (target.axis === 'x' ? 'main bar' : 'distribution bar') : 'ring';
+  let manualLabel = 'Tap the bars';
+  if (marking) manualLabel = 'Mark the corners first';
+  else if (taps.length) manualLabel = `Lock ${taps.length} bar${taps.length > 1 ? 's' : ''}`;
+
+  const widest = lockGaps.length ? Math.round(Math.max(...lockGaps)) : null;
+  const showTape = hot !== undefined && lockGaps.length > 0;
+  const goFix = () => outside && router.push({ pathname: '/inspect/fix', params: { check: outside.def.id, from: 'scan' } });
+
   return (
     <View className="flex-1 bg-black">
       {perm?.granted && VisionView ? (
@@ -277,56 +328,62 @@ export default function Scan() {
         </View>
       ) : null}
 
-      {/* top: persistent label + controls */}
-      <View className="absolute inset-x-0 flex-row items-start gap-3 px-4" style={{ top: i.top + 10 }}>
-        <RoundBtn onPress={() => (view === 'manual' ? setPhase('live') : router.back())}>
-          <X size={22} color="#fff" />
-        </RoundBtn>
-        <View className="flex-1 rounded-2xl bg-black/55 px-4 py-2.5">
-          <T w="semibold" className="text-[16px] text-white" numberOfLines={1}>
+      {/* top: close, the record, torch and help */}
+      <View className="absolute inset-x-0 flex-row items-center gap-2 px-4" style={{ top: i.top + 10 }}>
+        <GlassBtn label={view === 'manual' ? 'Stop marking' : 'Close scanner'} onPress={() => (view === 'manual' ? setPhase('live') : router.back())}>
+          <X size={22} color="#fff" strokeWidth={2.4} />
+        </GlassBtn>
+        <View className="h-12 flex-1 justify-center rounded-full bg-black/50 px-4">
+          <T w="semibold" className="text-[15px] leading-[19px] text-white" numberOfLines={1}>
             {cur.name}
             {cur.rev > 1 ? ` · rev ${cur.rev}` : ''}
           </T>
-          <T className="text-[13px] text-white/75" numberOfLines={1}>
-            {target.label} · {marker.name} · {engineLine}
+          <T className="text-[12px] leading-[16px] text-white/70" numberOfLines={1}>
+            {target.label} · {marker.name}
           </T>
         </View>
         {view === 'live' ? (
-          <View className="gap-2">
-            <RoundBtn onPress={() => setTorch(!torch)} on={torch}>
+          <>
+            <GlassBtn label={torch ? 'Torch off' : 'Torch on'} on={torch} onPress={() => setTorch(!torch)}>
               {torch ? <Flashlight size={20} color="#000" /> : <FlashlightOff size={20} color="#fff" />}
-            </RoundBtn>
-            <RoundBtn onPress={() => setHelp(!help)} on={help}>
+            </GlassBtn>
+            <GlassBtn label="How to scan" on={help} onPress={() => setHelp(!help)}>
               <CircleHelp size={20} color={help ? '#000' : '#fff'} />
-            </RoundBtn>
-          </View>
+            </GlassBtn>
+          </>
         ) : null}
       </View>
 
-      {/* family selector + simulated label */}
-      {view === 'live' ? (
-        <View className="absolute inset-x-0 items-center gap-2" style={{ top: i.top + 76 }}>
-          {targets.length > 1 ? (
-            <View className="flex-row gap-2">
-              {targets.map((t) => {
-                const on = t.id === target.id;
-                const done = !!activeLock(cur, t.id);
-                return (
-                  <Pressable key={t.id} onPress={() => (tap(), setTid(t.id))} className={`h-9 flex-row items-center gap-1.5 rounded-full px-3.5 ${on ? 'bg-white' : 'bg-black/55'}`}>
-                    {done ? <Check size={14} color={on ? '#000' : '#fff'} strokeWidth={3} /> : null}
-                    <T w="semibold" className={`text-[13px] ${on ? '' : 'text-white'}`}>
-                      {t.short}
-                    </T>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : null}
+      {/* target switch: one glass segmented control */}
+      {view === 'live' && targets.length > 1 ? (
+        <View className="absolute inset-x-0 items-center" style={{ top: i.top + 70 }}>
+          <View className="flex-row rounded-full bg-black/50 p-1">
+            {targets.map((t) => {
+              const on = t.id === target.id;
+              const done = !!activeLock(cur, t.id);
+              return (
+                <Press
+                  key={t.id}
+                  onPress={on ? undefined : () => setTid(t.id)}
+                  scale={0.95}
+                  accessibilityRole="tab"
+                  accessibilityLabel={`${t.label}${done ? ', locked' : ''}`}
+                  accessibilityState={{ selected: on }}
+                  className={`h-11 min-w-[96px] flex-row items-center justify-center gap-1.5 rounded-full px-4 ${on ? 'bg-white' : ''}`}
+                >
+                  {done ? <Check size={15} color={on ? '#000' : '#fff'} strokeWidth={3} /> : null}
+                  <T w={on ? 'bold' : 'semibold'} className={`text-[15px] ${on ? '' : 'text-white'}`}>
+                    {t.short}
+                  </T>
+                </Press>
+              );
+            })}
+          </View>
         </View>
       ) : null}
 
       {help && view === 'live' ? (
-        <Animated.View entering={FadeIn} exiting={FadeOut} className="absolute inset-x-4 rounded-card bg-white p-4" style={{ top: i.top + 150 }}>
+        <Animated.View entering={FadeIn} exiting={FadeOut} className="absolute inset-x-4 rounded-card bg-paper p-4" style={[{ top: i.top + 132 }, SHADOW.float]}>
           <T w="semibold" className="text-[16px] leading-[22px]">
             {target.marker === 'card' ? 'Lay card S flat on the bars, edges along the bars.' : 'Lay strip_300 along the beam, 0 end at the column face.'} Torch on, about 30 cm away. Keep the whole {marker.name} in view.
           </T>
@@ -335,12 +392,13 @@ export default function Scan() {
       ) : null}
 
       {!perm?.granted ? (
-        <View className="absolute inset-x-5 top-1/3 rounded-card bg-paper p-5">
-          <T w="semibold" className="text-[18px]">
-            Camera needed
+        <View className="absolute inset-x-5 top-1/4 items-center rounded-sheet bg-paper px-5 pb-5 pt-4" style={SHADOW.float}>
+          <Illo name="phone" size={120} />
+          <T w="bold" className="mt-2 text-center text-[22px] leading-[28px] tracking-[-0.4px]">
+            Allow the camera
           </T>
-          <T className="mt-1 text-[15px] text-ink-2">Sariya measures the steel against the printed card. Photos stay on this phone until you send a pack.</T>
-          <View className="mt-4">{perm && !perm.canAskAgain ? <Button label="Open settings" onPress={() => Linking.openSettings()} /> : <Button label="Allow camera" onPress={requestPerm} />}</View>
+          <T className="mt-1 text-center text-[15px] leading-[21px] text-ink-2">Sariya measures the steel against the printed card. Photos stay on this phone until you send a pack.</T>
+          <View className="mt-5 self-stretch">{perm && !perm.canAskAgain ? <Button label="Open settings" onPress={() => Linking.openSettings()} /> : <Button label="Allow camera" onPress={requestPerm} />}</View>
         </View>
       ) : null}
       {perm?.granted && !VisionView ? (
@@ -350,7 +408,7 @@ export default function Scan() {
           </Notice>
         </View>
       ) : null}
-      {camError ? (
+      {camError && VisionView ? (
         <View className="absolute inset-x-5" style={{ top: i.top + 190 }}>
           <Notice tone="fail" title="Camera problem">
             {camError}
@@ -358,52 +416,63 @@ export default function Scan() {
         </View>
       ) : null}
 
-      {/* live readout + lock */}
-      {(view === 'live' || view === 'locking') && perm?.granted ? (
-        <View className="absolute inset-x-0 items-center" style={{ bottom: i.bottom + 24 }}>
-          <View className="flex-row items-center gap-2 rounded-full bg-black/60 px-4 py-2">
-            <View className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: view === 'locking' ? '#3AD07A' : LIVE_COPY[live.status].color }} />
-            <T w="semibold" className="text-[16px]" style={{ color: view === 'locking' ? '#3AD07A' : LIVE_COPY[live.status].color }}>
-              {view === 'locking' ? 'Locking… hold still' : live.status === 'searching' ? `Find ${marker.name}` : live.status === 'partial' ? `Show all of ${marker.name}` : LIVE_COPY[live.status].label}
+      {/* live readout + shutter */}
+      {(view === 'live' || locking) && perm?.granted ? (
+        <View className="absolute inset-x-0 items-center" style={{ bottom: i.bottom + 20 }}>
+          <View className="h-10 flex-row items-center gap-2 rounded-full bg-black/50 px-4">
+            <View className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: statusColor }} />
+            <T w="semibold" className="text-[16px]" style={{ color: statusColor }}>
+              {statusText}
             </T>
           </View>
-          {live.positions.length >= 2 ? (
+          {liveMm !== null ? (
             <>
-              <View className="mt-2 flex-row items-end">
-                <T w="bold" className="text-[60px] leading-[66px] tracking-[-2px] text-white">
-                  ~{Math.round(gapsOf(live.positions).reduce((a, g) => a + g, 0) / (live.positions.length - 1))}
-                </T>
-                <T w="medium" className="mb-3 ml-1.5 text-[20px] text-white/80">
+              <View className="mt-1 flex-row items-end">
+                <Num className="text-[76px] leading-[84px] tracking-[-2.5px] text-white" style={OVER_CAMERA}>
+                  ~{liveMm}
+                </Num>
+                <T w="semibold" className="mb-3.5 ml-1.5 text-[22px] text-white/70" style={OVER_CAMERA}>
                   mm
                 </T>
               </View>
-              <T className="text-[14px] text-white/75">
-                {live.positions.length} bars{live.frame?.weak.length ? ` · ${live.frame.weak.length} partly seen` : ''} · Lock for the verdict
+              <T w="medium" className="-mt-1 text-[14px] text-white/80" style={OVER_CAMERA}>
+                {live.positions.length} bars{weakCount ? ` · ${weakCount} partly seen` : ''}
               </T>
             </>
           ) : null}
           {turnHint(live.frame) ? (
-            <T w="semibold" className="mt-1 text-[14px] text-[#FFC043]">
+            <T w="semibold" className="mt-1 text-[14px] text-[#FFC043]" style={OVER_CAMERA}>
               Turn the phone so the bars run up the screen
             </T>
           ) : null}
 
-          <View className="mt-4 w-full flex-row items-center justify-center gap-10">
-            <RoundBtn onPress={startManual} label="By hand">
-              <Hand size={20} color="#fff" />
-            </RoundBtn>
-            <View className="items-center">
-              <Pressable onPress={doLock} disabled={(live.status !== 'ready' && live.status !== 'steady') || view === 'locking'} className="h-24 w-24 items-center justify-center">
-                <LockRing progress={view === 'locking' ? lockProgress : live.progress} />
-                <View className={`h-[74px] w-[74px] items-center justify-center rounded-full ${live.status === 'ready' || view === 'locking' ? 'bg-white' : 'bg-white/25'}`}>
-                  <Ruler size={28} color={live.status === 'ready' || view === 'locking' ? '#000' : 'rgba(255,255,255,0.7)'} />
+          <View className="mt-4 w-full flex-row items-center justify-center">
+            <View className="w-24 items-center">
+              <GlassBtn label="Mark by hand" caption="By hand" size={56} onPress={startManual}>
+                <Hand size={22} color="#fff" />
+              </GlassBtn>
+            </View>
+            <View className="mx-4 items-center">
+              <Press
+                onPress={doLock}
+                disabled={!canLock || locking}
+                feel="impact"
+                scale={0.93}
+                accessibilityRole="button"
+                accessibilityLabel="Lock the measurement"
+                className="items-center justify-center"
+                style={{ width: SHUTTER, height: SHUTTER }}
+              >
+                <LockRing progress={locking ? lockProgress : live.progress} />
+                <View className={`h-[84px] w-[84px] items-center justify-center rounded-full ${lit ? 'bg-white' : 'border-2 border-white/35 bg-white/15'}`}>
+                  <Ruler size={32} color={lit ? '#000' : 'rgba(255,255,255,0.55)'} strokeWidth={2.2} />
                 </View>
-              </Pressable>
-              <T w="semibold" className="text-[15px] text-white">
-                Lock
+              </Press>
+              <T w="bold" className={`mt-0.5 text-[15px] ${lit ? 'text-white' : 'text-white/55'}`} style={OVER_CAMERA}>
+                {locking ? 'Locking' : 'Lock'}
               </T>
             </View>
-            <View className="w-12" />
+            <View className="w-24" />
           </View>
         </View>
       ) : null}
@@ -411,104 +480,130 @@ export default function Scan() {
       {/* manual marking instructions */}
       {view === 'manual' ? (
         <>
-          <View className="absolute inset-x-4 rounded-2xl bg-black/70 px-4 py-3" style={{ top: i.top + 70 }}>
+          <View className="absolute inset-x-4 rounded-2xl bg-black/50 px-4 py-3" style={{ top: i.top + 70 }}>
             <View className="flex-row items-center gap-2">
+              <View className="rounded-full bg-white px-2.5 py-0.5">
+                <Num className="text-[13px]">{marking ? 1 : 2}/2</Num>
+              </View>
               <SourceTag source="manual" />
-              <T className="text-[13px] text-white/75">{corners.length < 4 ? `Step 1 of 2 · corner ${corners.length + 1} of 4` : `Step 2 of 2 · ${taps.length} bars marked`}</T>
+              <Num w="medium" className="text-[13px] text-white/70">
+                {marking ? `Corner ${corners.length + 1} of 4` : `${taps.length} marked`}
+              </Num>
             </View>
-            <T w="semibold" className="mt-1 text-[16px] leading-[22px] text-white">
-              {corners.length < 4 ? `Tap ${marker.corners}: top-left, top-right, bottom-right, bottom-left.` : `Tap each ${target.marker === 'card' ? (target.axis === 'x' ? 'main bar' : 'distribution bar') : 'ring'} once, where it crosses the ${marker.name}.`}
+            <T w="bold" className="mt-1.5 text-[18px] leading-[24px] text-white">
+              {marking ? `Tap the 4 corners of the ${marker.name}` : `Tap each ${barWord} once`}
+            </T>
+            <T className="text-[13px] leading-[18px] text-white/70">
+              {marking ? `${target.marker === 'strip' ? '0 end on the left. ' : ''}Top-left first, then clockwise.` : `Where it crosses the ${marker.name}.`}
             </T>
           </View>
           <View className="absolute inset-x-0 flex-row items-center gap-3 px-5" style={{ bottom: i.bottom + 20 }}>
-            <RoundBtn
+            <Press
               onPress={() => {
                 if (taps.length) setTaps(taps.slice(0, -1));
                 else setCorners(corners.slice(0, -1));
               }}
-              label="Undo"
+              disabled={!corners.length}
+              scale={0.94}
+              accessibilityRole="button"
+              accessibilityLabel="Undo last tap"
+              className={`h-14 flex-row items-center gap-2 rounded-2xl bg-black/50 px-5 ${corners.length ? '' : 'opacity-40'}`}
             >
-              <Undo2 size={20} color="#fff" />
-            </RoundBtn>
+              <Undo2 size={22} color="#fff" strokeWidth={2.2} />
+              <T w="semibold" className="text-[17px] text-white">
+                Undo
+              </T>
+            </Press>
             <View className="flex-1">
-              <Button label={corners.length < 4 ? 'Mark the corners first' : taps.length ? `Lock ${taps.length} bar${taps.length > 1 ? 's' : ''}` : 'Tap the bars'} disabled={corners.length < 4 || !taps.length} kind="accent" onPress={lockManual} />
+              <Button label={manualLabel} disabled={marking || !taps.length} kind="accent" onPress={lockManual} />
             </View>
           </View>
         </>
       ) : null}
 
-      {/* locked result sheet */}
+      {/* locked result sheet: the actions stay pinned under the scrolling findings */}
       {view === 'locked' && lock ? (
-        <Animated.View entering={SlideInDown.springify().damping(18)} className="absolute inset-x-0 bottom-0 max-h-[62%] rounded-t-sheet bg-paper" style={{ paddingBottom: i.bottom + 16 }}>
-          <ScrollView contentContainerClassName="px-5 pt-3" keyboardShouldPersistTaps="handled">
+        <Animated.View entering={SlideInDown.springify().damping(18)} className="absolute inset-x-0 bottom-0 max-h-[64%] rounded-t-sheet bg-paper" style={[{ paddingBottom: i.bottom + 8 }, SHADOW.float]}>
+          <ScrollView style={{ flexShrink: 1 }} contentContainerClassName="px-5 pb-2 pt-3" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <View className="mb-3 h-1.5 w-10 self-center rounded-full bg-line" />
             <View className="flex-row items-center gap-2">
-              <T w="medium" className="text-[14px] text-ink-2">
-                {target.label}
-              </T>
+              <Overline>{target.label}</Overline>
               <SourceTag source={lock.source} />
             </View>
-            <T w="bold" className="mt-1 text-[28px] tracking-[-0.8px]">
-              {lock.positions.length} bars{lockGaps.length ? ` · widest ${Math.round(Math.max(...lockGaps))} ± ${lock.band} mm` : ''}
-            </T>
-            <T className="mt-0.5 text-[13px] text-ink-3">
-              {lock.frames} frame{lock.frames === 1 ? '' : 's'}{lock.engine ? ` · ${lock.engine}` : ''}{lock.image ? ` · photo ${lock.image.hash.slice(0, 8)}` : ' · no photo'}
-            </T>
-
-            <View className="-mx-5 mt-2">
-              {findings.map((f, k) => (
-                <View key={f.def.id} className="px-5 py-3">
-                  {k ? <Hairline /> : null}
-                  <View className="flex-row items-start gap-2">
-                    <T w="medium" className="flex-1 text-[16px]">
-                      {checkName(f.def)}
-                    </T>
-                    <Chip outcome={f.outcome} small />
-                  </View>
-                  {f.value ? <T className="mt-0.5 text-[15px]">{f.value}</T> : null}
-                  {f.limit ? <T className="text-[13px] text-ink-3">Limit {f.limit}</T> : null}
-                  {f.reason && f.outcome !== 'within' ? (
-                    <T className="mt-1 text-[14px] text-ink-2">
-                      {f.reason}
-                      {f.action ? `. ${f.action}` : ''}
-                    </T>
-                  ) : null}
-                </View>
-              ))}
+            <View className="mt-2 flex-row items-end gap-8">
+              <Stat value={lock.positions.length} unit="bars" caption="Counted" />
+              {widest !== null ? <Stat value={widest} unit={`± ${lock.band} mm`} caption="Widest gap" /> : null}
             </View>
 
-            {hot !== undefined && lockGaps.length ? (
-              benchOpen ? (
-                <View className="mt-3 rounded-xl border border-line p-3">
-                  <T w="semibold" className="text-[15px]">
-                    Tape gap {hot + 1} (highlighted), centre to centre
-                  </T>
-                  <View className="mt-2 flex-row items-center gap-2">
-                    <View className="h-12 flex-1 flex-row items-center rounded-xl bg-tile px-3">
-                      <TextInput value={tape} onChangeText={(t) => setTape(t.replace(/[^0-9.]/g, '').slice(0, 5))} keyboardType="numeric" placeholder="tape mm" placeholderTextColor="#8A8A8A" className="flex-1 font-semibold text-[18px] text-ink" />
-                    </View>
-                    <Pressable onPress={saveBench} className="h-12 justify-center rounded-xl bg-ink px-4 active:opacity-80">
-                      <T w="semibold" className="text-[15px] text-white">
-                        Save row
+            {findings.length ? (
+              <Group className="mt-4">
+                {findings.map((f, k) => (
+                  <View key={f.def.id} className="px-4 py-3.5">
+                    {k ? <Hairline /> : null}
+                    <View className="flex-row items-center gap-3">
+                      <T w="semibold" className="flex-1 text-[16px] leading-[22px]" numberOfLines={2}>
+                        {checkName(f.def)}
                       </T>
-                    </Pressable>
+                      <Chip outcome={f.outcome} small />
+                    </View>
+                    {f.value || f.limit ? (
+                      <View className="mt-1 flex-row flex-wrap items-baseline gap-x-2">
+                        {f.value ? (
+                          <Num w="semibold" className="text-[15px]">
+                            {f.value}
+                          </Num>
+                        ) : null}
+                        {f.limit ? <T className="text-[13px] text-ink-3">Limit {f.limit}</T> : null}
+                      </View>
+                    ) : null}
+                    {f.reason && f.outcome !== 'within' ? (
+                      <T className="mt-1 text-[14px] leading-[20px] text-ink-2">
+                        {f.reason}
+                        {f.action ? `. ${f.action}` : ''}
+                      </T>
+                    ) : null}
                   </View>
-                  {benchSaved ? <T className="mt-2 text-[13px] text-ink-2">{benchSaved}</T> : null}
-                </View>
-              ) : null
+                ))}
+              </Group>
             ) : null}
 
-            <View className="mt-4" onTouchStart={() => Keyboard.dismiss()}>
-              {outside ? <Button label="Show fix for the mason" kind="accent" onPress={() => router.push({ pathname: '/inspect/fix', params: { check: outside.def.id, from: 'scan' } })} /> : null}
-              {rescan && !outside ? <Button label={`Re-scan ${target.short.toLowerCase()}`} onPress={() => actions.rescan(target.id)} /> : null}
-              {outside || rescan ? (
-                <TextBtn label={next.label} onPress={next.go} />
-              ) : (
-                <Button label={next.label} onPress={next.go} />
-              )}
-              {hot !== undefined && lockGaps.length && !benchOpen ? <TextBtn label="Add a tape check" onPress={() => setBenchOpen(true)} /> : null}
-            </View>
+            {hot !== undefined && showTape && benchOpen ? (
+              <View className="mt-3 rounded-card bg-tile p-3">
+                <T w="semibold" className="text-[15px]">
+                  Tape gap {hot + 1} (highlighted), centre to centre
+                </T>
+                <View className="mt-2 flex-row items-center gap-2">
+                  <View className="h-12 flex-1 flex-row items-center rounded-xl bg-paper px-3">
+                    <TextInput value={tape} onChangeText={(t) => setTape(t.replace(/[^0-9.]/g, '').slice(0, 5))} keyboardType="numeric" placeholder="tape mm" placeholderTextColor="#8A8A8A" className="flex-1 font-semibold text-[18px] text-ink" />
+                  </View>
+                  <Press onPress={saveBench} accessibilityRole="button" className="h-12 justify-center rounded-xl bg-ink px-4">
+                    <T w="semibold" className="text-[15px] text-white">
+                      Save row
+                    </T>
+                  </Press>
+                </View>
+                {benchSaved ? <T className="mt-2 text-[13px] text-ink-2">{benchSaved}</T> : null}
+              </View>
+            ) : null}
+
+            <Details>
+              <Group>
+                <KV first k="Frames" v={String(lock.frames)} />
+                {lock.engine ? <KV k="Engine" v={lock.engine} /> : null}
+                <KV k="Photo" v={lock.image ? lock.image.hash.slice(0, 12) : 'None'} />
+              </Group>
+            </Details>
           </ScrollView>
+
+          <View className="border-t border-line px-5 pt-3" onTouchStart={() => Keyboard.dismiss()}>
+            {outside ? <Button label="Show fix for the mason" kind="accent" onPress={goFix} /> : null}
+            {rescan && !outside ? <Button label={`Re-scan ${target.short.toLowerCase()}`} onPress={() => actions.rescan(target.id)} /> : null}
+            {outside || rescan ? null : <Button label={next.label} onPress={next.go} />}
+            <View className="flex-row items-center justify-center gap-6">
+              {outside || rescan ? <TextBtn label={next.label} onPress={next.go} /> : null}
+              {showTape && !benchOpen ? <TextBtn label="Add a tape check" onPress={() => setBenchOpen(true)} /> : null}
+            </View>
+          </View>
         </Animated.View>
       ) : null}
     </View>

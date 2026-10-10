@@ -63,7 +63,8 @@ export function validate(f: Field, v: number): string | null {
 export type SpecValues = Partial<Record<FieldId, number | null>>;
 
 // Drawing values signed by the engineer and sent to the operator, so the person being checked does not set the bar.
-export type SpecPayload = { k: 'spec'; m: MemberKind; n: string; values: SpecValues; hooks: boolean; t: number; e: string; f: string };
+// s (site) and p (planned pour) are optional so specs signed before they existed still verify.
+export type SpecPayload = { k: 'spec'; m: MemberKind; n: string; values: SpecValues; hooks: boolean; t: number; e: string; f: string; s?: string; p?: number };
 
 export type Spec = {
   rev: number;

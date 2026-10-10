@@ -7,8 +7,8 @@ group = 'expo.modules.sariyavision'
 version = '0.1.0'
 
 // The model ships from the repo's models/ folder so the app never carries a second copy of the weights.
-// New round: ./gradlew assembleRelease -Psariya.model=v3 -Psariya.threshold=0.4 (or set both in gradle.properties).
-def sariyaModel = findProperty('sariya.model') ?: 'v2'
+// New round: ./gradlew assembleRelease -Psariya.model=v3 -Psariya.threshold=0.3 (or set both in gradle.properties).
+def sariyaModel = findProperty('sariya.model') ?: 'v3'
 def sariyaThreshold = findProperty('sariya.threshold') ?: '0.3'
 def modelDir = file("${projectDir}/../../../../models/seg/${sariyaModel}")
 def modelFile = new File(modelDir, 'unet_mbv3_1152.tflite')

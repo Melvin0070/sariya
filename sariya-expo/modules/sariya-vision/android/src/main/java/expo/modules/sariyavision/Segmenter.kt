@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 // Bar segmentation model (notes/14-model/MODEL-V*.md): U-Net MobileNetV3, input float32 [1, 640, 1152, 3] raw RGB 0-255
 // in sensor orientation, output float32 [1, 640, 1152, 1] probability. Version and threshold come from the build
-// (-Psariya.model, -Psariya.threshold); v2's report sets 0.3 because it traded recall for no desk false alarms.
+// (-Psariya.model, -Psariya.threshold); v3 uses 0.3 to favour bar recall while retaining rejection of desk objects.
 object Segmenter {
   const val W = 1152
   const val H = 640

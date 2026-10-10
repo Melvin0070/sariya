@@ -249,3 +249,27 @@ export function tallyLine(fs: Finding[]) {
   if (t.pending) bits.push(`${t.pending} not checked yet`);
   return bits.join(' · ');
 }
+
+// The number a fix changes, short enough for "was → now": the bar count, or the widest gap with its band.
+export function brief(f: Finding): string | undefined {
+  const l = f.lock;
+  if (l && f.def.id.endsWith('_count')) return `${l.positions.length} bars`;
+  if (l && f.hot !== undefined) return `widest gap ${r0(gapsOf(l.positions)[f.hot])} ± ${l.band} mm`;
+  return f.value;
+}
+
+export type Delta = { def: CheckDef; was: Finding; now: Finding; asked: boolean };
+
+// Checks the engineer asked about, plus any that were outside or re-scan in the parent revision.
+export function fixDelta(parent: Inspection, child: Inspection): Delta[] {
+  const asked = new Set(parent.request?.payload.checks ?? []);
+  const before = evaluate(parent);
+  const after = evaluate(child);
+  const out: Delta[] = [];
+  for (const was of before) {
+    const now = after.find((f) => f.def.id === was.def.id);
+    const flagged = was.outcome === 'outside' || was.outcome === 'rescan';
+    if (now && (asked.has(was.def.id) || flagged)) out.push({ def: was.def, was, now, asked: asked.has(was.def.id) });
+  }
+  return out;
+}
