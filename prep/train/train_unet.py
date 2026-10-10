@@ -183,16 +183,19 @@ def main(argv=None):
 
     for ep in range(start_ep, a.epochs):
         model.train(); t0 = time.time(); tot = 0.0
-        for x, y in train:
+        for step, (x, y) in enumerate(train, 1):
             x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
             with torch.autocast(device_type=device.type, enabled=device.type == "cuda"):
                 loss = loss_fn(model(x), y)
             opt.zero_grad(set_to_none=True)
             scaler.scale(loss).backward(); scaler.step(opt); scaler.update(); sched.step()
             tot += loss.item()
+            if step % 50 == 0:                       # progress line for the live log
+                print(f"[{dt.datetime.now():%H:%M:%S}] epoch {ep + 1}/{a.epochs} step {step}/{len(train)} "
+                      f"loss {tot / step:.4f} {time.time() - t0:.0f}s", flush=True)
         m = evaluate(model, val, device) if len(val) else {"iou": None, "f1": None}
         rec = {"epoch": ep, "loss": round(tot / max(len(train), 1), 4), **m, "sec": round(time.time() - t0, 1), "time": now()}
-        log["epochs"].append(rec); print(rec)
+        log["epochs"].append(rec); print(rec, flush=True)
         torch.save({"model": model.state_dict(), "opt": opt.state_dict(), "epoch": ep, "best": best}, os.path.join(a.out, "last.pt"))
         if m["iou"] is not None and m["iou"] > best:
             best = m["iou"]

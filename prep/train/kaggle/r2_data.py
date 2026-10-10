@@ -16,12 +16,35 @@ H = os.path.dirname(os.path.abspath(__file__))
 TMP = "/kaggle/temp"
 
 
-def _root(marker: str) -> str | None:
-    hits = glob.glob(f"/kaggle/input/**/{marker}", recursive=True)
-    return hits[0][: -len(marker)].rstrip("/") if hits else None
+def log(*a) -> None:
+    import datetime
+    print(f"[{datetime.datetime.now():%H:%M:%S}]", *a, flush=True)
 
 
-def _neg(images: str, name: str, *extra: str) -> tuple[str, str] | None:
+def find_dir(slug: str) -> str | None:
+    """Mount point of an attached dataset or notebook output. Depth-limited, so it never crawls COCO's 160k files."""
+    for root, dirs, _ in os.walk("/kaggle/input"):
+        if os.path.basename(root) == slug:
+            return root
+        if root.count(os.sep) >= 5:              # /kaggle/input/datasets/<owner>/<slug>
+            dirs[:] = []
+    return None
+
+
+def _root(slug: str, marker: str) -> str | None:
+    """Folder inside dataset `slug` that contains `marker` (checked at the top, then one zip-folder level down)."""
+    base = find_dir(slug)
+    if not base:
+        log(f"dataset {slug} not attached")
+        return None
+    for cand in [base] + [os.path.join(base, d) for d in sorted(os.listdir(base))]:
+        if os.path.exists(os.path.join(cand, marker)):
+            return cand
+    log(f"dataset {slug}: {marker} not found under {base}")
+    return None
+
+
+def _neg(images: str, name: str, *extra: str) -> tuple[str, str]:
     out = f"{TMP}/neg/{name}.json"
     subprocess.check_call([sys.executable, f"{H}/make_negatives.py", "--images", images, "--out", out,
                            "--sites", f"{TMP}/neg/sites.csv", "--site-prefix", name, *extra])
@@ -35,9 +58,11 @@ REAL_DIR = f"{TMP}/realtiles"
 def _stirrup(n_syn: int) -> None:
     """Round 3 positives (needs internet): n_syn synthetic stirrup scenes (varied colour, light, background,
     distractors; straight segments labelled, bends not) + the 233 real stirrup photos as a val/test split."""
-    pre = _root("postiles/dataset.json")          # sariya-stirrup-tiles: the same sample, tiled on the laptop
+    pre = _root("sariya-stirrup-tiles", "postiles/dataset.json")   # the same sample, tiled on the laptop
     if pre:
         os.symlink(f"{pre}/postiles", f"{TMP}/postiles"); os.symlink(f"{pre}/realtiles", REAL_DIR)
+        log(f"stirrup tiles from {pre}: train {len(os.listdir(f'{pre}/postiles/train/images'))}, "
+            f"real test {len(os.listdir(f'{pre}/realtiles/test/images'))}")
         return
     import random
     from huggingface_hub import hf_hub_download, snapshot_download   # anonymous HF: ~1 file/s, ~45 min for 2,733 files
@@ -77,28 +102,35 @@ def prepare(roi_dir: str) -> str:
     # Counts per source; round 2 defaults. Round 3 sets R_STIRRUP (positives) and trims the desk negatives.
     n = {k: int(os.environ.get(f"R_{k.upper()}", v)) for k, v in
          (("wires", 400), ("coco", 400), ("indoor", 300), ("stirrup", 0))}
+    log("prepare: counts", n)
     os.makedirs(f"{TMP}/neg", exist_ok=True)
     pairs = []
-    wires = _root("train/train/imgs")
+    wires = _root("electric-wires-image-segmentation", "train/train/imgs")
     if wires and n["wires"]:
         pairs.append(_neg(wires, "wires", "--include", "/imgs/", "--n", str(n["wires"])))   # 28,646 in the set
-    coco = _root("coco2017/annotations/instances_val2017.json")
+        log("negatives: wires done")
+    coco = _root("coco-2017-dataset", "coco2017/annotations/instances_val2017.json")
     if coco and n["coco"]:
         pairs.append(_neg(f"{coco}/coco2017/val2017", "coco", "--coco-ann", f"{coco}/coco2017/annotations/instances_val2017.json",
                           "--coco-cats", "laptop", "keyboard", "cell phone", "remote", "mouse", "tv", "--n", str(n["coco"])))
-    indoor = _root("indoorCVPR_09/Images")
+        log("negatives: coco done")
+    indoor = _root("indoor-scenes-cvpr-2019", "indoorCVPR_09/Images")
     if indoor and n["indoor"]:
         pairs.append(_neg(f"{indoor}/indoorCVPR_09/Images", "indoor", "--n", str(n["indoor"]), "--group-by-dir"))
+        log("negatives: indoor done")
     if n["stirrup"]:
         _stirrup(n["stirrup"])
-    venue = _root("venue")
+    venue_slug = os.environ.get("R_VENUE")
+    venue = _root(venue_slug, "venue") if venue_slug else None
     if venue:
         pairs.append(_neg(f"{venue}/venue", "venue", "--group-by-dir"))
+    log(f"tiling {len(pairs)} negative sources")
     args = [sys.executable, f"{H}/prep_data.py", "--out", f"{TMP}/negtiles", "--tiles", "1",
             "--sites", f"{TMP}/neg/sites.csv", "--min-mask-frac", "0"]
     for js, img in pairs:
         args += ["--coco", js, "--images", img]
-    subprocess.check_call(args)
+    subprocess.check_call(args, stdout=subprocess.DEVNULL)
+    log("negatives tiled")
 
     data = f"{TMP}/data"                     # ROI tiles (symlinked) + negatives, one tree for train_unet.py
     neg_names: dict[str, list[str]] = {}
@@ -124,7 +156,7 @@ def prepare(roi_dir: str) -> str:
     json.dump(meta, open(f"{data}/dataset.json", "w"), indent=1)
     json.dump(neg_names, open(f"{data}/neg_names.json", "w"))
     os.symlink(f"{roi_dir}/augment.json", f"{data}/augment.json")
-    print("round data:", json.dumps(meta))
+    log("round data:", json.dumps(meta))
     return data
 
 

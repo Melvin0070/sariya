@@ -32,7 +32,7 @@ if [ -n "${STIRRUP_DATASET:-}" ]; then NEG_SOURCES="$NEG_SOURCES, \"$USER_SLUG/$
 R_ENV="R_WIRES=${R_WIRES:-400} R_COCO=${R_COCO:-400} R_INDOOR=${R_INDOOR:-300} R_STIRRUP=${R_STIRRUP:-0}"
 INIT_ARGS=""; KERNEL_SOURCES="[]"
 if [ -n "${INIT_FROM:-}" ]; then
-  INIT_ARGS=', "--init", glob.glob("/kaggle/input/**/unet_mbv3_1152.pt", recursive=True)[0]'
+  INIT_ARGS=", \"--init\", glob.glob(find_dir(\"$INIT_FROM\") + \"/**/unet_mbv3_1152.pt\", recursive=True)[0]"
   KERNEL_SOURCES="[\"$USER_SLUG/$INIT_FROM\"]"
 fi
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -43,12 +43,24 @@ GIT=$(git -C "$HERE" rev-parse HEAD)
 {
   cat <<EOF
 from __future__ import annotations
-import glob, json, os, subprocess, sys
-WHEELS = os.path.dirname(glob.glob("/kaggle/input/**/segmentation_models_pytorch-*.whl", recursive=True)[0])
-WEIGHTS = glob.glob("/kaggle/input/**/mobilenetv3_large_100.ra_in1k.safetensors", recursive=True)[0]
+import datetime, glob, json, os, subprocess, sys
+os.environ["PYTHONUNBUFFERED"] = "1"
+def log(*a): print(f"[{datetime.datetime.now():%H:%M:%S}]", *a, flush=True)
+def find_dir(slug):                      # depth-limited: never crawls COCO's 160k files
+    for root, dirs, _ in os.walk("/kaggle/input"):
+        if os.path.basename(root) == slug:
+            return root
+        if root.count(os.sep) >= 5:
+            dirs[:] = []
+    raise FileNotFoundError(f"{slug} is not attached")
+log("bootstrap: inputs", sorted(os.listdir("/kaggle/input")))
+DEPS = find_dir("${DEPS#*/}")
+WHEELS = os.path.dirname(glob.glob(DEPS + "/**/segmentation_models_pytorch-*.whl", recursive=True)[0])
+WEIGHTS = glob.glob(DEPS + "/**/mobilenetv3_large_100.ra_in1k.safetensors", recursive=True)[0]
 subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "--no-index", "--no-deps",
                        *glob.glob(WHEELS + "/*.whl")])
-DATA = os.path.dirname(glob.glob("/kaggle/input/**/dataset.json", recursive=True)[0])
+DATA = find_dir("${DATASET#*/}")
+log("bootstrap: wheels installed; ROI tiles at", DATA, "| GPU", subprocess.run(["nvidia-smi", "-L"], capture_output=True, text=True).stdout.strip())
 GIT = "$GIT"
 EOF
   if [ -n "${NEG:-}" ]; then
