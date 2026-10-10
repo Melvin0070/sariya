@@ -1,5 +1,21 @@
 # Sariya session state
 
+## Status (10 Oct 2026, 09:55, model lane): v3 trained, in the app, recommended
+- **v3** is in `models/seg/v3/` (`8aa92ef`); report: `notes/14-model/MODEL-V3.md`. It was trained from v2 plus 2,500 synthetic stirrup scenes.
+
+  | | v1 | v2 | v3 |
+  |---|---|---|---|
+  | ROI test IoU | 0.846 | 0.811 | **0.851** |
+  | False alarms (no-rebar tiles) | 80 % | 0 % | **0 %** |
+  | Real-stirrup recall | - | 0.873 | **0.910** |
+  | NPU | 12.2 ms | 11.6 ms | **12.1 ms** |
+
+- **Expo app:** a release build with `-Psariya.model=v3 -Psariya.threshold=0.3` is installed on the iQOO (`…001UZ`). Model hashes are verified, it runs on the NPU, and card S is detected.
+  - **Still to check:** v3 on the half-scale mesh and the rusty bars (the teammate's earlier replay showed v2 at 0 % there).
+  - **Fallback if it misses:** `/tmp/sariya-app-v1.apk` (v1, 0.5), installed with `adb install -r`, keeping data.
+- **Recommendation:** make v3 / 0.3 the module default once the prop check passes. That's a one-line change in the sariya-vision `build.gradle`, owned by the app lane.
+- **Round 4** (if the props still fail): venue photos of our bars (positives) plus venue clutter (negatives), starting from v3.
+
 ## Session note (10 Oct, ~09:00): one UI for engineer and operator
 - Engineer "Send drawing values" now uses the operator's flow: member + name, then one value at a time on the keypad, then the check list (`components/member-pick.tsx`, `components/spec-form.tsx`). "No drawing" stays operator-only.
 - Record (P1) and review (P2) share the evidence list, the sign-off QR card and a Drawing section (`components/record-parts.tsx`); both read Checks → Evidence → Drawing.
