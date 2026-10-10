@@ -1,5 +1,7 @@
 # Checkpoint cards: what we promise, show and say (print one page per checkpoint)
 
+**10 Oct 07:45 build changes:** (1) the engineer approves, and every phone trusts another phone's key, with an **app PIN** set at setup (salted hash in SecureStore; 5 wrong tries lock it for 30 s), not a fingerprint: the loaners have none enrolled. Read every "fingerprint" below as "PIN". (2) **Beam is "coming soon"** in the build: cut F3 and every beam beat; the stage deck is F1, F2, plus F12 only if validated. (3) The engineer sends the drawing values from P2 before the run (pre-flight T-50).
+
 Numbers come from BUILD-PLAN.md §7 (half scale). Roles: **A** presents, **B** operates P1, **C** is the engineer (P2 + laptop), **J** is the evaluator.
 
 10 Oct: A = Melvin, B = Sabari, C = Alwin. [TEAM-BUILD.md](TEAM-BUILD.md) determines readiness; these checklists are targets, not completed-status reports. Manual marking is a labelled fallback. No fresh verdict while card/coverage/Lock quality is invalid.
@@ -83,6 +85,7 @@ Rules for every checkpoint:
 - the spec by voice with read-back (keypad fallback);
 - a pack exported from P1 by Office Kit;
 - P2 review + BiometricPrompt approval;
+- drawing values issued from P2 and opened on P1 before the run (review shows "issued by you · unchanged"; typed-on-site values need the engineer's tick);
 - both signature chips.
 
 | s | Who | Say / do | Screen |

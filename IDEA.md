@@ -2,6 +2,7 @@
 
 This is the working spec. Log every change in STATE.md.
 - **As built, 10 Oct (06:50):** the Expo app (`sariya-expo/`) runs segmentation model **v2** live on the iQOO NPU through the local module `modules/sariya-vision` (CameraX, LiteRT 2.3, OpenCV 4.10 ChArUco/ArUco, pre-compiled QAIRT 2.50 model: loads in ~120 ms, 18-21 ms per inference, ~65 ms per frame end to end). Card S and strip_300 are detected live. Geometry matches truth to 0.3 mm on a synthetic card-S mesh with v1 weights; v2 marks no bars on that image (known recall gap, round 3 in training). **Not yet shown:** tape accuracy on real steel (G1), v2 on the props. Model rounds swap by build property (`-Psariya.model=vN`). Earlier evidence: [MODEL-V1](notes/14-model/MODEL-V1.md), [MODEL-V2](notes/14-model/MODEL-V2.md).
+- **10 Oct 07:45:** the engineer issues signed drawing values to the operator; approval and key trust use an app PIN (no fingerprint on the loaners); **beam is "coming soon"** in the build (slab only), so beam beats are out of the demo until it is re-enabled.
 - **v4 (9 Oct, at the event), the team's vision:** a live AR measuring camera. Detail, comparison with v3 and the loaner check: `notes/13-ar-vision/AR-VISION.md`.
   - When the camera sees a bar, it draws a line on that bar in real time; the card gives the scale, so the gaps between lines show live in mm.
   - Live numbers are approximate ("~50 mm"); **Lock** (~1.2 s of steady, sharp frames fused, typically 15-18) gives the value with its band, and only a locked value gets a verdict.
@@ -23,10 +24,15 @@ This is the working spec. Log every change in STATE.md.
 > **The steel inside an Indian house is visible for a day or two, then the concrete hides it for good.
 > Sariya checks it with one phone and a printed card, offline.**
 
-**Who scans:** the person already paid to check the steel, the evening before the pour. That is:
-- the owner's engineer or inspector;
-- a builder's QC supervisor; or
-- a steel or cement brand's technical engineer.
+**Who does what** (clarified 10 Oct):
+- **The designer** (structural engineer) writes the drawing and the bar-bending schedule. Sariya never creates them; their values are the spec.
+- **The operator scans:** the person on site the evening before the pour who is paid to check the steel. That is:
+  - the site engineer or supervisor;
+  - the owner's inspector;
+  - a builder's QC supervisor; or
+  - a steel or cement brand's technical engineer.
+- **The engineer approves:** the responsible engineer (usually the designer, or the owner's engineer), who takes the liability and usually can't be at every pour. They send the drawing values and sign off from their desk.
+- **The mason** ties and fixes the steel, and hears the fix. They never hold the phone.
 
 **What the phone does:**
 - draws a live line on every bar it sees, with the mm between them, anchored to the printed card;
@@ -79,7 +85,7 @@ Kannada, and a signed record for the engineer."*
 **Hackathon collision:** still low. Another construction team is ~5-10% likely, another rebar team ~1-3% [I].
 
 ## 3. The product loop
-1. **Spec in.** The engineer enters a 5-field spec per member, by voice or form:
+1. **Spec in.** The engineer, not the operator, sets the values the steel is checked against. As built (10 Oct): the engineer's phone signs the drawing values and sends them to the operator over Office Kit. The operator's phone accepts them only from an enrolled engineer key and opens a new inspection. Changing any value drops the signature, and the review then says "typed on site". If the operator types the spec on site (the fallback), the engineer must also tick "the drawing values match my drawing" before approving. Values that differ from what was signed block approval. The spec is a 5-field spec per member, by voice or form:
    - bar diameter;
    - bar count or spacing;
    - stirrup diameter;
@@ -112,7 +118,7 @@ Kannada, and a signed record for the engineer."*
    - Subtitles always.
    - A small push-to-talk command set, not free-form chat.
 7. **Record and sign off.**
-   - **Two phones, two keys.** The capture key sits in the operator's Android Keystore; the engineer's distinct approval key requires biometric authentication. Show actual hardware protection/attestation availability. Enrol public-key fingerprints on verifier devices explicitly; a key embedded in a pack is not automatically trusted and does not prove professional credentials.
+   - **Two phones, two keys.** As built: one Ed25519 key per phone, stored in SecureStore (encrypted at rest by Android Keystore). Signing runs in app code, not inside the Keystore, so never say "hardware-backed signing". Approval on the engineer's phone, and trusting another phone's key, is gated by an app PIN set at setup (salted hash in SecureStore; 5 wrong tries lock it for 30 s). It replaced the fingerprint prompt on 10 Oct because the loaners have no fingerprint enrolled. A device-bound biometric key is the product version. If the engineer scans the site themselves, approval still needs a second phone: the same key can't approve its own capture. Enrol public-key fingerprints on verifier devices explicitly; a key embedded in a pack is not automatically trusted and does not prove professional credentials.
    - **Immutable evidence:** capture binds the exact locked measurements, spec revision, rule/model/calibration versions and evidence-image hashes. Approval binds that capture payload; edits create a new revision.
    - **Anti-reuse:** reject duplicate approval of an already processed record/hash. Perceptual similarity can flag a possible reused image for review, but must not block a legitimate new scan of unchanged steel. The one demo card does not establish a unique site or physical-scene liveness; registered per-site cards remain a product extension.
    - **Privacy:** local storage and deliberate export in the event build; use consented prop imagery. Face redaction, GPS/mock-location recording and field retention controls remain post-event work, not implemented claims.
@@ -124,7 +130,8 @@ Kannada, and a signed record for the engineer."*
    - home inspectors.
 
 ## 4. Users and payers
-- **Operator:** the owner's engineer or inspector, a builder's QC supervisor, or a brand technical engineer. Never the mason who tied the steel: he hears the fix and keeps a record of the corrections he made.
+- **Operator (on site, scans):** the site engineer or supervisor, the owner's inspector, a builder's QC supervisor, or a brand technical engineer. Never the mason who tied the steel: the mason hears the fix and keeps a record of the corrections made.
+- **Engineer (usually remote, approves):** the responsible engineer, usually the designer or the owner's engineer. They issue the drawing values and sign off with their own key from the Office Kit desk, so they need not travel to every pour.
 - **Payers, ranked:**
   1. **Steel brands.** A FAIL for missing bars sells steel; the scan also verifies their brand on site and generates slab-date leads.
   2. **Cement brands' technical services.** The free slab-casting visit becomes a branded, signed report.
@@ -216,7 +223,8 @@ Full minimal kit: `notes/07-data-plan/data-and-props.md` §3.
 | "Can you tell 10 mm from 12 mm?" | Not from a standing sweep, and we don't pretend to. We take a close-up still at 20-30 cm and classify only above 95% confidence. Otherwise we use the scale: 20 cm of 10 mm weighs about 123 g, of 12 mm about 178 g, which also catches underweight steel. |
 | "Who holds the phone?" | The person paid to check: the owner's engineer or inspector, the builder's QC, or the brand's technical engineer. Never the mason who tied it; he hears the fix. |
 | "Scan a good cage, pour a bad one?" | Duplicate signed records are rejected; similar images can be flagged for review. Neither proves the physical scene or what is eventually poured. The engineer can request another view. Per-site card registration is a product extension. Tamper-evident, not tamper-proof. |
-| "Whose key signs the approval?" | Two phones, two keys: the capture key on the operator's phone, the approval key on the engineer's behind a fingerprint. |
+| "Whose key signs the approval?" | Two phones, two keys: the capture key on the operator's phone, the approval key on the engineer's, behind their PIN. |
+| "Who sets the spec? Couldn't the operator type a looser one?" | The engineer signs the drawing values on their own phone and sends them to the operator. If the operator changes one, the review shows "typed on site" and the engineer must confirm it against the drawing. Values that differ from what the engineer signed block approval. |
 | "Bengaluru is zone II." | The rulebook is zone-aware. IS 456 applies everywhere; IS 13920 is required in zones III-V and "optional in Seismic Zone II" (cl. 1.1.1). The drawing wins. |
 | "Why on-device, and why the NPU?" | Sites are offline, and 30 fps live guidance needs the NPU (AI Hub lists ~2-4 ms for segmentation models on the 8 Elite Gen 5 [S]; we show the latency measured on this loaner). Plus privacy (faces, home location) and zero marginal cost. We show measured NPU, GPU and CPU numbers. |
 | "What trained the model, and when?" | Public weights, attributed; [fine-tuned on public rebar sets plus photos of our own props, timestamped log in the repo] or [used as pre-trained]: say which is true. No site frames exist. |

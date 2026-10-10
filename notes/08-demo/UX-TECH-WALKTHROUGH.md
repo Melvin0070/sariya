@@ -1,5 +1,7 @@
 # Sariya: the UX with the tech under each step (10 Oct 2026)
 
+**10 Oct 07:45 build changes:** (1) the engineer approves, and every phone trusts another phone's key, with an **app PIN** set at setup (salted hash in SecureStore; 5 wrong tries lock it for 30 s), not a fingerprint: the loaners have none enrolled. Read every "fingerprint" below as "PIN". (2) **Beam is "coming soon"** in the build: cut F3 and every beam beat; the stage deck is F1, F2, plus F12 only if validated. (3) The engineer sends the drawing values from P2 before the run (pre-flight T-50).
+
 For the presenter and operator. Each step: what the jury sees, what the phone does, the line to say.
 Numbers are the half-scale stage values from BUILD-PLAN §7. Stage order and timing: demo-script.md §2.
 
@@ -44,12 +46,14 @@ shows a key QR and scans the others, confirmed by fingerprint.
 - Runs through LiteRT on the Hexagon NPU (QAIRT 2.50, HTP v81) in burst mode. The first JIT compile takes ~53 s; the
   compiled graph is cached, so later starts take 4-8 s. That is why the readiness screen exists.
 - Fallback order: NPU → GPU (19.8 ms) → CPU (235 ms). The screen shows which one actually ran.
-- Keys: each phone makes a key pair in Android Keystore; the private key never leaves the phone. Enrolment swaps only
+- Keys: each phone makes an Ed25519 key pair, stored in SecureStore (encrypted at rest by Android Keystore; signing runs in app code). The private key never leaves the phone. Enrolment swaps only
   public-key fingerprints by QR. A key that arrives inside a file is never trusted on its own.
 
 **Say (if asked):** "First launch compiles the model for this NPU once; after that it's cached."
 
-## Step 1: spec in (P1)
+## Step 1: spec in (P2 issues, P1 opens)
+
+**Who:** the engineer sets the bar, not the person being checked. On P2: Send drawing values → pick slab/beam, member name, fields (empty = not on drawing) → sign and send over Office Kit. On P1: Drawing values from the engineer → the signature is checked against the enrolled engineer key → a new inspection opens with those values. Typing on P1 (below) is the fallback; the review flags it.
 
 **Sees:** pick Slab or Beam, then five fields. Slab: bar diameter, count and spacing each way. Beam: stirrup diameter,
 end-zone spacing, mid spacing, end-zone length. Optional hold-to-talk: "rings 8, 50 at the end, 75 middle, end zone
@@ -169,12 +173,12 @@ stirrups found in each.
 
 ## Step 8: sign and send the capture (P1 → laptop → P2)
 
-**Sees:** "Sign record" → a `.sariya.zip` pack is sent by Office Kit file transfer → P2 opens it from Android's system
+**Sees:** "Sign record" → a `.sariya.json` pack is sent by Office Kit file transfer → P2 opens it from Android's system
 file picker.
 
 **Tech:**
 - `ScanRecord` = a canonical payload: locked values and bands, spec revision, rule/model/calibration versions, image
-  hashes and manual readings. P1 signs it with its Keystore key.
+  hashes and manual readings. P1 signs it with its device key.
 - P2 checks the hashes and the signature against the enrolled P1 key before showing anything. Corrupt or unknown-signer
   packs disable Approve.
 
@@ -184,7 +188,7 @@ file picker.
 the signer and the revision. Then **Approve** with a fingerprint, or "request another view" of a named zone.
 
 **Tech:**
-- BiometricPrompt unlocks the separate approval key on P2. It signs the exact capture payload hash, not an editable
+- The fingerprint prompt gates approval on P2, which signs with its own, separate key. It signs the exact capture payload hash, not an editable
   screen.
 - The approval file returns to P1 by Office Kit and attaches only to the capture it signed. A sign-off QR appears.
 - Office Kit is the engineer's desk: a mirror plus file transport. The laptop holds no key.
@@ -240,7 +244,7 @@ Cuts if late: skip the lower layer at 1:50; skip the replay at 2:30. Never cut t
 
 ## Lines in the old Q&A card that are now wrong: don't say them
 
-- demo-script §5 Q3 "not on ARCore's supported list, no metric depth": ARCore 1.56 installed from Play on 9 Oct. Say
+- demo-script §5 Q3 and Q8 were corrected on 10 Oct (ARCore dropped from the build; no face-blur/GPS claim). Earlier note: ARCore 1.56 installed from Play on 9 Oct. Say
   instead: "ARCore tracks to centimetres; spacing needs millimetres, so the card measures and ARCore at most anchors the
   overlay."
 - demo-script §5 Q8 "faces are blurred, GPS advisory": not implemented. Say instead: "Everything stays on the phone; a
