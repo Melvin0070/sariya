@@ -54,6 +54,25 @@
 - **Compat fixes:** LiteRT 2.3.0 ships Kotlin 2.4 metadata vs Expo 57's Kotlin 2.1 → `-Xskip-metadata-version-check` scoped to the module. PreviewView needed `shouldUseAndroidLayout` (black preview otherwise). Capture packs now pin `liveEngine` per capture so records signed by the old build (`simulated`) still verify.
 - **Open:** (1) test v2 on the real prop mesh before the demo; if it misses bars, swap `models/seg/v2` → `v1` in the module's build.gradle (one line) or use round 3. (2) A missed bar currently reads as a short count ("outside"), not "re-scan": consider gating count on mask coverage. (3) Tilt/distance gates need intrinsics (not yet). (4) Debug APK 119 MB arm64-only; release build should restrict ABIs to arm64-v8a. Nothing committed.
 
+## Status (10 Oct 2026, 08:30, model lane): round 3 still training; switch the app to v1 for CP1
+- **Round 3** = v2 + 2,500 synthetic stirrup scenes (`tsrobcvai/Synthetic_Dataset_for_Stirrup_Rebar_Segmentation`, uploaded as JPEG tiles to the private dataset `sariya-stirrup-tiles`) + negatives (400 wires, 200 COCO desk, 200 indoor); 12 epochs.
+  - Kaggle kernel `sabarinarayanakg/sariya-unet-train-r3c`, pushed 06:04. Still RUNNING at 08:30, ~60 min past the estimate.
+  - Its live log never streamed to the CLI. When it finishes: `kaggle kernels output sabarinarayanakg/sariya-unet-train-r3c -p runs/r3`, then read `train_log.json` → `round2_compare`. That holds ROI IoU, the false-alarm rate, and stirrup-real recall, for v2 vs v3.
+- **CP1 at 10:00: switch the Expo app from v2 to v1.**
+  - **Why:** the 05:50 note above shows v2 marks 0 % bar pixels on the card-S mesh replay, while v1 gives gaps of 50.1 / 49.9 / 64.9 mm vs the truth 50 / 50 / 65.
+  - **How:** one line, `models/seg/v2` → `v1` in the sariya-vision module's build.gradle.
+  - **Safety net for v1's false lines on cables and screens:** the card zone and the straightness filter.
+- **Data sources checked:**
+  - **Dropped SORD** (`bugwei/synthetic_on-site_rebar_data`, CC BY-NC): background and rusty bars are left unlabelled, which would teach "rusty bar = not bar".
+  - **Real stirrup photos:** only the top bars are labelled, so they are scored by recall only and never trained on.
+- **Kaggle lessons (9-10 Oct):**
+  - Without phone verification, GPU jobs silently run on CPU with no internet.
+  - **Deleting a notebook does not stop its running session.** A leftover session (round 3b) still blocks the second GPU slot ("Maximum batch GPU session count of 2"). Stop it in the browser: profile → View Active Events.
+  - The CLI live log (`kernels logs -f`) gave 500s or nothing for script jobs; the stored log works after the job ends.
+  - Anonymous Hugging Face downloads are throttled to ~1-1.5 files/s, so 2,733 files take ~30-45 min. Pre-tile and upload instead.
+  - Upload from the venue runs at ~1-4 MB/s. JPEG tiles are ~6x smaller than PNG.
+  - Datasets are found by slug, not by crawling `/kaggle/input` (COCO has 160k files). The old crawl also risked picking the wrong `dataset.json`.
+
 ## Status (10 Oct 2026, 04:10): model v2 (hard negatives), v1 stays default
 - **v2** is in `models/seg/v2/`; report: `notes/14-model/MODEL-V2.md`. It was fine-tuned from v1 with 1,100 public no-rebar images (wires, COCO desk objects, indoor scenes), built directly on Kaggle.
   - **Fixed:** false alarms on no-rebar tiles fell from 80 % to 0 %. On the phone, cables, keyboards and screen text are ignored.
