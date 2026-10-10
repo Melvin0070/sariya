@@ -1,11 +1,53 @@
 # Sariya session state
 
+## Session note (10 Oct, 06:55): blur gate, coverage map, saved timings, docs, commit
+- **Pulled** caea715 (round 3 prep only, no new model).
+- **Blur:** native Laplacian-variance sharpness per frame; live status "Blurred: hold still" when a frame is under 60 % of the sharpest of the last 30; Lock keeps only frames at ≥ 70 % of the sharpest in its window and the re-scan reason counts the blurred ones. Relative, so no camera-specific threshold.
+- **Coverage map:** every lock (auto and by hand) stores frame footprint, card/strip outline, bars used and partly seen bars in card mm; signed with the capture and drawn under the evidence on the record and engineer review screens.
+- **Timings** buffered per frame and saved to the store when the scan screen closes (5,000 per accelerator); Numbers tab p50/p95 now survive restarts.
+- **Docs:** IDEA.md (as-built line, Lock, ARCore dropped, blur, partly seen, coverage, demo beat now "± 5 mm", runtime), demo-script too-far gate, TEAM-BUILD "As built" block telling Sabari not to re-implement runtime/geometry.
+- **Verified:** typecheck, lint, 3 JVM + 5 bun tests; release APK installed and launched on the iQOO (Numbers tab reads stored data, no crash on old state).
+- **Open (needs people + props):** G1 tape gate; too-far distance at 0.6/0.8 m; v2 (or round 3) on the props; by-hand freeze on device; two-phone sign-off.
+
+## Session note (10 Oct, 06:25): partly seen bars, release build, model swap
+- **Under-card misses:** bar continuity now ignores the card's shadow (card + max(10, 1.5·dia) mm) and the other family's crossings (blurred crossing pixels made gaps between bars look like bars). Accept ≥ 0.5, report 0.2-0.5 as **partly seen** (`weak`). On the synthetic v1 mask: 3 bars found, the 2 under-card bars come out as partly seen, crossing noise 0.
+- **Re-scan, not false "outside":** locks carry fused `weak` positions (seen in ≥ 30 % of locked frames, not on a counted bar). Count short + any partly seen → re-scan; a wide gap holding a partly seen bar → re-scan, no "add a bar" fix. Dashed amber lines live and on the evidence; live hint "Turn the phone so the bars run up the screen" when bars cross the short side (less visible length).
+- **Tests:** 3 JVM unit tests on Bars.kt (`:sariya-vision:testDebugUnitTest`; mutation-checked: removing the crossing exclusion fails one); 5 scratch bun tests on the re-scan rules pass.
+- **Build:** arm64-only via the module's config plugin, consumer keep-rules for OpenCV/LiteRT, model version + threshold as one build property (`-Psariya.model=vN -Psariya.threshold=x`, default v2/0.3; unknown version fails the build). **Release APK 107 MB** built and run on the iQOO: model v2 on NPU 18 ms, loads 121 ms; live scan runs; strip_300 detected live. Strip prompt now says "Find strip_300".
+- **Model-team ask (round 3):** positives with card S / strip_300 lying on the bars, labelled right up to the card edge (the card itself = not bar); cheap version: paste the printed card onto ROI-1555 tiles and mask the occluded pixels. Plus rusty bars on warm wood/concrete. v2 marks 0 % on a synthetic card-S mesh where v1 marks 9.5 %.
+- **Later (06:40):** screens with no open record now redirect home instead of rendering blank (process death could strand the user on a black scan screen); the fix screen keeps a one-frame blank while it closes. Locks and the readiness row carry the model sha (`seg v2 7ad05e742fad · NPU · n ms`, from the build).
+- **Open:** by-hand freeze not re-tested on device; G1 tape gate (10 tape-checked scans, 8/10 in band) not run; no blur/sharpness, distance or tilt gate (marker-px only, threshold scaled from 4K, unvalidated on the 1080p stream); no lens undistortion or calibration; no out-of-plane term for the lower layer; coverage map not built; timings are in memory only; two-phone path untested.
+
+## Session note (10 Oct, 05:50): model v2 connected to the Expo app (live, on the NPU)
+- **Pulled** `origin/main` (75501c0: v2 model + round 3 prep); local uncommitted work kept, STATE.md conflict merged by hand.
+- **Built** `sariya-expo/modules/sariya-vision` (local Expo module): CameraX 1.6 preview + analysis at 1920x1080, OpenCV 4.10 ChArUco (card S, ids 360-377) / ArUco (strip_300, ids 450-461) homography, LiteRT 2.3 model v2 (NPU precompiled file, else GPU, else CPU; threshold 0.3), bars as one parallel family in plane mm (angle search near the card axis, offset-histogram peaks, length + continuity gates, card region excluded). Scan screen now shows live model lines, gaps and "MODEL V2 · NPU n MS"; Lock fuses ~1.2 s of frames (modal count, per-bar median, band = scatter + mask-edge + 1 % scale, floor 5 mm) and saves the analysed frame as evidence with the model's own lines. Simulated engine removed; old `simulated` locks still labelled.
+- **NPU libs:** the 4 QAIRT 2.50.0.260828 `.so` files were pulled from Qualcomm's SDK zip by HTTP range (22 MB, not the 2.6 GB) into the module's git-ignored `jniLibs/`. Each teammate must copy them in (README).
+- **Verified on the iQOO 15:** readiness row "Model v2 on NPU: 21 ms a frame, loaded in 134 ms"; live loop ~65 ms/frame (~15 fps) with model 20-21 ms; real printed card S detected live (25/25 corners, outline aligned on screen); v2 marks no bars on the wooden desk (correct). Synthetic card-S mesh (known truth) via photo replay: **v2 marks 0 % bar pixels** (also 0 on the Mac float model: v2's known recall loss on rusty bars on warm backgrounds); with v1 weights the same app geometry gives gaps 50.1 / 49.9 / 64.9 mm vs truth 50 / 50 / 65.
+- **Compat fixes:** LiteRT 2.3.0 ships Kotlin 2.4 metadata vs Expo 57's Kotlin 2.1 → `-Xskip-metadata-version-check` scoped to the module. PreviewView needed `shouldUseAndroidLayout` (black preview otherwise). Capture packs now pin `liveEngine` per capture so records signed by the old build (`simulated`) still verify.
+- **Open:** (1) test v2 on the real prop mesh before the demo; if it misses bars, swap `models/seg/v2` → `v1` in the module's build.gradle (one line) or use round 3. (2) A missed bar currently reads as a short count ("outside"), not "re-scan": consider gating count on mask coverage. (3) Tilt/distance gates need intrinsics (not yet). (4) Debug APK 119 MB arm64-only; release build should restrict ABIs to arm64-v8a. Nothing committed.
+
 ## Status (10 Oct 2026, 04:10): model v2 (hard negatives), v1 stays default
 - **v2** is in `models/seg/v2/`; report: `notes/14-model/MODEL-V2.md`. It was fine-tuned from v1 with 1,100 public no-rebar images (wires, COCO desk objects, indoor scenes), built directly on Kaggle.
   - **Fixed:** false alarms on no-rebar tiles fell from 80 % to 0 %. On the phone, cables, keyboards and screen text are ignored.
   - **Broke:** ROI test IoU fell from 0.846 to 0.811, and on the phone v2 misses rusty bars on a wooden desk. v1 misses one of the two as well.
 - **Decision:** v1 stays the default for the frontend; v2 is experimental (threshold 0.3). Round 3 adds **more bar images**: public rebar sets plus venue bar photos, so both failures are fixed together.
 - **Test app** (local, `~/Developer/narayana/sariya-app`, not pushed) now bundles v1 and v2 with on-screen switches (model, zoom 1x / 1.7x centre crop). Use it for side-by-side checks at the venue.
+
+## Session note (10 Oct, 05:10): end-to-end UX flows rebuilt in `sariya-expo/`
+- **Done:** every screen of ux-flows.html / UX-TECH-WALKTHROUGH steps 0-12 now exists in the Expo app, in the existing Uber-style kit. Roles per phone (operator / engineer / verifier) chosen at setup; readiness screen checks camera, Hindi/Kannada TTS voices, fingerprint, signing key and storage for real.
+- **Operator:** member (slab, beam) → spec (type each value, DEMO PROP preset, or measure-only; "not on drawing" never borrows a default; edits make a new spec rev and clear fresh locks) → scan (live ~mm, Lock with progress, frozen evidence photo with gap labels, re-scan with a written reason) → manual tap-to-mark (4 card/strip corners + bars, homography, same gates, MARKED BY HAND) → readings by hand (cover tape, 200 mm weigh test with IS 1786 bands, 135° hook only if the drawing asks) → checks sheet (five answers, no overall badge) → fix (Hindi/Kannada/English subtitles, offline system TTS, auto-play, stop/repeat, "audio unavailable" state) → sign (Ed25519 key in SecureStore) → send pack (.sariya.json via share sheet; Office Kit is a share target on the iQOO) → open approval or review request → sign-off QR; new revision for requested views or rescans.
+- **Engineer:** open pack from the file picker → hash, signature and every photo hash checked; unknown signer = view-only; same key = blocked; replay = "already processed" → review desk → "I reviewed" + fingerprint approve, or signed request for another view → send back. **Verifier:** scan sign-off QR offline against enrolled keys. Numbers tab: lock counts by source, abstentions, error table from tape rows (simulated rows excluded), CSV export, NPU/GPU/CPU "no data".
+- **Removed (complexity, no value):** Viro AR view and dependency (ARCore only anchors; the Viro view had no torch or capture), column/footing/other members, seeded fake records, fixed-PIN "engineers". `modules/arcore-check` is left in place but unused.
+- **Verified:** typecheck + lint clean; scratch bun tests of the rulebook (CONTROL, F1, F2, F4 incl. re-scan band, beam F3 "add 1", weigh test, measure-only) and the two-phone trust loop (tamper, photo swap, replay, unknown keys, QR forgery, revision isolation) pass. Dev client rebuilt (prebuild --clean) and installed on the iQOO; operator flow driven on device through scan, lock, manual mark, readings, Hindi fix, sign and share sheet.
+- **Open:** live values remain simulated until `useLive()` in `src/lib/measure.ts` is replaced by the real pipeline. The two-phone engineer/verifier path is tested in code, not yet on two phones. The loaner has **no fingerprint enrolled** (engineer phone needs one). Device holds this session's test records (Slab S1 rev 1/2); clear app data before the demo. Hindi/Kannada wording still needs a native speaker. Nothing committed.
+
+## Session note (10 Oct): Expo app merged and device build
+- User clarified the app is on `origin/expo-app`; removed Expo Go and its downloaded APK at their request.
+- Merged `origin/expo-app` into local `main` with merge commit `93971f0`; existing uncommitted research/document changes preserved. App source is `sariya-expo/`.
+- Installed locked npm dependencies; TypeScript and Expo lint pass. Android development build succeeded using existing Homebrew Java 17 (bundled Java 25 failed CMake configuration). Installed `in.sariya.app` and verified the Records screen renders on the iQOO.
+- Metro remains running on localhost:8081 with USB forwarding and the development client connected. Restart/build commands added to `sariya-expo/README.md`. Merge and device README pushed to GitHub main; pulled and verified synchronized at `83d4672` (10 Oct). Remote commit `4e37f7f` was merged first; pre-existing uncommitted work remains local.
+- Device check initially said install ARCore, then resolved to Ready; installed Google Play Services for AR is 1.56.262080393. No AR camera session was validated.
+- Current measurement values are simulated by `src/lib/mock-measure.ts`; next development step is integrating/validating the real vision pipeline. Existing seeded records are demo data.
 
 ## Status (9 Oct 2026, 23:55): base segmentation model v1 trained
 - **Data:** ROI-1555 downloaded and verified (1,555 images, 10,481 bar instances, 0 errors; `prep/train/verify_labelme.py`), tiled by `prep_data.py`: train 853 / val 271 (scen1) / test 427 (scen2+3). Not used: ConRebSeg (22.6 GB, demolition scenes; index checked: 41,237 ExposedBars masks), Roboflow (needs a key), whiesty (Baidu only).
@@ -17,6 +59,35 @@
 - **Pre-compiled NPU model** `models/seg/v1/unet_mbv3_1152_sm8850_qairt250.tflite` (pulled from the phone's JIT cache): loads in 133 ms, 11.6 ms per frame. A test app (local only, `~/Developer/narayana/sariya-app`, not pushed) ran it live: **NPU 13 ms, 31 fps**. The frontend teammate integrates the model into their app using `notes/14-model/MODEL-V1.md` § Integration guide.
 - **Open:** the prep repo `Melvin0070/sariya` is public and now holds the v1 weights plus two ROI-1555 photo sheets (`models/seg/v1/*_sheet.jpg`; the dataset declares no licence). Decide whether to keep them public.
 - **Next:** prop photos for round 2.
+
+## Session note (10 Oct): UX + tech demo walkthrough
+- Wrote `notes/08-demo/UX-TECH-WALKTHROUGH.md`: steps 0-12 (readiness → spec → live scan → Lock → verdict → Hindi fix → physical readings → beam → sign → review/approve → verify → replay → numbers), the tech under each, and the 3:30 run mapped to steps.
+- Flagged stale lines in demo-script §5: Q3 (ARCore "not supported"; it installed 9 Oct) and Q8 (face blur/GPS, not implemented). Not yet edited in demo-script.md.
+- No spec or stack decisions changed. Every screen is still "designed", not confirmed built.
+
+## Status (10 Oct 2026): assigned end-to-end build issues published
+
+- **GitHub control (deleted 10 Oct):** all 27 issues (#1 control, #2-#27 = B01-B26) were closed as not planned, then deleted at the user's request; local copies in `notes/12-event/issue-pack/` and all links now point there. Originally created and verified **27 open issues**: control + 22 baseline implementation/integration/release tasks + 3 optional tasks + 1 post-event product-validation task. All have real owners, phase milestones, linked dependencies, acceptance/device checks and Claude Code/Codex briefs. Nothing is marked implemented merely because a deadline passed.
+- **Owners:** Alwin (`AlwinSunil`) UI/UX, speech, review screens and demo assets; Sabari (`NarayanaSabari`) AI/vision, calibrated geometry and device QA; Melvin (`Melvin0070`) rules, signing/transport and integration. Collaborator handles and display names verified through GitHub. Melvin is treated as the third owner based on the three-member repo; no separate app repo was supplied.
+- **Current execution:** `notes/12-event/TEAM-BUILD.md`; offline issue copies/index, data manifest, independent reviews and interactive board in `notes/12-event/issue-pack/`. All issue bodies and the full control plan are already on GitHub; local document edits are not committed/pushed by this session.
+- **Reviews:** delegated Claude Opus 5.5 for architecture/trust/critical path, then Claude Fable 5.1 for the concrete UX/dependency schedule. Findings incorporated and dispositions recorded. No extra app implementation agents were started.
+- **Live research:** organiser site bundle checked around 00:20 IST. Remaining Red/Green blocks, rubric and checkpoint times unchanged; submission cutoff still TBC. Android camera transforms, shared camera, document access, NPU deployment and thermals reopened as primary sources. Browser snapshots timed out twice; site bundle read directly instead.
+- **Checks:** all 26 child assignees, milestones, labels, dependency URLs and the control index verified against GitHub; issue graph has no cycles; referenced local source paths exist; `git diff --check` passes. Only rule JSON metadata changed, not numerical values. No Android build was claimed or performed.
+
+## Decisions (10 Oct, build issue session)
+
+- Preserve v4 live lines + approximate mm + explicit Lock. Freeze stream/transform/evidence contracts early; the old 45 px threshold is a 4K reference, not an unconditional preview threshold. Correlated frames cannot shrink systematic error. The initial field floor remains 5 mm until measured.
+- Keep the full-loop target with gated voice input; typed entry/Hindi output first. Build manual marking before CP1. If B01 finds no app already underway, plan manual CP1 and accept automatic mode only after its measured gate. Do not pretend 8.5 hours of serial vision work fits the remaining pre-CP1 freeze window.
+- Enrol trusted device-key fingerprints explicitly; signing binds immutable locked evidence/spec/version hashes. Approval uses the second phone/key and binds the capture payload. Use Android document URIs for Office Kit files. Perceptual similarity warns; deterministic record/hash duplicate protection must allow legitimate rescans.
+- Alwin also owns enrolment/P3 verification screens, beam overlays and tape-entry UI. B25 owns CP2 integration; B20 creates the candidate and B26 verifies the final APK/rehearsal/submission. Deck/video moved off Melvin to Alwin.
+- ARCore/BBS/Kannada/LLM remain optional; field validation, credential identity/revocation and privacy extensions are post-event. No unsupported face-redaction/GPS/liveness claim in the event scope. Proposed rule tolerances still need an engineer; corrected generated asset header to v0.1.1 to match its existing values.
+- Red work uses Office Kit from phones; current scoring weights are not independently known. Useful capture/review/testing, healthy thermals, charging and rest replace old heat/drain/artificial-tapping advice. No tracker alteration or synthetic activity tasks were created.
+
+## Open questions and next step (10 Oct)
+
+- **Start:** Melvin B01/#2; Sabari B02/#3 artifact audit; Alwin B03/#4 UI/spec preparation. B01 first inventories any existing app/repo/APK so the team does not rebuild completed work. Then follow control issue #1.
+- Unknown: app work in another repo, actual exported/trained model and phone runtime, measured prints, configured fingerprint/offline voice, floor cutoff and Red-specific ADB permission. Time elapsed does not answer any of these.
+- The repo still contains no event Android app source. This session created the work queue and design corrections only, preserving pre-existing STATE.md edits.
 
 ## Status (9 Oct 2026, 20:05): v4, the team's live AR camera vision
 - **IDEA.md is now v4.** A camera app that draws a live line on every bar, with the mm between them from the card, and a Lock step for the verdict. Comparison and design: `notes/13-ar-vision/AR-VISION.md`.
@@ -40,6 +111,11 @@
 
 ## Next step (9 Oct, 20:05)
 B runs G0 (NPU) by 20:15, then G0c (ARCore probe) by 20:45. P4 draws lines instead of the mask; P5 runs live with Lock. Update EVAL-CARDS CP1 and demo-script.md with the AR beat.
+
+## Session note (9 Oct): build-flow walkthrough requested
+- Explained the user journey from drawing/spec entry through camera capture, on-device measurement, deterministic rule checks, spoken correction, and signed Office Kit review.
+- No product or stack decisions changed; the current implementation sequence and fallback gates remain in `notes/12-event/BUILD-PLAN.md`.
+- Next step remains the event kickoff sequence below.
 
 ## Status (9 Oct 2026, 18:00): event build plan ready, plan cross-checked
 - **Event plan:** `notes/12-event/BUILD-PLAN.md`. It covers:
@@ -224,3 +300,8 @@ Workstream 2 (why-now evidence and news). It starts from the leads in VERDICT.md
 - 2026-10-09: demo rewritten for half scale and no site visits: opening is the one-day window + Japan + "half-scale props, the app checks whatever the drawing says"; the site-replay beat is replaced by the lower-layer fault (F12, "both directions"); numbers screen and Q&A quote bench (prop) accuracy and name site validation as the next step; IDEA §6 demo table rewritten; offcut references set to 0.2 m everywhere (app default length 200 mm). Submitted texts (SUBMISSION.md, FINAL-ANSWERS.md, DESCRIPTION_v4.txt) left as submitted.
 - 2026-10-09: user visited a small/mid-size construction site and reports that reinforcement is not checked before the pour there and that a few bars were mis-measured (user-reported; number of sites, photos and measured values still to be captured for the opening slide).
 - 2026-10-09: event build plan, checkpoint cards and errata written (notes/12-event/). The 97-item audit was applied across IDEA, PREP-PLAN, event-prompts, vision-stack, speech-llm-ocr, device-devenv, rulebook, data-and-props, demo-script, gtm and prep/README. Reference pipeline fixed for half scale (tolerance, gates, card S, strip_300); 32 tests pass. Live site checked: jury published, cut-off TBC.
+
+- 2026-10-09: Synced local main to origin/main at b5df62c (four commits: v4 AR vision and training preparation updates). Preserved the local build-flow walkthrough note while resolving a STATE.md overlap. No product decisions changed; open questions and next steps remain in the 20:05 status above.
+
+- 2026-10-10: Team workflow question: user is considering splitting end-to-end app issues among three people (UI/UX, AI, backend/integration) after model training. Recommendation: keep three owners, but split by vertical user-visible slices with package boundaries and a named integrator; validate the trained model artifact and establish the thin end-to-end mesh path first. Avoid three isolated lanes that meet only at the end. No assignment or scope decision made in this session.
+- 2026-10-10: Synced local `main` fast-forward to `origin/main` at `ba13987` (three commits: SM8850 precompiled NPU model and integration notes; round-2 hard-negative data/training updates; wire-negative cap). Preserved all pre-existing working-tree edits and untracked files through the update. No product decisions changed.

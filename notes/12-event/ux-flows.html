@@ -1,0 +1,327 @@
+<title>Sariya UX Flows</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; two wide figures scroll sideways on phones; flow steps in a 2-up grid. Site-drawing greys, oxidised-steel accent on the two trust gates. */
+:root{
+  --bg:#F3F4F2;--surface:#FFFFFF;--fg:#1C2326;--muted:#5A6568;--line:#CCD2D1;
+  --accent:#A86412;--accent-soft:#F6E8D4;
+  --ok:#2E7D4F;--bad:#B3261E;--warn:#8A5F00;--info:#2D5F8B;--none:#6B7476;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#151A1C;--surface:#1E2528;--fg:#E4E8E7;--muted:#9AA5A7;--line:#364043;
+  --accent:#E0A04A;--accent-soft:#3A2D1C;
+  --ok:#6FCF97;--bad:#F28B82;--warn:#E8C15A;--info:#8AB8E6;--none:#A3ADAF;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#151A1C;--surface:#1E2528;--fg:#E4E8E7;--muted:#9AA5A7;--line:#364043;
+  --accent:#E0A04A;--accent-soft:#3A2D1C;
+  --ok:#6FCF97;--bad:#F28B82;--warn:#E8C15A;--info:#8AB8E6;--none:#A3ADAF;color-scheme:dark}
+
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--body)}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:40px 64px;display:grid;gap:44px}
+header{display:grid;gap:10px;max-width:68ch}
+.eyebrow{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{font:700 clamp(36px,6vw,56px)/1 var(--display);letter-spacing:.01em;margin:0;text-wrap:balance}
+h2{font:700 28px/1.1 var(--display);margin:0;text-wrap:balance}
+h3{font:600 17px/1.3 var(--body);margin:0}
+p{margin:0}
+.lede{color:var(--muted);font-size:17px}
+.note{font:13px/1.5 var(--mono);color:var(--muted);border-left:3px solid var(--accent);padding-left:12px}
+section{display:grid;gap:16px}
+section > p{max-width:70ch}
+
+figure{margin:0;display:grid;gap:10px}
+.scroll{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px}
+.scroll svg{display:block;width:100%;min-width:900px;height:auto}
+figcaption{font-size:14px;color:var(--muted);max-width:75ch}
+
+/* SVG roles */
+.lane{stroke:var(--line);stroke-width:1}
+.bx{fill:var(--surface);stroke:var(--fg);stroke-width:1.2}
+.bx.acc{fill:var(--accent-soft);stroke:var(--accent);stroke-width:2.2}
+.bx.alt{fill:var(--bg);stroke:var(--muted);stroke-dasharray:4 3}
+.t{fill:var(--fg);font:600 13px var(--body)}
+.s{fill:var(--muted);font:11.5px var(--body)}
+.ll{fill:var(--fg);font:700 15px var(--display);letter-spacing:.02em}
+.al{fill:var(--muted);font:10.5px var(--mono)}
+.al.acc{fill:var(--accent)}
+.ar{stroke:var(--fg);stroke-width:1.3;fill:none}
+.ar.dash{stroke:var(--accent);stroke-dasharray:6 4}
+.head{fill:var(--fg)}
+.head.acc{fill:var(--accent)}
+
+/* status vocabulary */
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:1.5px solid currentColor;border-radius:4px;font:500 13px var(--mono);background:var(--surface)}
+.chip b{font:700 14px var(--mono)}
+.c-ok{color:var(--ok)}.c-bad{color:var(--bad)}.c-warn{color:var(--warn)}.c-info{color:var(--info)}.c-none{color:var(--none)}
+.never{font:13px var(--mono);color:var(--muted)}
+.never s{color:var(--bad)}
+
+/* flow steps */
+.flows{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.flow{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:18px 20px;display:grid;gap:10px;align-content:start;min-width:0}
+.flow-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.flow-h h3{font:700 21px/1.1 var(--display)}
+.tag{font:11px var(--mono);color:var(--muted);white-space:nowrap}
+.flow ol{margin:0;padding-left:20px;display:grid;gap:6px;font-size:15px}
+.flow li::marker{font:500 12px var(--mono);color:var(--accent)}
+.who{font:12px var(--mono);color:var(--accent);letter-spacing:.04em;text-transform:uppercase}
+code{font:13px var(--mono);background:var(--bg);padding:1px 5px;border-radius:3px}
+
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px 24px;margin:0;padding-left:20px;font-size:15px}
+footer{font:12px/1.6 var(--mono);color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">iQOO Hackathon 2026 · event build · Alwin's UI/UX lane</span>
+    <h1>Sariya UX flows</h1>
+    <p class="lede">One pre-pour check, across three phones and a laptop. The operator scans the steel, the engineer signs off with their own key, and anyone can check the sign-off offline.</p>
+    <p class="note">This is the designed spec as of 10 Oct. Every build issue is still open, so none of these screens are confirmed as built.</p>
+  </header>
+
+  <section>
+    <h2>End to end, by device</h2>
+    <figure>
+      <div class="scroll">
+      <svg viewBox="0 0 1180 390" role="img" aria-label="Swimlane: P1 sets up, enters the spec, scans, locks, gets the verdict and Hindi fix, takes tape and scale readings, signs and exports. The pack goes over Office Kit to P2, which validates it, reviews it and approves with a fingerprint or requests another view. The approval returns to P1 and P3 verifies the sign-off QR offline.">
+        <defs>
+          <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0 0L10 5L0 10z"/></marker>
+          <marker id="a1d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head acc" d="M0 0L10 5L0 10z"/></marker>
+        </defs>
+
+        <line class="lane" x1="0" y1="120" x2="1180" y2="120"/>
+        <line class="lane" x1="0" y1="200" x2="1180" y2="200"/>
+        <line class="lane" x1="0" y1="300" x2="1180" y2="300"/>
+
+        <text class="ll" x="12" y="70">P1 · OPERATOR</text>
+        <text class="s" x="12" y="88">scans · capture key</text>
+        <text class="ll" x="12" y="156">LAPTOP</text>
+        <text class="s" x="12" y="174">Office Kit · no key</text>
+        <text class="ll" x="12" y="246">P2 · ENGINEER</text>
+        <text class="s" x="12" y="264">approval key</text>
+        <text class="ll" x="12" y="336">P3 · VERIFIER</text>
+        <text class="s" x="12" y="354">mason or owner</text>
+
+        <!-- request another view: loops back to the scan -->
+        <path class="ar dash" d="M1001 228V30H305V48" marker-end="url(#a1d)"/>
+        <text class="al acc" x="650" y="22" text-anchor="middle">request another view → operator's pending list (via Office Kit)</text>
+
+        <!-- P1 row -->
+        <g text-anchor="middle">
+          <rect class="bx" x="140" y="52" width="98" height="44" rx="4"/><text class="t" x="189" y="71">Setup</text><text class="s" x="189" y="87">enrol keys</text>
+          <rect class="bx" x="256" y="52" width="98" height="44" rx="4"/><text class="t" x="305" y="71">Spec in</text><text class="s" x="305" y="87">typed or voice</text>
+          <rect class="bx" x="372" y="52" width="98" height="44" rx="4"/><text class="t" x="421" y="71">Live scan</text><text class="s" x="421" y="87">~mm on bars</text>
+          <rect class="bx acc" x="488" y="52" width="98" height="44" rx="4"/><text class="t" x="537" y="71">Lock</text><text class="s" x="537" y="87">value ± band</text>
+          <rect class="bx" x="604" y="52" width="98" height="44" rx="4"/><text class="t" x="653" y="71">Verdict</text><text class="s" x="653" y="87">+ Hindi fix</text>
+          <rect class="bx" x="720" y="52" width="98" height="44" rx="4"/><text class="t" x="769" y="71">Readings</text><text class="s" x="769" y="87">tape · scale</text>
+          <rect class="bx" x="836" y="52" width="98" height="44" rx="4"/><text class="t" x="885" y="71">Sign</text><text class="s" x="885" y="87">export pack</text>
+          <rect class="bx" x="1068" y="52" width="98" height="44" rx="4"/><text class="t" x="1117" y="71">Approval</text><text class="s" x="1117" y="87">merged</text>
+        </g>
+        <g>
+          <line class="ar" x1="238" y1="74" x2="254" y2="74" marker-end="url(#a1)"/>
+          <line class="ar" x1="354" y1="74" x2="370" y2="74" marker-end="url(#a1)"/>
+          <line class="ar" x1="470" y1="74" x2="486" y2="74" marker-end="url(#a1)"/>
+          <line class="ar" x1="586" y1="74" x2="602" y2="74" marker-end="url(#a1)"/>
+          <line class="ar" x1="702" y1="74" x2="718" y2="74" marker-end="url(#a1)"/>
+          <line class="ar" x1="818" y1="74" x2="834" y2="74" marker-end="url(#a1)"/>
+        </g>
+
+        <!-- Laptop row -->
+        <g text-anchor="middle">
+          <rect class="bx alt" x="836" y="138" width="98" height="44" rx="4"/><text class="t" x="885" y="157">Office Kit</text><text class="s" x="885" y="173">file transfer</text>
+          <rect class="bx alt" x="1068" y="138" width="98" height="44" rx="4"/><text class="t" x="1117" y="157">Office Kit</text><text class="s" x="1117" y="173">return file</text>
+        </g>
+
+        <!-- P2 row -->
+        <g text-anchor="middle">
+          <rect class="bx" x="836" y="228" width="98" height="44" rx="4"/><text class="t" x="885" y="247">Open pack</text><text class="s" x="885" y="263">check hashes</text>
+          <rect class="bx" x="952" y="228" width="98" height="44" rx="4"/><text class="t" x="1001" y="247">Review desk</text><text class="s" x="1001" y="263">laptop mirror</text>
+          <rect class="bx acc" x="1068" y="228" width="98" height="44" rx="4"/><text class="t" x="1117" y="247">Approve</text><text class="s" x="1117" y="263">fingerprint</text>
+        </g>
+        <line class="ar" x1="934" y1="250" x2="950" y2="250" marker-end="url(#a1)"/>
+        <line class="ar" x1="1050" y1="250" x2="1066" y2="250" marker-end="url(#a1)"/>
+
+        <!-- P3 row -->
+        <g text-anchor="middle">
+          <rect class="bx" x="1068" y="318" width="98" height="44" rx="4"/><text class="t" x="1117" y="337">Verify QR</text><text class="s" x="1117" y="353">offline check</text>
+        </g>
+
+        <!-- vertical hand-offs -->
+        <line class="ar" x1="885" y1="96" x2="885" y2="136" marker-end="url(#a1)"/>
+        <text class="al" x="879" y="116" text-anchor="end">.sariya.zip</text>
+        <line class="ar" x1="885" y1="182" x2="885" y2="226" marker-end="url(#a1)"/>
+        <text class="al" x="879" y="208" text-anchor="end">system file picker</text>
+        <line class="ar" x1="1117" y1="228" x2="1117" y2="184" marker-end="url(#a1)"/>
+        <text class="al" x="1111" y="208" text-anchor="end">approval</text>
+        <line class="ar" x1="1117" y1="138" x2="1117" y2="98" marker-end="url(#a1)"/>
+        <text class="al" x="1111" y="116" text-anchor="end">exact capture</text>
+        <line class="ar" x1="1117" y1="272" x2="1117" y2="316" marker-end="url(#a1)"/>
+        <text class="al" x="1111" y="298" text-anchor="end">sign-off QR</text>
+      </svg>
+      </div>
+      <figcaption>The two outlined gates carry the trust: only a locked value reaches the rulebook, and only a fingerprint-confirmed approval signs. The laptop mirrors P2 and moves files; it holds no key and runs no backend. A requested view goes back to the operator without destroying the original record.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>The scan screen, state by state</h2>
+    <figure>
+      <div class="scroll">
+      <svg viewBox="0 0 980 300" role="img" aria-label="Scan states: Loading leads to Live, then Locking, then Locked, then Verdict. Manual mode is entered from Live and feeds Locking through the same gates. A failed gate during Locking goes to Re-scan, which returns to Live. Moving the card, a bar or editing the spec after Locked goes to Invalidated, which returns to Live while the old record is kept.">
+        <defs>
+          <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0 0L10 5L0 10z"/></marker>
+        </defs>
+        <g text-anchor="middle">
+          <rect class="bx" x="20" y="110" width="150" height="52" rx="4"/><text class="t" x="95" y="132">Loading</text><text class="s" x="95" y="150">cold ~53 s · cached 4–8 s</text>
+          <rect class="bx" x="210" y="110" width="150" height="52" rx="4"/><text class="t" x="285" y="132">Live</text><text class="s" x="285" y="150">lines on bars, “~50 mm”</text>
+          <rect class="bx" x="400" y="110" width="150" height="52" rx="4"/><text class="t" x="475" y="132">Locking</text><text class="s" x="475" y="150">hold still · ~15 frames</text>
+          <rect class="bx acc" x="590" y="110" width="150" height="52" rx="4"/><text class="t" x="665" y="132">Locked</text><text class="s" x="665" y="150">“80 ± 3 mm”, frozen</text>
+          <rect class="bx" x="800" y="110" width="150" height="52" rx="4"/><text class="t" x="875" y="132">Verdict</text><text class="s" x="875" y="150">rules decide each check</text>
+
+          <rect class="bx alt" x="305" y="16" width="150" height="50" rx="4"/><text class="t" x="380" y="37">Manual mode</text><text class="s" x="380" y="54">tap bars · by hand</text>
+          <rect class="bx" x="305" y="214" width="150" height="50" rx="4"/><text class="t" x="380" y="235">Re-scan</text><text class="s" x="380" y="252">reason + action, in words</text>
+          <rect class="bx" x="590" y="214" width="150" height="50" rx="4"/><text class="t" x="665" y="235">Invalidated</text><text class="s" x="665" y="252">fresh value cleared</text>
+        </g>
+        <line class="ar" x1="170" y1="136" x2="208" y2="136" marker-end="url(#a2)"/>
+        <line class="ar" x1="360" y1="136" x2="398" y2="136" marker-end="url(#a2)"/>
+        <line class="ar" x1="550" y1="136" x2="588" y2="136" marker-end="url(#a2)"/>
+        <line class="ar" x1="740" y1="136" x2="798" y2="136" marker-end="url(#a2)"/>
+        <text class="al" x="769" y="128" text-anchor="middle">rules</text>
+
+        <line class="ar" x1="300" y1="110" x2="336" y2="68" marker-end="url(#a2)"/>
+        <text class="al" x="250" y="84" text-anchor="middle">freeze frame</text>
+        <line class="ar" x1="424" y1="66" x2="460" y2="108" marker-end="url(#a2)"/>
+        <text class="al" x="506" y="84" text-anchor="middle">same gates</text>
+
+        <line class="ar" x1="460" y1="162" x2="424" y2="212" marker-end="url(#a2)"/>
+        <text class="al" x="500" y="192" text-anchor="middle">gate fails</text>
+        <line class="ar" x1="336" y1="214" x2="300" y2="164" marker-end="url(#a2)"/>
+        <text class="al" x="238" y="196">move, retry</text>
+
+        <line class="ar" x1="665" y1="162" x2="665" y2="212" marker-end="url(#a2)"/>
+        <text class="al" x="673" y="192">card lost · bar moved · spec edited</text>
+        <path class="ar" d="M665 264V286H230V164" marker-end="url(#a2)"/>
+        <text class="al" x="457" y="281" text-anchor="middle">new scan; old record kept as history</text>
+      </svg>
+      </div>
+      <figcaption>The live “~” number is never a verdict. Re-scan reasons are written out (“too far, move closer”, “card not visible”) rather than shown as a colour. Manual mode uses the same card, calibration and uncertainty gates as the automatic path, and its records stay labelled as human-marked.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>Every check gets one of five answers</h2>
+    <div class="chips" role="list">
+      <span class="chip c-ok" role="listitem"><b>✓</b> within limits</span>
+      <span class="chip c-bad" role="listitem"><b>✕</b> outside limits</span>
+      <span class="chip c-warn" role="listitem"><b>↻</b> re-scan</span>
+      <span class="chip c-info" role="listitem"><b>▭</b> needs a tape reading</span>
+      <span class="chip c-none" role="listitem"><b>–</b> not seen</span>
+    </div>
+    <p class="never">No overall badge. Never shown or spoken: <s>safe</s> · <s>PASS</s> · <s>certified</s> · <s>permit</s></p>
+  </section>
+
+  <section>
+    <h2>The flows, step by step</h2>
+    <div class="flows">
+      <article class="flow">
+        <div class="flow-h"><h3>0 · First launch</h3><span class="tag">B02 · B12 · B13</span></div>
+        <span class="who">All phones, once</span>
+        <ol>
+          <li>Readiness screen shows the model compiling, not a frozen camera.</li>
+          <li>Camera or microphone denied: a visible way to recover. Offline voice and model assets show as present or missing.</li>
+          <li>Each phone shows its key QR and scans the others, confirmed by fingerprint. The real protection level is shown.</li>
+          <li>A key that arrives inside a pack stays untrusted until enrolled this way.</li>
+        </ol>
+      </article>
+
+      <article class="flow">
+        <div class="flow-h"><h3>1 · Spec in</h3><span class="tag">B03 · B15 · B21</span></div>
+        <span class="who">P1 operator</span>
+        <ol>
+          <li>Choose slab or beam.</li>
+          <li>Type the drawing values. Slab: diameter, count and spacing per direction. Beam: stirrup diameter, end and mid spacing, end-zone length.</li>
+          <li>Or hold to talk: “rings 8, 50 at the end, 75 middle, end zone 150”. Every field is read back; doubtful values stay unconfirmed.</li>
+          <li>Confirm to create a versioned spec. Cancel commits nothing.</li>
+          <li>No drawing: measurement-only mode, values with no verdict.</li>
+        </ol>
+      </article>
+
+      <article class="flow">
+        <div class="flow-h"><h3>2 · Scan and Lock</h3><span class="tag">B04 · B06 · B07 · B08 · B11</span></div>
+        <span class="who">P1 operator</span>
+        <ol>
+          <li>Card on the slab patch, or <code>strip_300</code> along the beam. Torch on, about 30 cm away.</li>
+          <li>Lines snap to each bar with live “~mm” gaps and follow a bar when it moves.</li>
+          <li>Hold still to Lock: the image freezes with “80 ± 3 mm c/c”.</li>
+          <li>Beam: the strip origin, ticks and end and mid zones are drawn, with stirrup positions per zone.</li>
+          <li>If detection is unstable, switch to manual mode and tap the bars.</li>
+        </ol>
+      </article>
+
+      <article class="flow">
+        <div class="flow-h"><h3>3 · Verdict and fix</h3><span class="tag">B05 · B09</span></div>
+        <span class="who">P1, spoken to the mason</span>
+        <ol>
+          <li>The verdict sheet lists each check, with the failing gap highlighted on the frozen image.</li>
+          <li>The fix is spoken in Hindi with subtitles: “Beam B2, left end: stirrups at 180, drawing says 100 for the first 600 mm. Add 2.” Stop and repeat buttons.</li>
+          <li>No voice installed: subtitles stay and “audio unavailable” shows.</li>
+          <li>Readings by hand: cover by tape, offcut length and mass (200 mm at 123 g is a 10, not a 12), and the hook against a template. Each edit makes a new revision.</li>
+          <li>The bench tape panel turns a locked gap and its tape reading into an error-table row.</li>
+        </ol>
+      </article>
+
+      <article class="flow">
+        <div class="flow-h"><h3>4 · Sign and review</h3><span class="tag">B12 · B13 · B14</span></div>
+        <span class="who">P1 → laptop → P2</span>
+        <ol>
+          <li>P1 signs the capture: the values, spec revision, rule and model versions, image hashes and manual readings.</li>
+          <li>Export <code>.sariya.zip</code> through Office Kit. P2 opens it from the system picker; the hashes and signature are checked first.</li>
+          <li>The review desk shows the frozen overlay, drawing, values with bands, sources, missing checks, signers and revision.</li>
+          <li>Approve with a fingerprint (cancel means no signature), or request another view of a named zone.</li>
+          <li>Approve is disabled for corrupt, unknown-signer or unreviewed packs.</li>
+        </ol>
+      </article>
+
+      <article class="flow">
+        <div class="flow-h"><h3>5 · Verify and replay</h3><span class="tag">B14 · B16</span></div>
+        <span class="who">P1 · P3</span>
+        <ol>
+          <li>The approval returns through Office Kit and attaches only to the capture it signed.</li>
+          <li>P3 scans the sign-off QR and checks it offline against enrolled keys.</li>
+          <li>Approving an approved pack again shows “already processed”.</li>
+          <li>An old approval on an edited spec or photo fails.</li>
+          <li>A new scan of unchanged steel is allowed, with at most a similarity warning.</li>
+        </ol>
+      </article>
+
+      <article class="flow">
+        <div class="flow-h"><h3>6 · History and numbers</h3><span class="tag">B18</span></div>
+        <span class="who">Any phone</span>
+        <ol>
+          <li>Saved scans by member, time and status: reopen or export.</li>
+          <li>The error table: measured against tape, residual, band, abstentions, distance and source. Exports as CSV.</li>
+          <li>Timings: NPU, GPU and CPU p50 and p95, the accelerator actually used, the model hash and sample counts.</li>
+          <li>Every value comes from stored samples. No data shows as “no data”, never as zero error.</li>
+        </ol>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Rules for every screen</h2>
+    <ul class="rules">
+      <li>Large touch targets; text readable through the laptop mirror.</li>
+      <li>Status is never shown by colour alone.</li>
+      <li>Keep space clear for the HackTracker overlay.</li>
+      <li>Anything marked by hand, missing or unassessed says so.</li>
+      <li>A signed record is never changed in place; edits make a new revision.</li>
+      <li>The mason hears the fix and never holds the phone.</li>
+    </ul>
+  </section>
+
+  <footer>Sources: IDEA.md §3 · notes/13-ar-vision/AR-VISION.md · issue-pack B03, B07, B09, B12–B16, B18, B21. Designed spec, 10 Oct 2026.</footer>
+</div>

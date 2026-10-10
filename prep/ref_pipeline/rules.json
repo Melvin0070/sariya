@@ -1,6 +1,6 @@
 {
- "rulebook_version": "0.1.0",
- "date": "2026-10-07",
+ "rulebook_version": "0.1.1",
+ "date": "2026-10-09",
  "precedence": [
   "drawing",
   "IS456:2000+A3",

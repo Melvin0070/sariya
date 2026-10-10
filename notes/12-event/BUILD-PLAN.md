@@ -2,6 +2,12 @@
 
 Written 9 Oct, 17:30-18:30 IST. **This file supersedes the timetable in PREP-PLAN.md §6 and in event-prompts.md §1.** If two files disagree on a demo number, §7 below is the single source.
 
+**10 Oct execution update:** [TEAM-BUILD.md](TEAM-BUILD.md) and its linked issues now own named assignments, remaining-block schedule, handoff contracts and acceptance gates. Alwin owns UI/UX, Sabari vision/AI, Melvin rules/trust/integration. Friday tasks below are historical targets, not progress evidence. The 45 px gate in §7 is a **4K reference**: validate the actual preview/Lock stream and transforms (B04/B08). Tap-to-mark precedes CP1. ARCore stays optional, outside the mesh critical path.
+
+TEAM-BUILD's tracker policy supersedes the old instructions below to avoid charging, generate background load or tap idle phones merely for activity. May scoring weights are historical, not verified Finale weights. Use real capture/review/development, charge as needed, rest and adapt to thermals.
+
+**Model update, pulled 52db88a:** v1 float export and standalone G0 device benchmark are now reported complete ([MODEL-V1](../14-model/MODEL-V1.md)). Use `models/seg/v1/unet_mbv3_1152.tflite`, compatible QAIRT 2.50/v81, tested performance mode and JIT cache; AOT failed and is optional. B02 now owns APK runtime delivery, cold/cached startup and camera parity, not initial training/export. Reported 12.2 ms is NPU burst inference average, not app p50 or live-loop latency; G1 and the sustained camera soak remain open. This supersedes the unknown-artifact/AOT-first assumptions below.
+
 Live site checked 9 Oct, 17:25: the timetable and rubric are unchanged. The Finale jury is now published, and the submission cut-off is still "TBC" (see §10).
 
 ---

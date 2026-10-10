@@ -56,6 +56,7 @@ kaggle kernels output sabarinarayanakg/sariya-unet-train -p runs/
 - Float32, 27 MB. Input NHWC `[1, 640, 1152, 3]` raw RGB 0-255; output `[1, 640, 1152, 1]` probability, bar = > 0.5. The normalisation is inside the graph.
 - **Parity with PyTorch (5 test tiles):** max |probability difference| 0.00002; mask agreement 100.0000 %.
 - **AOT for SM8850 failed** on Kaggle (`apply_plugin`). The on-device log shows the same root cause: the LiteRT Qualcomm plugin needs libQnnSystem ≥ 1.14, and the pinned QAIRT 2.47 ships 1.11. On-device JIT with QAIRT 2.50 works (below), so AOT is optional. To retry, pin a sdk-qualcomm build that bundles QAIRT 2.50.
+- **AOT for SM8850 failed** on Kaggle (`apply_plugin`). The committed `models/seg/v1/aot_sm8850_error.txt` specifically reports missing `libc++.so.1` while loading the compiler plugin. Separately, the on-device benchmark report records that QAIRT 2.47's libQnnSystem 1.11 was rejected by a plugin requiring ≥ 1.14. These are distinct observed failures; fixing QAIRT alone is not proven to fix the committed AOT failure. On-device JIT with QAIRT 2.50 works as reported below, so AOT remains optional. Any retry must resolve the compiler host dependencies as well as compatible runtime versions.
 
 **Benchmark.** iQOO 15 (I2501, SM8850, Android 16, OriginOS 7), over USB, LiteRT `benchmark_model` (litert-cli-nightly 0.3.0.dev20261009). One 1152 x 640 frame per inference. Reproduce with `prep/train/bench_device.sh models/seg/v1/unet_mbv3_1152.tflite`.
 

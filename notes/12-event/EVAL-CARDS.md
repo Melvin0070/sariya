@@ -2,6 +2,8 @@
 
 Numbers come from BUILD-PLAN.md §7 (half scale). Roles: **A** presents, **B** operates P1, **C** is the engineer (P2 + laptop), **J** is the evaluator.
 
+10 Oct: A = Melvin, B = Sabari, C = Alwin. [TEAM-BUILD.md](TEAM-BUILD.md) determines readiness; these checklists are targets, not completed-status reports. Manual marking is a labelled fallback. No fresh verdict while card/coverage/Lock quality is invalid.
+
 Evaluators score the jury lines: end product 30, novelty 20, technical depth 15, demo 10. Each card says how we earn each line.
 
 Finale jury (published on the site, 9 Oct):
@@ -28,7 +30,8 @@ Rules for every checkpoint:
 
 **Must work** (frozen build from 08:30):
 - card S detected;
-- live NPU overlay;
+- live per-bar lines and approximate mm labels, with the actual accelerator named;
+- explicit Lock with immutable evidence; only the locked result gets a verdict;
 - count and mean/single-gap spacing per layer with ±;
 - a verdict against a typed 5-field spec (8 @ 50);
 - the Hindi fix spoken with subtitles;
@@ -39,15 +42,15 @@ Rules for every checkpoint:
 | s | Who | Say / do | Screen |
 |---|---|---|---|
 | 0-15 | A | "In a house, this steel is visible for a day; then concrete hides it. Nobody measures it. Sariya does it with one phone and this card, offline. Half-scale props; the app checks whatever the drawing says." | Home, spec "8 @ 50, 5 bars" |
-| 15-40 | J / B | "Lift any bar." (F1: T3.) B scans at 0.3 m. | Overlay live → "Count 4, drawing 5. Slot 3 empty. Outside limits." Hindi plays, subtitles |
-| 40-65 | J / B | B puts T3 back; J slides T4 to the F2 tick (220). Scan. A: "Tape it, centre to centre." | "Gap 3: 80 ± [band]. Limit 65. Outside." J's tape reads ~80 |
+| 15-40 | J / B | "Lift any bar." (F1: T3.) B scans at 0.3 m, then taps Lock. | Approximate lines → locked "Count 4, drawing 5. Outside limits." Only name slot 3 if observed. Hindi plays, subtitles |
+| 40-65 | J / B | Restore T3; J slides T4 to 220; its line and approximate gap follow. B taps Lock. "Tape it, centre to centre." | Locked "Gap 3: 80 ± [actual band]. Limit 65." Say outside only if its band clears the limit. Tape the drawn segment |
 | 65-80 | A | "Too far, and it refuses." B scans from 0.8 m. | "Re-scan: card too small in the frame." |
 | 80-90 | A | "Segmentation on the NPU, [x] ms. By 19:00: the beam's end zones, the spec by voice, and the engineer's fingerprint sign-off over Office Kit." | Accelerator chip / numbers |
 
 **If missing:**
 - Voice out: "Hindi text now, voice by tonight." Play the pre-rendered WAV if one exists.
 - NPU: "GPU today, [x] ms; the NPU compile is the next fix." Show the AI Hub profile if we have it.
-- Band: show the value and say "the band comes from tonight's tape checks; it starts at ±5".
+- Band unvalidated: show approximate measurement-only values or the validated manual path; no confident verdict with an invented band. The initial 5 mm floor plus applicable terms is not proof of field accuracy.
 - Model mask weak: switch on tap-to-mark (`marked by hand` chip). "Human gives topology, pixels give position."
 
 **Pre-flight (T-10):**

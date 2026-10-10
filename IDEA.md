@@ -1,12 +1,13 @@
 # Sariya: idea as of 9 Oct 2026 (v4, live AR camera)
 
 This is the working spec. Log every change in STATE.md.
+- **As built, 10 Oct (06:50):** the Expo app (`sariya-expo/`) runs segmentation model **v2** live on the iQOO NPU through the local module `modules/sariya-vision` (CameraX, LiteRT 2.3, OpenCV 4.10 ChArUco/ArUco, pre-compiled QAIRT 2.50 model: loads in ~120 ms, 18-21 ms per inference, ~65 ms per frame end to end). Card S and strip_300 are detected live. Geometry matches truth to 0.3 mm on a synthetic card-S mesh with v1 weights; v2 marks no bars on that image (known recall gap, round 3 in training). **Not yet shown:** tape accuracy on real steel (G1), v2 on the props. Model rounds swap by build property (`-Psariya.model=vN`). Earlier evidence: [MODEL-V1](notes/14-model/MODEL-V1.md), [MODEL-V2](notes/14-model/MODEL-V2.md).
 - **v4 (9 Oct, at the event), the team's vision:** a live AR measuring camera. Detail, comparison with v3 and the loaner check: `notes/13-ar-vision/AR-VISION.md`.
   - When the camera sees a bar, it draws a line on that bar in real time; the card gives the scale, so the gaps between lines show live in mm.
-  - Live numbers are approximate ("~50 mm"); **Lock** (gyro still, ~15 frames fused) gives the value with its band, and only a locked value gets a verdict.
-  - **The card measures; ARCore only anchors** the overlay and coverage map. ARCore 1.56 installed from Play on the loaner (9 Oct), though Google's web list omits the iQOO 15. Its ±1-5 cm is never quoted as a measurement. If the hour-1 probe fails, the AR is card-only.
+  - Live numbers are approximate ("~50 mm"); **Lock** (~1.2 s of steady, sharp frames fused, typically 15-18) gives the value with its band, and only a locked value gets a verdict.
+  - **The card measures and anchors.** ARCore was dropped on 10 Oct (the Viro AR view had no torch or capture); the overlay is drawn from the card pose every frame, so it needs the card in view.
   - AI does one job: bar pixels on the NPU, every frame. Card pose, lines, mm and the verdict are maths and rules. Pitch line: "AI finds the bars, maths measures them, rules decide."
-  - Open: whether voice, the Hindi fix and the signed record stay in Tier 1 (STATE.md).
+  - **10 Oct execution:** [TEAM-BUILD.md](notes/12-event/TEAM-BUILD.md) assigns Alwin UI/UX, Sabari vision/AI and Melvin rules/trust/integration. Retain the full-loop target with explicit gates: typed spec + Hindi output first, voice input conditional, signed review targeted at CP2. Tap-to-mark is ready before CP1; ARCore, BBS import and LLM wording are optional. Issues define the fallback without pretending the automatic feature is complete.
 - **v1 (30 Sep):** `context/shared/DEEP-RESEARCH-2026-09-30.md` §3.
 - **Why v2 differs:** `notes/01-redteam/VERDICT.md`.
 - **v3 (5 Oct), for the Phase 1 submission:** `SUBMISSION.md`, `SUBMISSION_DECK.md`, `notes/10-submission/`. Changes from v2:
@@ -89,13 +90,13 @@ Kannada, and a signed record for the engineer."*
 2. **Capture, the evening before the pour.**
    - A rigid ChArUco card with a per-site ID goes on each slab patch, and a printed marker strip goes along each beam.
    - Stop and hold at the critical zones: beam ends, mid-span, cantilevers, and 2-3 slab patches.
-   - The gyro picks the sharp frames, with the torch on.
-   - A live AR overlay draws a line on each bar with the gap in mm ("~50"), and shows coverage ("bars 1-6 measured, move left"). If ARCore runs, it keeps the lines anchored when the card leaves the frame.
+   - Blurred frames are dropped: each frame's sharpness is compared with the sharpest recent frame of the same scan (no fixed threshold to calibrate). Torch on.
+   - A live AR overlay draws a line on each bar with the gap in mm ("~50"),. Bars the model only partly sees (usually under the card) show dashed and are never counted; they turn a short count or a wide gap into re-scan.
 3. **Measure, on-device.**
    - The pipeline, on every preview frame: rebar segmentation on the NPU → mask warped to the card plane → bar lines from a profile → back onto the image. Planar faces only (the slab's top layer; a beam's top or side face).
-   - **Lock** when the phone is still: ~15 frames fused into one value with its band. Only locked values reach the rulebook.
+   - **Lock** when the phone and observed bars are still: ~15 consistent frames fused into one value with its band. Only immutable locked values reach the rulebook. Keep systematic uncertainty and the initial 5 mm field floor; do not divide the whole band by the square root of frame count. Validate the actual stream/calibration, rather than applying the old 4K pixel threshold unchanged to preview frames. If preview quality is insufficient, use a validated high-resolution capture for Lock and record that measurement mode explicitly.
    - Outputs: count, spacing, and stirrup spacing by zone, each ± a band.
-   - Plus a coverage map of what was actually seen.
+   - Plus a coverage map per lock (frame footprint, card or strip, bars used, partly seen bars, in card mm), signed with the record.
 4. **Prompt for what a camera can't do,** and record each reading:
    - **Cover:** a tape reading entered by voice.
    - **Diameter:** a close-up still that abstains when unsure, backed by a 20 cm offcut on a kitchen scale. IS 1786 mass bands separate a 10 from a 12 mm bar (123 vs 178 g per 20 cm; 0.62 vs 0.89 kg/m) and catch underweight steel.
@@ -111,10 +112,11 @@ Kannada, and a signed record for the engineer."*
    - Subtitles always.
    - A small push-to-talk command set, not free-form chat.
 7. **Record and sign off.**
-   - **Two phones, two keys.** The capture key sits on the operator's phone (hardware-backed, attested); the approval key sits on the engineer's phone, behind a fingerprint.
-   - **Anti-reuse:** per-site card IDs, and a perceptual hash that catches a re-used scan.
-   - **Privacy:** faces blurred on-device; GPS is advisory and records the mock-location flag.
-   - **Office Kit is the engineer's desk:** review packs on the laptop, request another view, sign off. The sign-off QR verifies offline.
+   - **Two phones, two keys.** The capture key sits in the operator's Android Keystore; the engineer's distinct approval key requires biometric authentication. Show actual hardware protection/attestation availability. Enrol public-key fingerprints on verifier devices explicitly; a key embedded in a pack is not automatically trusted and does not prove professional credentials.
+   - **Immutable evidence:** capture binds the exact locked measurements, spec revision, rule/model/calibration versions and evidence-image hashes. Approval binds that capture payload; edits create a new revision.
+   - **Anti-reuse:** reject duplicate approval of an already processed record/hash. Perceptual similarity can flag a possible reused image for review, but must not block a legitimate new scan of unchanged steel. The one demo card does not establish a unique site or physical-scene liveness; registered per-site cards remain a product extension.
+   - **Privacy:** local storage and deliberate export in the event build; use consented prop imagery. Face redaction, GPS/mock-location recording and field retention controls remain post-event work, not implemented claims.
+   - **Office Kit is the engineer's desk:** review the engineer-phone screen on the laptop; move packs and requests for another view through Office Kit files. Sariya opens received files through Android's document picker. The sign-off QR verifies offline against enrolled keys, with the full pack available when evidence inspection is needed.
 8. **Where it plugs in** (roadmap, not built at the event):
    - brand programmes: more sites per technical engineer, rib-mark brand verification, slab-date leads;
    - builders' stage-gated payouts;
@@ -149,7 +151,7 @@ Product lens: 44/90 (industry jury; the v1 self-score was 61).
 | 0:00 | The one-day window: the steel is visible for a day, then hidden. Japan has accepted camera checks since 2023; we built it for India. "Half-scale props; the app checks whatever the drawing says." |
 | 0:20 | A judge draws one card from a deck of robust faults and applies it: remove a mesh bar, open a gap to ~80 mm (drawing 50), or move an end-zone stirrup into mid-span. |
 | 0:45 | Scan at about 30 cm: a line snaps onto every bar with the live gap in mm. The judge slides one bar and its line and number follow. Lock: the verdict arrives within 3 s, with values, spoken in Hindi and subtitled. |
-| 1:05 | The judge tapes the exact segment the app drew: "80 ± 3 mm c/c". |
+| 1:05 | The judge tapes the exact segment the app drew: "80 ± 5 mm c/c" (5 mm field floor until the tape table justifies less). |
 | 1:25 | Honesty on show: from 0.8 m the phone says "re-scan, too far"; at 30 cm, a confident "outside limits" (72 vs limit 65). |
 | 1:50 | Both directions: a lower-layer bar is moved; the app catches it through the gaps, with a wider band. |
 | 2:10 | Weigh test: a 20 cm offcut labelled "12" weighs 123 g, so it is a 10 (a 12 would be 178 g). |
@@ -169,7 +171,7 @@ Full minimal kit: `notes/07-data-plan/data-and-props.md` §3.
 
 ## 7. Build plan (48 h). Event-time plan: notes/12-event/BUILD-PLAN.md (block-by-block, gates, half-scale constants)
 - **Tier 1 (mesh loop + spoken Hindi fix by Eval 1; beam zones, voice spec, two-key record and Office Kit desk by Eval 2; see notes/12-event/EVAL-CARDS.md), about 55-75 person-hours:**
-  - the live AR line overlay with mm labels and Lock (card-anchored; ARCore anchoring only if the G0c probe passes);
+  - the live AR line overlay with mm labels and Lock (card-anchored);
   - planar count and spacing with the card;
   - stirrup zones on a beam face, using the strip;
   - the physical prompts;
@@ -182,7 +184,7 @@ Full minimal kit: `notes/07-data-plan/data-and-props.md` §3.
   - the hook-template check;
   - NPU vs GPU vs CPU, battery and temperature numbers on the numbers screen.
 - **Roadmap only, never built at the event:** card-free depth, rib-mark OCR, slump check, work passport, AwaasApp export, drawing extraction by an LLM.
-- **Hour 1:** drop in the pre-compiled SM8850 .tflite (float first) and run the P1 NPU smoke test; GPU is the fallback (BUILD-PLAN gate G0).
+- **Runtime (done 10 Oct):** the pre-compiled SM8850 file from the device JIT cache loads in ~120 ms, so the ~53 s cold compile never happens on the iQOO; other phones fall back to GPU, then CPU, and the readiness screen says which and why. QAIRT 2.50 libs are git-ignored and copied in per laptop (`sariya-expo/README.md`).
 - **Red Light hours:** each phone alternates Office Kit Remote PC (driving the agent) and scanning the props with tape checks (camera, mic, NPU), which grows the error table (BUILD-PLAN §1.3).
 
 ## 8. Before 9 Oct (data and people, not code). Historical: superseded by notes/12-event/BUILD-PLAN.md; items 2 and 4 did not happen
@@ -213,7 +215,7 @@ Full minimal kit: `notes/07-data-plan/data-and-props.md` §3.
 | "Japan already does this." | Yes. MLIT has accepted camera-based rebar inspection since 2023, which is why we trust the physics. What's new is where it runs and whom it serves: offline on a phone, IS codes, 2 mm size steps, Hindi and Kannada, and a pre-pour record for self-built homes with no QA team. |
 | "Can you tell 10 mm from 12 mm?" | Not from a standing sweep, and we don't pretend to. We take a close-up still at 20-30 cm and classify only above 95% confidence. Otherwise we use the scale: 20 cm of 10 mm weighs about 123 g, of 12 mm about 178 g, which also catches underweight steel. |
 | "Who holds the phone?" | The person paid to check: the owner's engineer or inspector, the builder's QC, or the brand's technical engineer. Never the mason who tied it; he hears the fix. |
-| "Scan a good cage, pour a bad one?" | Per-site card IDs (product), re-used-scan detection by perceptual hash (shown in the demo), and the engineer can demand a live re-scan of any member. Tamper-evident, not tamper-proof. |
+| "Scan a good cage, pour a bad one?" | Duplicate signed records are rejected; similar images can be flagged for review. Neither proves the physical scene or what is eventually poured. The engineer can request another view. Per-site card registration is a product extension. Tamper-evident, not tamper-proof. |
 | "Whose key signs the approval?" | Two phones, two keys: the capture key on the operator's phone, the approval key on the engineer's behind a fingerprint. |
 | "Bengaluru is zone II." | The rulebook is zone-aware. IS 456 applies everywhere; IS 13920 is required in zones III-V and "optional in Seismic Zone II" (cl. 1.1.1). The drawing wins. |
 | "Why on-device, and why the NPU?" | Sites are offline, and 30 fps live guidance needs the NPU (AI Hub lists ~2-4 ms for segmentation models on the 8 Elite Gen 5 [S]; we show the latency measured on this loaner). Plus privacy (faces, home location) and zero marginal cost. We show measured NPU, GPU and CPU numbers. |

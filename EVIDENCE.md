@@ -1,5 +1,16 @@
 # Sariya: evidence ledger
 
+## Execution refresh — 10 Oct 2026, about 00:20 IST
+
+- **V (live organiser site):** Finale Red/Green and CP1/CP2/CP3 times still match BUILD-PLAN; submission cutoff remains TBC. Rubric remains 30/20/15/15/10/10. Read the Finale `Xx` timetable, not the city `Qx` array, in [the live site bundle](https://iqoo.reskilll.com/assets/index-B_APmUMd.js); [organiser site](https://iqoo.reskilll.com/).
+- **Recorded organiser answer, not newly independently verified:** PREP-PLAN §7 says scores average the three phones, Remote PC agents/sideloading are allowed and Finale detects camera/mic/AI. The May tracker implementation cannot establish the deployed Finale weights; do not claim heat/drain/artificial activity earns a known score.
+- **V (primary docs):** Android [document-picker access](https://developer.android.com/training/data-storage/shared/documents-files) supports received Office Kit packs through user-selected URIs. The app cannot assume arbitrary raw-folder access to another app's received documents.
+- **V (primary docs):** [ARCore camera sharing](https://developers.google.com/ar/develop/java/camera-sharing) requires explicit session/camera integration. On this loaner, required stream/control compatibility remains untested; installation alone is insufficient evidence for our measurement flow.
+- **V (repo inspection):** the generated rules JSON had v0.1.1 numerical tolerances but a v0.1.0 header. Metadata corrected to v0.1.1/date 9 Oct; numeric rules unchanged. This is version consistency, not engineer approval of the proposed tolerances.
+- **U (build state):** no event Android app or proven exported model was found in this planning checkout. This does not prove that the team has not built one elsewhere. B01/B02 in the issue board explicitly inventory actual repo/APK/model progress.
+
+Current execution and research dispositions: [TEAM-BUILD.md](notes/12-event/TEAM-BUILD.md). Older ledger rows below retain their dated provenance; use the newer build/device notes where superseded.
+
 **Status legend:**
 - **V**: verified by an opened source.
 - **S**: seen only in a search result; re-open it before it goes on a slide.

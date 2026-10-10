@@ -1,5 +1,9 @@
 # Event prompt pack: Sariya app build, Fri 9 Oct 19:00 to Sun 11 Oct 12:00 (written 7 Oct 2026)
 
+**10 Oct:** use [TEAM-BUILD.md](../12-event/TEAM-BUILD.md) and B01–B26 issues for current execution. This older reference pack is overridden where it assumes mask-only UI, a stream-independent 45 px gate, rulebook v0.1.0, keys trusted from the imported record, hard pHash rejection, raw shared-folder import, late manual fallback or the old lanes/timetable. Read the corresponding issue corrections before executing a Pxx prompt.
+
+**v1 runtime update (52db88a):** use the committed float `models/seg/v1/unet_mbv3_1152.tflite`; [MODEL-V1](../14-model/MODEL-V1.md) reports working standalone JIT on QAIRT 2.50/v81 with burst mode and compiler cache. AOT failed and is optional. Do not assume the old artifact paths/Maven pins/performance defaults below reproduce that runtime. B02 validates APK packaging, camera parity, cold/cache startup and actual backend/mode.
+
 Everything here is config, schemas, signatures-as-text and prompts for Claude Code / Codex. No app source. The fresh-code rule (IDEA.md v3, guide: "code written during the event window") applies to everything the prompts produce.
 
 Inputs to VERIFY at 17:00, any of which may be missing (`sariya-models/`, sha256 `MANIFEST.txt`; PREP-PLAN §2; status board in notes/12-event/BUILD-PLAN.md §3.1):

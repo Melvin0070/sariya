@@ -1,0 +1,906 @@
+[
+  {
+    "id": "B01",
+    "title": "Bootstrap the event app and freeze the three-lane contracts",
+    "owner": "Melvin0070",
+    "phase": "CP1",
+    "hours": 1.5,
+    "deps": [],
+    "packages": "Gradle, manifest, model/, app wiring, diagnostic persistence",
+    "outcome": "All three people can build independently against the same typed interfaces and install compatible APK updates.",
+    "tasks": [
+      "First audit existing app repo/branch/APK and completed gates; link any work already done instead of rebuilding it. This planning repo has no app source at the time of issue creation. Record the implementation repo and app root in the control issue.",
+      "Use the existing models/seg/v1 artifact/logs and notes/14-model/MODEL-V1.md. Keep model preparation (cold JIT, cache hit, fallback, failure) out of measurement timing and expose it through B01 contracts to Alwin. Model readiness is not an accepted Lock.",
+      "Create or verify one Kotlin/Compose :app module, in.sariya.camera, minSdk 31. Resolve and pin a buildable dependency set; old prompt versions are candidates, not proof that Maven artifacts exist. Do not add every optional runtime.",
+      "Freeze SpecRevision, AnalysisFrame metadata, LiveFrameResult, LockResult, Finding/FixAction, ScanRecord and TelemetrySample. Include frame/lock IDs, timestamps, image dimensions, crop/rotation/coordinate transforms, mm units, family IDs, card/calibration ID, gate reasons, uncertainty terms, rulebook version/hash and actual accelerator.",
+      "Keep live approximate results separate from immutable locked measurements. Freeze spec and asset versions into a lock; a changed spec cannot silently change a signed record. Export fake results and small golden JSON fixtures for other lanes, visibly marked as fixtures.",
+      "Freeze VerificationState, ApprovalState, TransferState and ReviewRequest adapters plus fake states at contract freeze, before the trust implementation. LockResult always identifies its actual measurement/evidence mode; Sabari records the selected stream/still branch before B06/B07 bind to it.",
+      "Share a development signing certificate securely across laptops; never reuse or publish a production key. Preserve existing installs and Android Keystore identities. Keep this APK certificate distinct from capture/approval record keys.",
+      "Add minimal crash-to-file and copy-diagnostics support now, so Red debugging needs no ADB. Wire permission-denied, model-missing and startup-error states.",
+      "Create AGENTS/CLAUDE instructions, issue-sized branches/worktrees and local prompt files. Melvin alone integrates shared contracts and root build changes. Set up build/JVM checks if the repo supports CI; include an offline build after dependencies are cached."
+    ],
+    "tests": [
+      "A clean checkout builds and runs JVM tests with pinned dependencies; a subsequent cached build succeeds offline.",
+      "Serialized fixtures round-trip with stable IDs/units. A fixture is never displayed as a real scan or included in accuracy metrics.",
+      "An APK from the second laptop updates the first without uninstalling; stored data and enrolled record keys survive.",
+      "Reject stale lock/spec IDs at the interface boundary and retain actionable diagnostics after a simulated controlled error."
+    ],
+    "phone": "Install the same integration APK on P1/P2/P3; open the fake-data screen, deny/regrant camera permission, and copy a diagnostic report.",
+    "fallback": "If bootstrap takes over 60 minutes, use the smallest working cached stack. Do not wait for ML export or ARCore. Do not reset a phone to fix an APK signing mismatch.",
+    "refs": [
+      "notes/05-feasibility/event-prompts.md",
+      "notes/12-event/BUILD-PLAN.md",
+      "notes/14-model/MODEL-V1.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review",
+    "refresh_note": "The trained/exported v1 model and a standalone device benchmark are now in this repo (52db88a). The app source is still absent here: inventory any external app work, then bootstrap only what is missing. Freeze model readiness/cache/failure state alongside the existing frame contracts; do not spend this issue rebuilding training/export tools."
+  },
+  {
+    "id": "B02",
+    "title": "Integrate exported v1 with QAIRT 2.50, JIT cache and camera parity",
+    "owner": "NarayanaSabari",
+    "phase": "CP1",
+    "hours": 1.5,
+    "deps": [
+      "B01"
+    ],
+    "packages": "segment/, model assets and MODEL_CARD inputs",
+    "outcome": "The already-exported v1 model runs correctly inside the Android APK, with honest startup/backend state and camera-aligned bar probabilities.",
+    "tasks": [
+      "Use the existing float artifact models/seg/v1/unet_mbv3_1152.tflite, SHA-256 196d279e980b159e88c5a4b60936daeb8f593c9ac45e3fe02c424c614599f7c0. Check the committed training/export log and tensor contract; initial training/export is complete and must not be repeated just to satisfy this issue.",
+      "Input is raw RGB NHWC float32 [1,640,1152,3] in 0..255, with ImageNet normalization inside the graph; output NHWC [1,640,1152,1] probabilities, bar >0.5. Match crop/resize/rotation/padding and return inverse transforms. No Y-plane feed or double normalization.",
+      "Integrate the portable model through the app runtime with matching QAIRT 2.50/v81 libraries, libQnnSystem >=1.14 and compatible LiteRT dispatch/compiler components. Verify artifact versions and transitive native libraries actually resolve in the APK; do not assume the old Maven pin bundles this combination. Copying files from a developer home folder is not reproducible packaging.",
+      "Select and log the actual HTP performance mode; reported NPU default 73.3 ms versus burst 12.2 ms shows backend choice alone is insufficient. Burst is a measured option, not a requirement to ignore thermal throttling; GPU at a reported 19.8 ms is the fallback.",
+      "Implement a persistent, versioned private compiler cache keyed by model hash/runtime/device identity. Report preparing/fallback/failed states; the first CLI compile was ~53 s and cache hit 4–8 s. Prewarm before rehearsal, do not compile on each frame or Lock. Test invalid/corrupt cache recovery without losing records or keys.",
+      "Validate Android camera/image preprocessing and mask alignment on the identical prop images against laptop output. The report says PyTorch-to-TFLite parity passed on five test tiles, but that does not validate Android preprocessing or the Android accelerator output.",
+      "Capture APK-side init/preprocess/inference/postprocess timings, p50/p95, backend/partition evidence and runtime versions. Attach raw logs; distinguish them from the previously reported CLI averages. Prove cold launch with packaged model/runtime and no network.",
+      "Keep AOT optional; the committed AOT error is missing libc++.so.1, while QAIRT mismatch is separately reported from device testing. Timebox APK runtime repairs, then use GPU; do not block capture/UI on AOT, INT8 or a second training run."
+    ],
+    "tests": [
+      "Artifact SHA-256 equals 196d279e980b159e88c5a4b60936daeb8f593c9ac45e3fe02c424c614599f7c0; missing/corrupt asset or runtime shows actionable recovery instead of crashing.",
+      "Phone/laptop same-image comparison on representative props targets mask IoU >=0.90, with recorded tolerance for accelerator differences and correct 0/90/180/270 rotation/crop alignment. Export parity alone does not check this box.",
+      "An offline sideloaded APK loads the compatible NPU runtime and records real backend/performance mode/partition evidence; unsupported NPU falls back visibly to GPU.",
+      "Cold compile and cached restart are timed separately; UI remains responsive, model preparation never creates a Lock, corrupted/version-mismatched cache rebuilds safely, and warm scan does not rerun compilation.",
+      "50 warm app iterations per available backend report actual p50/p95 and full stage timings. No CLI mean is relabelled p50/p95 or camera-loop fps."
+    ],
+    "phone": "Cold-launch the APK offline, observe first model preparation, restart to measure cache hit, then scan CONTROL/F2 and compare the aligned camera masks. Verify fallback and resumed capture after Office Kit.",
+    "fallback": "The model/export blocker is cleared. If Android NPU packaging/performance integration fails within 45 minutes, use the tested GPU path and record it. Keep early manual marking for geometry failure; do not wait for AOT, prop retraining or INT8.",
+    "refs": [
+      "notes/14-model/MODEL-V1.md",
+      "models/seg/v1/unet_mbv3_1152.tflite",
+      "models/seg/v1/train_log.json",
+      "models/seg/v1/export_log.json",
+      "models/seg/v1/aot_sm8850_error.txt",
+      "prep/train/bench_device.sh",
+      "prep/README.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review",
+    "completed_evidence": [
+      "Trained v1 checkpoint and 50-epoch log committed; held-out segmentation metrics recorded.",
+      "Float TFLite artifact committed and SHA-256 verified locally: 196d279e980b159e88c5a4b60936daeb8f593c9ac45e3fe02c424c614599f7c0.",
+      "PyTorch-to-TFLite parity on five tiles reported in MODEL-V1; Android camera/backend parity still pending.",
+      "Standalone iQOO NPU/GPU/CPU benchmark and 60-second burst result reported; APK-level gate still pending."
+    ],
+    "refresh_note": "Pulled `52db88a` on 10 Oct. The repository now contains `models/seg/v1/unet_mbv3_1152.tflite` (26,935,452 bytes), locally checked SHA-256 `196d279e980b159e88c5a4b60936daeb8f593c9ac45e3fe02c424c614599f7c0`, its PyTorch checkpoint, dataset manifest, training/export logs and [notes/14-model/MODEL-V1.md](https://github.com/Melvin0070/sariya/blob/52db88a/notes/14-model/MODEL-V1.md). Training log records held-out segmentation IoU 0.8466 / F1 0.917; these are pixel-mask metrics, not millimetre measurement accuracy.\n\nThe report records iQOO 15 CLI inference averages: NPU burst 12.2 ms, NPU 60-second burst 12.8 ms, GPU 19.8 ms, CPU 234.6 ms. This is prior reported benchmark evidence, not a benchmark rerun in this issue refresh, not p50/p95, and not full camera-to-verdict latency. G0's standalone runtime feasibility is reported passed; Android APK delivery, app backend selection, camera preprocessing parity and G1 tape validation remain open.\n\nUse the portable float model with on-device JIT, matching QAIRT 2.50/v81 runtime libraries, an explicit tested performance mode and persistent compiler cache. Default NPU mode was reported at 73.3 ms; `Accelerator.NPU` alone does not establish 12.2 ms. Cold compile ~53 seconds and cache-hit startup 4–8 seconds need a preparation state. AOT is not a blocker. The committed AOT error is missing `libc++.so.1`; the report's on-device QAIRT 2.47 incompatibility is a separate failure and must not be assumed to explain that file."
+  },
+  {
+    "id": "B03",
+    "title": "Build the spec form and scan UI against fixture contracts",
+    "owner": "AlwinSunil",
+    "phase": "CP1",
+    "hours": 1.5,
+    "deps": [
+      "B01"
+    ],
+    "packages": "ui/spec/, ui/scan/ shell and navigation",
+    "outcome": "An engineer can choose a member, confirm the drawing values and enter the scan without waiting for the model.",
+    "tasks": [
+      "Own all Compose screen layout; service owners expose state/actions rather than editing ui/. Build against B01 fake results, then replace the provider at integration.",
+      "Make typed entry the reliable baseline: slab diameter/count/spacing per family; beam stirrup diameter/end spacing/mid spacing/end-zone length. The old five-field shorthand must not lose member type, units, count or zone information.",
+      "Ship the half-scale presets as editable demo data: slab 8 mm, 5 bars per family at 50; beam 8 mm rings, end 50 over 150, mid 75. Display DEMO PROP where appropriate.",
+      "Provide explicit measurement-only mode with no drawing; missing fields never silently inherit a passing default. Confirm and version the spec before Lock.",
+      "Design readable mm values, non-colour-only statuses, large touch targets, subtitles and space clear of the HackTracker overlay. Camera/microphone permission recovery and offline asset state must be reachable.",
+      "Handle first-run model preparation and cache-hit startup explicitly; keep typed spec/navigation responsive and Lock disabled until valid input. Expose a manual/GPU fallback when supported. No fake progress percentage or inference latency that includes unexplained compile time."
+    ],
+    "tests": [
+      "Forms reject nonfinite/negative/impossible inputs, preserve mm units and accept end zone 150. Cancel/edit does not commit an unconfirmed spec.",
+      "No-drawing mode cannot show within/outside or infer a drawing requirement.",
+      "UI previews cover loading, live, locking, locked, re-scan, not-seen, needs-tape, permission denied and manual mode."
+    ],
+    "phone": "On a loaner, enter both presets and a custom spacing; rotate/resume; confirm data survives navigation and text is readable in the laptop mirror.",
+    "fallback": "Keep one clear form and scan screen; cut onboarding animation and visual polish before reducing status clarity.",
+    "refs": [
+      "IDEA.md",
+      "notes/12-event/BUILD-PLAN.md",
+      "notes/13-ar-vision/AR-VISION.md",
+      "notes/14-model/MODEL-V1.md"
+    ],
+    "agent": "Claude Code Fable 5.1 or Opus 5.5 for UI iteration; Codex for state/acceptance review",
+    "refresh_note": "Model export is ready. The report shows ~53 s cold JIT and 4–8 s cached startup. Add responsive preparing / ready / fallback / failed UI from B01/B02; do not leave a frozen camera, indefinite spinner or enable Lock before calibrated model/manual readiness. Timing is reported CLI behavior and must be measured in the app."
+  },
+  {
+    "id": "B04",
+    "title": "Capture calibrated frames and detect card S with stream-aware gates",
+    "owner": "NarayanaSabari",
+    "phase": "CP1",
+    "hours": 2,
+    "deps": [
+      "B01"
+    ],
+    "packages": "capture/, fiducial/ card path",
+    "outcome": "Every measurement is associated with a valid card pose and the exact camera geometry that produced it.",
+    "tasks": [
+      "Use CameraX/Camera2 on the main camera with bounded backpressure and guaranteed frame cleanup. Validate 4:3 framing or sufficient actual coverage for the 220 mm grid zone; do not measure off-screen geometry.",
+      "Detect DICT_5X5_1000 card S IDs 360..377, 6x6 squares, nominal square 15 mm/marker 11 mm. Store measured pattern width/6, not just nominal print size. Mask the card footprint out of bar extraction.",
+      "Calibrate the chosen measurement stream, including crop and rotation. Do not apply 4K intrinsics unchanged to 1080p. Record calibration residual or mark uncalibrated with increased uncertainty.",
+      "Resolve the v4 preview versus old 4K-still quality gate before geometry: 45 px is a 4K reference, not a raw threshold for every stream. A normalized threshold must use actual transforms and be validated with tape; upsampling does not create precision.",
+      "Check card validity, coverage, reprojection, tilt, blur, gyro and marker resolution. If no valid card, expose reason and do not permit a new Lock. An old anchored overlay is not fresh measurement evidence.",
+      "Keep ARCore outside the baseline; B22 is a separate 20-minute optional probe. Keep camera ownership singular.",
+      "Before B06/B07 implementation, publish LOCK-MODE in the control issue: actual stream/resolution, calibration/transforms, evidence frame source, quality metric and fallback. Expose calibrated frozen-frame pixel-to-mm/manual-measurement adapter with conservative band before learned geometry; Alwin owns the marking UI."
+    ],
+    "tests": [
+      "Transform fixtures for rotation 0/90/180/270 and crop/letterbox map known points correctly. Invalid/inverted pose, missing card and partial coverage abstain.",
+      "CONTROL at intended 0.30-0.35 m can be measured only when actual capture quality supports it; the 0.8 m case must abstain. Save effective intrinsics, frame dimensions and gate metrics for both.",
+      "No permanent frame retention or stalled preview after 100 frames, background/resume or permission failure."
+    ],
+    "phone": "Scan near/far and tilted card S, partly cover it, move it out of frame, and resume from Office Kit. Inspect gate reasons and capture geometry logs.",
+    "fallback": "If preview resolution cannot support the measured band, keep approximate live lines and use a validated high-resolution capture at Lock; record this downgrade explicitly, with its own image and mode. No silent threshold weakening.",
+    "refs": [
+      "notes/13-ar-vision/AR-VISION.md",
+      "notes/12-event/BUILD-PLAN.md",
+      "notes/05-feasibility/event-prompts.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review"
+  },
+  {
+    "id": "B05",
+    "title": "Implement versioned rules and deterministic correction actions",
+    "owner": "Melvin0070",
+    "phase": "CP1",
+    "hours": 2,
+    "deps": [
+      "B01"
+    ],
+    "packages": "rules/, rule asset, rule golden fixtures",
+    "outcome": "A locked measurement yields an auditable drawing comparison; uncertain or missing evidence cannot look acceptable.",
+    "tasks": [
+      "Use rules v0.1.1 data and its content hash. Check the old generated JSON header: it still said 0.1.0 despite updated tolerances. Keep the asset and record metadata aligned.",
+      "Implement WITHIN, OUTSIDE, RESCAN, NEEDS_TAPE and NOT_SEEN, plus no-verdict measurement-only mode. Gate missing coverage/card/measurement before numerical comparison; uncertainty touching a boundary is RESCAN.",
+      "Implement the drawing spacing policies mean +max(10 mm,5%) and local +max(15 mm,25%), explicitly labelled proposed project tolerances, not statutory BIS allowances. Distinguish drawing checks from applicable code checks and Zone II advisories. Missing effective depth or other code inputs means not evaluated/needs reading, never invented defaults.",
+      "Produce structured FixAction fields from confirmed requirements and observed counts. The speech/UI cannot recompute numbers or choose the verdict.",
+      "Implement offcut mass helper with editable length, default 200 mm; measured mass/length and tolerances yield a size-class consistency check, not steel grade/authenticity or material certification.",
+      "Return rule ID/version, source, limit, uncertainty, evidence source and advisories for the record and UI."
+    ],
+    "tests": [
+      "Slab spec 50 gives mean limit 60 and local limit 65. 80 +/-5 is outside; 65 +/-5 is re-scan; 72 with band >=7 is re-scan, not forced outside. Test equality at both uncertainty bounds.",
+      "Missing spec never gives a verdict. Missing evidence is not seen/needs tape; failed capture gate is re-scan.",
+      "Beam left-end fixture [25,125] in first 150 at drawing 50 gives two links and add 1; no negative add count.",
+      "Mass fixtures: 200 mm at about 123 g is consistent with nominal 10; 178 g with nominal 12; overlapping/invalid bands abstain. Never identify steel grade."
+    ],
+    "phone": "Show CONTROL, F1, F2, near-limit and missing-evidence fixtures in the UI; compare every label and numeric correction to the rule output.",
+    "fallback": "If full code checks lack inputs/engineer review, ship drawing comparison and explicitly unassessed manual checks; do not label proposed tolerances BIS-approved.",
+    "refs": [
+      "notes/06-rulebook/rulebook.md",
+      "prep/ref_pipeline/rules.json",
+      "notes/12-event/BUILD-PLAN.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review"
+  },
+  {
+    "id": "B06",
+    "title": "Extract and track live bar lines in card coordinates",
+    "owner": "NarayanaSabari",
+    "phase": "CP1",
+    "hours": 2.5,
+    "deps": [
+      "B02",
+      "B04"
+    ],
+    "packages": "segment/ frame adapter, geometry/ live extraction",
+    "outcome": "Moving a real bar moves its on-screen line and approximate mm gap without producing a premature verdict.",
+    "tasks": [
+      "Warp probabilities/mask to the card plane, remove card edges, derive per-orientation profiles and peaks, fit visible centrelines and associate stable family/slot IDs in mm. Use Hough/skeleton fallback only if needed.",
+      "Preserve input-to-model-to-card-to-preview transforms; publish immutable LiveFrameResult with timestamp, approximate gaps, coverage, gates, backend and per-stage latency.",
+      "Reject tie-wire/shadow/card false positives and retain visibility/occlusion status rather than filling missing bars from the expected count. Do not make the model match the drawing.",
+      "Only do bounded work per newest frame; measure throughput. Target >=10 live updates/s on the chosen backend and use real thermal controls, not synthetic load.",
+      "Handle the F2 80 mm gap together with its adjacent 20 mm gap: the two close bars must not merge and total count must remain 5.",
+      "Use v1 reported failure cases (thin/distant stirrup legs and shiny aluminium rails) as regression fixtures. Keep current model ID/hash on live results; a model swap invalidates cached live state and requires G1 revalidation."
+    ],
+    "tests": [
+      "Fixture masks for control, missing bar, crossing families, card edge and F2 give expected topology without injecting expected bars.",
+      "Motion, out-of-order frames and lost-card results do not retain a valid live measurement flag; no geometry from the future/previous spec leaks into Lock.",
+      "Live messages contain approximate values only; no rule verdict is computed on this path."
+    ],
+    "phone": "Move T4 from 190 to 220 and back while the phone stays still, then move the phone. Lines follow the bars and the overlay/card remain aligned.",
+    "fallback": "If learned topology fails the tape gate, retain a diagnostic overlay and promote B07. If throughput is low, show measured update rate and reduce workload; no fabricated 30 fps claim.",
+    "refs": [
+      "notes/13-ar-vision/AR-VISION.md",
+      "notes/05-feasibility/vision-stack.md",
+      "notes/14-model/MODEL-V1.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review",
+    "refresh_note": "Use the committed v1 float model and B02 adapter. Thin/distant stirrup misses and shiny-metal false positives are reported; include them with F2 close-bar checks. The reported 12.2 ms NPU average excludes camera conversion, card detection, geometry and drawing; measure the actual >=10 updates/s target."
+  },
+  {
+    "id": "B07",
+    "title": "Render live lines, Lock states and an early manual-marking fallback",
+    "owner": "AlwinSunil",
+    "phase": "CP1",
+    "hours": 2.5,
+    "deps": [
+      "B01",
+      "B03"
+    ],
+    "packages": "ui/scan/ renderer and manual-mark editor",
+    "outcome": "The same understandable scan flow works with automatic detection or explicitly labelled human marking.",
+    "tasks": [
+      "Consume fake LiveFrameResult/LockResult first so development does not wait on B06/B08. Render lines/labels using the provided transforms and timestamp; stable slot labels must not jump between families.",
+      "Use a visible tilde/live state before Lock, progress during Lock, then a frozen image and exact band/result after Lock. Lost card, moved bar or changed spec visibly invalidates fresh measurement; preserve old saved scans as historical only.",
+      "Build tap-to-mark now, before CP1: freeze a valid calibrated frame, let the user mark/refine bar centrelines, feed the same geometry/rule contracts, and keep `marked by hand` provenance in UI and records.",
+      "Manual marking must not bypass card, coverage, calibration or uncertainty gates. Count can come from human topology, but the app must not claim automatic detection.",
+      "Make retry/cancel/repeat speech and next scan obvious. Show re-scan reason as text and action, not colour alone.",
+      "Own a minimal tape ground-truth entry panel now: select locked gap/family, enter tape c/c and operator/source, write a bench row via the B08/B01 contract. This must exist before the later numbers-screen polish."
+    ],
+    "tests": [
+      "UI fixtures exercise approximate -> locking -> locked -> invalidated and all gate failures without stale green/within states.",
+      "Overlay aligns under preview scaling/rotation; manual points round-trip between screen and measurement coordinates.",
+      "A manually marked record remains manual after export/import; no unlabelled fake or manual results enter automatic accuracy counts."
+    ],
+    "phone": "Disable the segmenter; mark the five top bars, Lock, tape the result, then edit spec/move card and verify the fresh-measurement state clears.",
+    "fallback": "If automatic overlay is unstable, make the manual path the explicit demo mode. Never hide its human input.",
+    "refs": [
+      "notes/05-feasibility/event-prompts.md",
+      "notes/13-ar-vision/AR-VISION.md"
+    ],
+    "agent": "Claude Code Fable 5.1 or Opus 5.5 for UI; Codex for stale-state and coordinate review"
+  },
+  {
+    "id": "B08",
+    "title": "Lock measurements with honest uncertainty and pass the tape gate",
+    "owner": "NarayanaSabari",
+    "phase": "CP1",
+    "hours": 2.5,
+    "deps": [
+      "B04",
+      "B06"
+    ],
+    "packages": "geometry/ lock, uncertainty and bench-data writer",
+    "outcome": "A Lock produces repeatable count/spacing, evidence and an error band that survives contact with a tape.",
+    "tasks": [
+      "Collect about 15 valid, temporally consistent frames while gyro and scene are stable. Reject changing topology, moving bars, spec changes, stale timestamps and insufficient coverage; camera stillness alone does not prove the bars stayed still.",
+      "Fuse matched bar positions robustly in card mm. Do not divide systematic calibration, plane-offset or scale errors by sqrt(frame count); temporal correlation does not create independent samples.",
+      "Start with field floor 5 mm and all applicable geometry terms. Record lock ID, sample count, frames/time range, uncertainty terms, effective stream/calibration, model hash, evidence image hashes and manual/automatic source.",
+      "Select an evidence frame from the accepted lock window and draw measurements on it. If high-resolution still is the measurement fallback, recompute on that actual frame with its own calibration; never sign a later photo as if it generated the fused values.",
+      "Run the gate on tape-labelled props: 10 CONTROL scans for count/spacing plus F1/F2/far card; reserve separate observations for calibration and evaluation. Log failed/re-scan attempts too.",
+      "Freeze immutable LockResult before calling rules. Never pool different families, streams, manual and automatic methods or model versions into one accuracy claim.",
+      "Pin the v1 model hash in each tape observation. Keep any prop adaptation training/calibration images disjoint from held-out tape evaluation; never use published segmentation IoU as an uncertainty floor or within-band result."
+    ],
+    "tests": [
+      "G1: CONTROL count 5/5 in 10/10 accepted test scans and tape spacing inside its band on at least 8/10 attempts; also report abstentions and denominator. This is a bench gate, not a field accuracy claim.",
+      "F2 count remains five and 80 mm is outside only if the measured band permits; F1 misses a bar; the far card abstains. F4 72 only counts as outside if lower bound exceeds 65.",
+      "Synthetic tests cover 15 identical correlated frames, changed spec, moving bar, dropped frame, missing card and evidence mismatch; none shrinks systematic uncertainty or produces stale LockResult.",
+      "G1 additionally requires band <15 mm on F2 and zero false WITHIN outcomes on the tested missing-bar/wide-gap fixtures. Report numeric error and band distribution alongside coverage. A huge band cannot pass useful fault discrimination; no artificial band cap is applied to measurements. F4 outside is optional and needs band <7 mm."
+    ],
+    "phone": "Tape the exact drawn centre-to-centre segment at 0.25/0.30/0.35 m; capture near and far failed attempts in the bench ledger.",
+    "fallback": "If G1 fails, switch CP1 to B07 manual mode and state what still fails. If band >=7, drop the promised F4 outside result; use measured F2 when justified. Do not reduce the band to improve the demo.",
+    "refs": [
+      "notes/12-event/BUILD-PLAN.md",
+      "notes/05-feasibility/vision-stack.md",
+      "notes/07-data-plan/sheets/error_table.csv",
+      "notes/14-model/MODEL-V1.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review",
+    "refresh_note": "The model now exists and passes the reported standalone runtime gate; segmentation IoU 0.8466 does not establish spacing accuracy. G1 remains entirely open. Freeze v1 as the baseline, collect actual prop/tape evidence and re-run G1 if the model/preprocessing/runtime changes."
+  },
+  {
+    "id": "B09",
+    "title": "Show findings, physical readings and a spoken Hindi correction",
+    "owner": "AlwinSunil",
+    "phase": "CP1",
+    "hours": 2,
+    "deps": [
+      "B03",
+      "B05"
+    ],
+    "packages": "ui/verdict/, ui/manual-readings/, voice/ output templates",
+    "outcome": "The engineer sees what needs fixing and the mason hears the same numbers in Hindi, fully offline.",
+    "tasks": [
+      "Bind deterministic findings and FixAction to the verdict sheet; highlight the specific layer/gap in the frozen evidence. Show within/outside/re-scan/needs tape/not seen without a global safety badge.",
+      "Use deterministic Hindi templates and subtitles. First use a verified offline installed voice or correct prerecorded/template audio; Piper can be wired if already available. Do not block the loop on a generative LLM.",
+      "Keep speech numbers and units identical to the finding; dynamic number words must cover the actual values. A prerecorded fixed phrase must never announce an unmeasured value.",
+      "Add editable manual cover, offcut length/mass and hook observations with explicit source. Missing tools or hidden surfaces remain needs-tape/not-seen. Physical prompts do not imply camera measurements.",
+      "Add stop/repeat speech; microphone/TTS do not run continuously for scoring. System voice missing -> subtitles plus visible audio-unavailable state."
+    ],
+    "tests": [
+      "CONTROL/F1/F2/beam F3 templates preserve all numeric slots and never invent add counts. Hindi output cannot say safe/certified/permit.",
+      "Edited readings preserve units, operator and observation source. Saving/changing a manual reading produces a new record revision, not silent mutation of a signed record.",
+      "Offline TTS or audio fallback works after force stop; unavailable assets fail visibly, with readable subtitles."
+    ],
+    "phone": "Run a real F2 Lock and listen to the Hindi fix; tape the highlighted gap. Enter 200 mm/123 g and show size-class consistency without a grade/authenticity claim.",
+    "fallback": "At CP1 keep typed spec + subtitles and a verified Hindi audio path. If speech is not working, say so and display text; never play unrelated canned results.",
+    "refs": [
+      "notes/05-feasibility/speech-llm-ocr.md",
+      "notes/08-demo/demo-script.md",
+      "notes/06-rulebook/rulebook.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review"
+  },
+  {
+    "id": "B10",
+    "title": "Integrate and freeze the first real mesh loop on all three phones",
+    "owner": "Melvin0070",
+    "phase": "CP1",
+    "hours": 1.5,
+    "deps": [
+      "B02",
+      "B03",
+      "B04",
+      "B05",
+      "B06",
+      "B07",
+      "B08",
+      "B09"
+    ],
+    "packages": "Integration wiring and checkpoint evidence; coordinate package fixes with owners",
+    "outcome": "The team has a demonstrable build before spending time on beam and approval features.",
+    "tasks": [
+      "Merge each owner’s reviewed branch into integration main, build one APK with hash/commit ID and distribute it to P1/P2/P3. Do not wait for all lanes to finish before first fixture wiring.",
+      "Exercise spec -> live lines -> Lock -> rule result -> Hindi/subtitles -> saved local evidence. Model-failure/manual fallback must be accessible in this same build.",
+      "Use the actual results to choose automatic/manual mode at the gate; mark unmet upstream acceptance honestly. A documented fallback allows this integration gate but does not make the automatic issue completed.",
+      "Write CP1 known limitations and assign blockers to their package owner. Freeze at 08:30 Sat; later changes before CP1 are blocker fixes only.",
+      "Ensure logs and diagnostics can be copied/transferred without ADB in Red. Record actual CP1 feedback after presentation.",
+      "Consult the control issue gate table: if B01 inventory finds no existing automatic implementation, schedule manual CP1 as baseline immediately, not at the last minute. Automatic mode is an upgrade only after measured G1 before the 06:00 mode decision."
+    ],
+    "tests": [
+      "CONTROL, F1, F2, far-card abstention and no-drawing flow pass in the integrated APK or are explicitly downgraded to manual mode.",
+      "Spec edit, background/resume and permission loss cannot show a stale successful verdict.",
+      "Three consecutive 90-second CP1 runs succeed; attach APK hash, device IDs and observed mode. No mock results in the demonstration."
+    ],
+    "phone": "Alwin operates one phone from a cold start while Sabari tapes the exact segment; Melvin checks logs and repeats on the other two phones.",
+    "fallback": "If the core is not reliable by 06:00, stop beam/voice-input/ARCore work, use manual marking, and spend the 06:00-08:00 Green on this integration.",
+    "refs": [
+      "notes/12-event/BUILD-PLAN.md",
+      "notes/12-event/EVAL-CARDS.md",
+      "notes/14-model/MODEL-V1.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review",
+    "dependency_note": "Automatic path uses all listed prerequisites; manual recovery uses B01, B03, B04, B05, B07 and B09. Unproven B02/B06/B08 stay open.",
+    "refresh_note": "Remove the missing-model assumption: v1 export and standalone runtime feasibility are now reported complete. This is not proof of the app or G1. At the existing mode gate, select the integrated automatic loop only after B02 camera parity and B08 tape acceptance; otherwise retain the labelled manual path. Training/export is not a CP1 dependency anymore."
+  },
+  {
+    "id": "B11",
+    "title": "Measure beam stirrup positions and drawing zones from strip_300",
+    "owner": "NarayanaSabari",
+    "phase": "CP2",
+    "hours": 2,
+    "deps": [
+      "B08",
+      "B05"
+    ],
+    "packages": "fiducial/ strip path, geometry/ beam zones",
+    "outcome": "The same app finds the intentionally missing end-zone stirrup and gives the correct correction.",
+    "tasks": [
+      "Detect IDs 450..461, 20 mm markers, 25 mm pitch; centres are 12.5+(id-450)*25 mm from the marked zero end. Establish strip orientation and left-end origin, including reversed-view detection.",
+      "Read the demo drawing: 300 mm beam face; pieces at 25/75/125/200/275; left end first 150 at 50, mid at 75. Do not invent a symmetric right-end zone in this small demo or overlap zones silently.",
+      "Calculate spacing, count and first-link offset per actually covered zone; mask the strip and reject occlusion. Use min line length 80 mm for the 125 mm cross pieces.",
+      "Return typed zones and FixAction via B05, not UI heuristics. F3 moves piece 75 to about 180 (not 190, where masks can merge).",
+      "Expose drawing-vs-code origin: this prop is a drawing-comparison demonstration, not a scale model proving structural code compliance."
+    ],
+    "tests": [
+      "Strip centre fixtures for first/last IDs and flipped orientation pass. Mixed/full-scale marker IDs cannot silently use half-scale scale.",
+      "CONTROL positions and F3 [25,125,180,200,275] yield end gap 100, two end links and add 1; incomplete zone is not seen.",
+      "Band terms and lock evidence are preserved; a hidden/merged piece is not silently counted from the drawing."
+    ],
+    "phone": "Tape the left-end gap on the actual beam before/after F3, reverse the phone view, and partially cover the strip to check abstention.",
+    "fallback": "Keep mesh as the CP2 fallback if strip quality fails. Show beam as unvalidated rather than forcing a count.",
+    "refs": [
+      "notes/12-event/BUILD-PLAN.md",
+      "notes/07-data-plan/data-and-props.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review"
+  },
+  {
+    "id": "B12",
+    "title": "Persist and sign immutable capture evidence with enrolled device keys",
+    "owner": "Melvin0070",
+    "phase": "CP2",
+    "hours": 3,
+    "deps": [
+      "B01",
+      "B05",
+      "B08"
+    ],
+    "packages": "record/ canonical payload, storage, capture signing and enrolment",
+    "outcome": "A saved record proves which bytes and images the enrolled capture device signed, and survives app updates.",
+    "tasks": [
+      "Define versioned canonical payload bytes and test vectors; exclude signature envelopes from the capture payload. Bind spec revision, locked values/bands, rulebook/model/calibration hashes, evidence file hashes, manual readings and provenance.",
+      "Persist records atomically; do not write a valid-looking half record after process death or full storage. Keep previous record immutable when corrections create a new revision.",
+      "Generate capture and approval key roles in Android Keystore on separate devices. Try available hardware protection and report actual level; StrongBox absence must not break signing or be called StrongBox.",
+      "Enrol capture/approval public-key fingerprints through a deliberate QR/fingerprint confirmation on the other devices before verification. Keys supplied inside an imported pack are untrusted until enrolled. This proves an enrolled device key, not professional credentials.",
+      "Set up approval-key authentication policy for B14; distinguish biometric cancellation, unavailable enrolment and invalidated key. Never silently substitute the operator key.",
+      "Provide APIs and fake view models for Alwin; no edits to ui/ without handoff."
+    ],
+    "tests": [
+      "Same payload yields identical canonical bytes across encode/decode; reject NaN, duplicate/ambiguous fields and unsupported schemas. Changing any bound field/image causes verification failure.",
+      "Unknown self-signed key shows unknown signer; enrolled capture verifies. Public keys can be shared, private keys never exported.",
+      "App process restart and same-certificate APK update retain keys/history. Missing image, interrupted save and key invalidation cannot show valid capture approval."
+    ],
+    "phone": "Enrol P1/P2 keys on P3, sign a real Lock, update the APK without uninstalling and verify again; try a pack from an unenrolled key.",
+    "fallback": "If hardware attestation is unavailable, show actual Keystore backing and omit attestation claims. If signing fails, retain unsigned evidence visibly and do not claim the trust beat.",
+    "refs": [
+      "notes/05-feasibility/event-prompts.md",
+      "IDEA.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review"
+  },
+  {
+    "id": "B13",
+    "title": "Build the engineer review desk and Office Kit file handoff UX",
+    "owner": "AlwinSunil",
+    "phase": "CP2",
+    "hours": 2,
+    "deps": [
+      "B01",
+      "B09"
+    ],
+    "packages": "ui/review/, ui/transfers/; consumes record and officekit contracts",
+    "outcome": "The engineer can inspect a record on a phone mirrored to the laptop and deliberately approve or request another view.",
+    "tasks": [
+      "Build against B12/B14 fake adapters first, so trust implementation does not block design. Show frozen photo/overlay, drawing, numbers/bands, source, manual fields, missing checks, both signer states and record revision.",
+      "Create Export pack / Open received pack / Return signed pack actions with visible states, hashes and error recovery. Office Kit is an external app and file bridge; do not invent an Office Kit SDK or hidden transfer status.",
+      "Explain the real sequence P1 export -> Office Kit laptop -> P2 open -> review -> fingerprint -> return. The laptop is a mirror/review desk, not a third private key or a backend service.",
+      "Keep approval disabled for corrupt, unknown-signer or unreviewed records. Offer request re-scan/new view without destroying the previous record.",
+      "Make the mirrored screen readable from the jury table; show unassessed checks rather than an overall safe badge.",
+      "Own key enrolment screens (show own QR, scan peer QR, fingerprint confirmation), approval-role labels and P3 verification screen; services come from B12/B14 and the B01 fake contracts.",
+      "Own the beam scan overlay, strip origin/ticks/zone labels through B11 result types; the camera/geometry owner must not edit ui/.",
+      "Request-another-view writes a small ReviewRequest referencing the immutable capture hash/member, with a note and requested zone. Export it through the same Office Kit/file-picker path; the operator imports it into a pending-request list. Do not expose a no-op request button."
+    ],
+    "tests": [
+      "Fixture states include unsigned, capture valid, unknown signer, corrupt, pending review, cancelled biometric, approved and already processed.",
+      "Cancellation of picker/transfer/review preserves the current record; an old approval cannot be displayed on an edited record.",
+      "User explicitly chooses a received document; no silent whole-storage permission or arbitrary folder scan."
+    ],
+    "phone": "Alwin acts as engineer on P2, receives a real pack through Office Kit, opens it from the system picker and requests a new view before approving a second record.",
+    "fallback": "If transfer fails, retain export/import and show the failure. A Quick Share demonstration is only an alternative in Green/eval or with recorded organiser permission, never the default Red route.",
+    "refs": [
+      "notes/05-feasibility/event-prompts.md",
+      "notes/12-event/EVAL-CARDS.md"
+    ],
+    "agent": "Claude Code Fable 5.1 or Opus 5.5 for review UX; Codex for state transitions"
+  },
+  {
+    "id": "B14",
+    "title": "Round-trip an Office Kit pack and countersign with the engineer key",
+    "owner": "Melvin0070",
+    "phase": "CP2",
+    "hours": 2.5,
+    "deps": [
+      "B12"
+    ],
+    "packages": "officekit/, record/ approval and QR verification",
+    "outcome": "A capture pack can be reviewed, countersigned on P2 and verified offline on P1/P3 without changing its evidence.",
+    "tasks": [
+      "Export a documented .sariya.zip containing canonical payload, detached capture signature, evidence and manifest; use Android document/share APIs. Import received files with ACTION_OPEN_DOCUMENT or granted URIs, not raw directory enumeration of Office Kit-owned files.",
+      "Validate sizes, paths, hashes, schema and capture signature before showing a trusted record. Reject zip traversal/oversize/missing evidence; import idempotently.",
+      "Engineer approval signs a domain-separated envelope containing capture payload hash, capture-signature binding, approval decision, record revision and enrolled key identity. Authenticate the approval operation using BiometricPrompt; cancel means no signature.",
+      "Return the detached approval through Office Kit and merge it only into the exact immutable capture it references. Persist both signatures and verification states.",
+      "Generate a compact verification QR with hashes/key IDs/signatures or a defined local-record lookup; on a new P3 explain whether the full pack is required. Verify against enrolled keys, never trust embedded keys automatically.",
+      "Prove offline compute independently from Office Kit local Wi-Fi requirements; no cloud endpoint or INTERNET permission required by Sariya’s core.",
+      "Implement the ReviewRequest artifact/response path agreed in B01: reference capture hash/member, requested view/note, origin identity/status. Import idempotently as a pending request and link the subsequent new record; a request never alters or approves the old record."
+    ],
+    "tests": [
+      "P1 -> laptop -> P2 -> laptop -> P1 yields byte-identical capture payload. P3 verifies the enrolled two-key chain after receiving any required pack.",
+      "Fingerprint cancellation, wrong key, changed image/spec, malformed zip and mismatched approval hash cannot display two valid signatures.",
+      "Imported document access works on Android 16 after app restart/update; revoked URI permission asks to select again."
+    ],
+    "phone": "Time a genuine Office Kit round trip and fingerprint approval on the three loaners. Attempt a changed-byte pack and confirm visible rejection.",
+    "fallback": "If G4 is not passing by 17:30 Sat, present verified capture-only status honestly. In an eval/Green block a documented alternate transport may demonstrate the file format; do not claim Office Kit transfer worked.",
+    "refs": [
+      "notes/12-event/BUILD-PLAN.md",
+      "notes/05-feasibility/event-prompts.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review"
+  },
+  {
+    "id": "B15",
+    "title": "Add offline voice spec entry with confirmation and keypad recovery",
+    "owner": "AlwinSunil",
+    "phase": "CP2",
+    "hours": 2,
+    "deps": [
+      "B03",
+      "B09"
+    ],
+    "packages": "voice/ input, number parser and ui/spec/ read-back",
+    "outcome": "A spoken drawing becomes confirmed structured fields without an LLM silently inventing requirements.",
+    "tasks": [
+      "Implement push-to-talk ASR only if usable offline assets exist; ask Sabari for artifact/runtime help without transferring ownership of his vision lane. Typed entry remains immediately available.",
+      "Parse constrained Hindi/English numbers and field names into candidates; preserve raw transcript and unknown fields. Accept end zone 100..1500 step 25 and spacing 25..400 step 5, including demo end zone 150; show out-of-set candidates for correction rather than silently rounding.",
+      "Read back every changed field and require explicit confirmation before creating a new SpecRevision. Voice cannot overwrite a signed record or generate a verdict.",
+      "Serialize ASR and TTS around camera inference when needed; release microphone after push-to-talk. Handle hall noise, missing language and cancellation.",
+      "Keep Gemma/Kannada generation in B23; deterministic parsing/templates satisfy this issue."
+    ],
+    "tests": [
+      "Tests cover 50 vs 150, 8 vs 80, mixed-language numerals, missing keyword, negative and out-of-range values; uncertain values remain unconfirmed.",
+      "Five real hall trials: at least four correctly parsed/read back before confirmation; log failures. This is a gate, not a language accuracy statistic.",
+      "Network-disabled recognition works or a visible keypad fallback is chosen within the timebox."
+    ],
+    "phone": "Speak the beam sentence on P2: rings 8, 50 at the end, 75 middle, end zone 150; deliberately say an ambiguous number and correct it.",
+    "fallback": "Timebox to 60 minutes if runtime/assets are not already working. If G2 fails, keep keypad in CP2 and mark voice input deferred, while retaining Hindi output.",
+    "refs": [
+      "notes/05-feasibility/speech-llm-ocr.md",
+      "notes/12-event/BUILD-PLAN.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review"
+  },
+  {
+    "id": "B16",
+    "title": "Reject duplicate approvals without blocking legitimate rescans",
+    "owner": "Melvin0070",
+    "phase": "CP3",
+    "hours": 1.5,
+    "deps": [
+      "B12",
+      "B14"
+    ],
+    "packages": "record/ duplicate, revision and freshness policies",
+    "outcome": "Yesterday’s already-approved pack cannot be counted or approved again, while a genuine new observation remains possible.",
+    "tasks": [
+      "Persist processed record IDs, canonical hashes and approval associations across restarts. Reimport may open history idempotently; a second approval/counting action must say already processed.",
+      "Reject reuse of an old approval on a different hash or spec revision. Freshness/member identity belongs in the signed payload; wall-clock age alone is not proof of a replay.",
+      "Treat perceptual similarity as a review warning, not an automatic hard block. A needed re-scan of unchanged steel naturally looks like the previous image.",
+      "Separate integrity/duplicate checking from physical-scene authenticity. The demo has one card S; do not claim card 20 proves a unique site or that this prevents photographing a screen.",
+      "Keep the exact rejected/flagged reason visible in the review UI through its state contract."
+    ],
+    "tests": [
+      "Already-approved pack rejected for another approval after restart. Import of the same pack remains safe/idempotent and does not inflate scan counters.",
+      "New record/new capture of the unchanged mesh is allowed with a similarity warning if enabled. Corrected F2 is not blocked by perceptual similarity alone.",
+      "Old approval attached to modified spec or photo fails; unknown enrolled identity remains distinct from duplicate record."
+    ],
+    "phone": "Approve one record, reopen it and attempt approval again; then create a legitimate new Lock of the same prop and review it successfully.",
+    "fallback": "Ship deterministic record/hash duplicate protection first. Cut perceptual hash implementation before weakening legitimate re-scan behavior or inventing liveness.",
+    "refs": [
+      "notes/12-event/EVAL-CARDS.md",
+      "notes/05-feasibility/event-prompts.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review"
+  },
+  {
+    "id": "B17",
+    "title": "Validate lower-layer measurements and sustained device behavior",
+    "owner": "NarayanaSabari",
+    "phase": "CP3",
+    "hours": 2,
+    "deps": [
+      "B08",
+      "B11"
+    ],
+    "packages": "geometry/ lower family, numbers/ samplers and runtime governor",
+    "outcome": "The team knows which families and hardware claims remain valid after sustained real use.",
+    "tasks": [
+      "Test F12 (B2 90->60, lower gap 80) through the mesh gaps; account for different bar-plane height, occlusion and wider uncertainty. Do not treat lower bars as coplanar by default. If evidence is insufficient, return not seen/needs tape.",
+      "Store stage and backend latency samples, real frame/lock counts, battery and thermal status, with model/device/mode identifiers. Unsupported CPU/GPU/NPU benchmark rows read unavailable.",
+      "Run a 30-minute representative camera/torch/inference session including Office Kit switches; test workload reduction under thermal pressure and recoverability after pause.",
+      "Stop/reduce camera/inference work when backgrounded, thermally constrained or not needed. No artificial load, continuous microphone recording or mandatory discharge for tracker scoring.",
+      "Write device and benchmark evidence for B18/B20, with separate warm-up/inference/end-to-end measurements and no site-accuracy claim.",
+      "Baseline model v1 has known thin/distant-bar misses and shiny-metal false positives. If G1 reveals a prop-specific failure, first diagnose calibration/preprocessing/topology; only then timebox a prop-photo adaptation experiment. Keep v1 rollback, version/hash/license provenance and disjoint evaluation frames; rerun parity and G1 before promoting a new model.",
+      "Compare thermally sustainable NPU mode against GPU when needed; retain measured results and adapt workload. A 60-second CLI no-throttling result is not 30-minute camera-loop evidence. AOT/INT8/round-two training are not release blockers."
+    ],
+    "tests": [
+      "F12 either passes its measured tape band with explicit lower-layer status or abstains; a calibration from top-layer observations alone is not sufficient evidence.",
+      "No crash, unbounded memory growth or stale locks during the soak. Record sustained update rate and any fallback/degradation instead of assuming >=10 fps forever.",
+      "Replay/fixture/manual scans do not inflate automatic accuracy or real capture counts. Repeated lock of the same data is identifiable."
+    ],
+    "phone": "Run real capture -> Office Kit -> resume across P1/P2/P3; record charging and thermal events as observed. Tape F12 at multiple views.",
+    "fallback": "Cut the lower-layer demo claim if its band is not validated. Keep stable top-layer measurement and show actual backend; never trade device health for inferred score weights.",
+    "refs": [
+      "notes/13-ar-vision/AR-VISION.md",
+      "notes/00-prep/tracker-officekit.md",
+      "notes/12-event/BUILD-PLAN.md",
+      "notes/14-model/MODEL-V1.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review",
+    "refresh_note": "The committed report covers only 60 seconds of NPU burst: 12.8 ms average, thermal status 0. That does not complete this 30-minute camera+torch+Office Kit soak. Measure app memory, cold/cached startup, runtime mode and thermal behavior. Prop adaptation/INT8 is optional after a baseline failure is demonstrated, with separate held-out checks."
+  },
+  {
+    "id": "B18",
+    "title": "Expose the bench error table, scan history and truthful numbers",
+    "owner": "AlwinSunil",
+    "phase": "CP3",
+    "hours": 1.5,
+    "deps": [
+      "B01",
+      "B12"
+    ],
+    "packages": "ui/numbers/, ui/history/, CSV presentation/export adapter",
+    "outcome": "The jury and engineer can trace each accuracy number to a stored observation and revisit previous inspections.",
+    "tasks": [
+      "Build against telemetry and record fixtures first; bind B08/B17 data at integration. List local records by member/time/status with reopen and export, no cloud backend required.",
+      "Display p50/p95 stage/backend timings, model hash, actual accelerator, sample counts, measurement mode and uncertainty floor. Empty data is no data, not zero-error success.",
+      "Provide a bench table with measured vs tape c/c, residual, band, within-band result, abstention, distance/stream/family and source. Export CSV with identifiers linking back to evidence.",
+      "Separate calibration observations from held-out evaluation. Label bench/half-scale props and denominator; show abstentions. A small bench table cannot imply general 95% site coverage.",
+      "Show claimed vs measured device usage separately: Sariya can count its own work, not predict the organiser score or reliably measure another app’s foreground minutes."
+    ],
+    "tests": [
+      "Known CSV fixture calculates errors/coverage/percentiles correctly; missing truth rows are excluded with counts, not silently treated as perfect.",
+      "Manual, automatic, synthetic and duplicate records remain distinguishable. App restart preserves history and values.",
+      "The numbers screen derives from stored samples; no hardcoded demo accuracy/latency values or fictional site visits.",
+      "Model-report reference averages cannot populate measured app p50/p95, fps or accuracy counters. Segmentation test IoU/F1 and tape error are separate metrics with source/sample labels."
+    ],
+    "phone": "Open three real stored records, locate the tape row for one, export CSV and compare its measurement/band to the signed record.",
+    "fallback": "If three-backend bench is incomplete, show the measured backend plus unavailable rows. Keep traceable CSV and a short history list before decorative charts.",
+    "refs": [
+      "notes/07-data-plan/sheets/error_table.csv",
+      "notes/05-feasibility/event-prompts.md",
+      "notes/14-model/MODEL-V1.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review",
+    "refresh_note": "Separate the reported CLI benchmark from measured app telemetry. v1 report gives averages (NPU burst 12.2 ms; 60 s burst 12.8; GPU 19.8; CPU 234.6), not p50/p95 or end-to-end camera timing. Display prior report values only as labelled reference data; do not seed the measured telemetry or error table with them."
+  },
+  {
+    "id": "B19",
+    "title": "Prepare the demo scripts, deck and real backup recording",
+    "owner": "AlwinSunil",
+    "phase": "CP3",
+    "hours": 2,
+    "deps": [
+      "B10",
+      "B14"
+    ],
+    "packages": "Demo scripts, deck, backup video and UX acceptance log",
+    "outcome": "The final presentation shows what the release actually does, with a tested failure branch.",
+    "tasks": [
+      "Own deck and video production to keep Melvin available for integration; coordinate speaking roles (Melvin presenter, Sabari operator, Alwin engineer unless the team chooses otherwise).",
+      "Update CP1/CP2/CP3 scripts to show a judge sliding a bar -> live approximate line/gap -> Lock -> verdict -> tape. Use actual displayed bands, never a promised +/-3 mm.",
+      "Write the full loop script and capture a preliminary rehearsal: mesh, re-scan, beam if validated, physical mass, Office Kit review, distinct-key approval, P3 verification, duplicate rejection and numbers. Keep a 3:30 script target; B26 owns the three timed final-APK runs.",
+      "Capture a real on-device backup video of the working app and real props; label fallback playback as recorded. Save APK/commit ID with the recording.",
+      "Exercise failure branches for missing card, poor model/manual mode, missing voice asset, no fingerprint, Office Kit disconnect and unknown signer. A truthful smaller demo beats simulated success.",
+      "Use only verified product/evidence claims: no site statistics, safety certification, first-ever claim, engineer endorsement, or fictional NPU execution. Explain local Wi-Fi for Office Kit separately from offline inference.",
+      "Start deck/script from B10 while transfer is being built; the recording used for final submission must be checked against the B20 candidate and refreshed if behavior differs. Final rehearsal and release validation are B26, so this issue does not depend on B20.",
+      "Use the v1 training/export provenance now available in MODEL-V1/train_log/export_log. Cite segmentation metrics as segmentation metrics only; actual app throughput and mm accuracy come from app/tape data. Do not imply round-two prop training or site validation already exists."
+    ],
+    "tests": [
+      "Scripts include every implemented beat and failure branch; a preliminary timed run identifies any cuts. Final three-run acceptance belongs to B26.",
+      "Deck, script, model card and app agree on implemented scope and measured numbers. Remove unavailable features rather than promise them at final judging.",
+      "PDF/video open offline on the presentation device and link to the release used."
+    ],
+    "phone": "Run the cold-jury script with someone choosing a random validated fault. Practise losing the card and falling back to manual markings or the labelled backup video.",
+    "fallback": "F4 is an abstention demonstration; if its near result remains uncertain, use F2 for outside. Cut unvalidated lower-layer/voice-input extras first.",
+    "refs": [
+      "notes/12-event/EVAL-CARDS.md",
+      "notes/08-demo/demo-script.md",
+      "notes/12-event/BUILD-PLAN.md",
+      "notes/14-model/MODEL-V1.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review",
+    "refresh_note": "Training provenance is no longer unknown: v1 U-Net/MobileNetV3, ROI-1555-only, Kaggle T4, 50 epochs; test IoU 0.8466/F1 0.917. Benchmark is reported CLI inference, not end-to-end live measurement. Keep the demo/deck actual app values and tape data separate. Do not say prop/site fine-tuning happened yet."
+  },
+  {
+    "id": "B20",
+    "title": "Freeze, verify and package the release candidate",
+    "owner": "Melvin0070",
+    "phase": "CP3",
+    "hours": 2,
+    "deps": [
+      "B10",
+      "B11",
+      "B12",
+      "B13",
+      "B14",
+      "B16",
+      "B17",
+      "B18",
+      "B19",
+      "B25"
+    ],
+    "packages": "Integration, release packaging, README and provenance",
+    "outcome": "The team submits a reproducible app with preserved keys, real evidence and an explicit supported-scope list.",
+    "tasks": [
+      "At 01:00 Sun freeze features; later changes are blocker fixes, measured numbers and assets. Freeze a candidate before dawn Red and keep last-known-good APK available.",
+      "Run meaningful rule/canonical/security/transform tests plus release-mode build, lifecycle smoke and complete device flow. Check shrinker/native libraries/model packaging, not just debug APK.",
+      "Preserve signing continuity: an incompatible release APK cannot be installed over debug without losing Android Keystore keys on uninstall. Use the tested final package/certificate plan; if a reinstall is necessary, export evidence and deliberately re-enrol keys before rehearsal.",
+      "Write README build/demo steps and implemented/deferred features, PROVENANCE with actual app/training timestamps, MODEL_CARD with shipped checksum/licence/data/runtime measurements, and LICENSES. Research repo history before kickoff is not app provenance; disclose prepared assets accurately.",
+      "Attach APK and checksum/commit, model acquisition or bundled-asset instructions, deck PDF, real video and bench CSV. Keep private signing keys/secrets and unconsented personal images out of the public submission.",
+      "Prepare all submission fields and confirm the floor cutoff. Hand the exact candidate/checksums to B26 for final rehearsal; Melvin submits after its verdict by the earlier of 11:30 Sun or 30 minutes before the announced cutoff. This issue closes on candidate delivery, not submission receipt.",
+      "Before returning loaners, export team evidence and use approved steps to sign out personal accounts/remove team secrets; do not alter HackTracker.",
+      "For v1, verify the TFLite checksum and reproducible QAIRT 2.50/v81/native-runtime packaging in the final APK; prewarm using the actual release app/cache, then test cold and cached launches. A debug app cache or CLI cache is not proof the release cache is ready.",
+      "Resolve and document dataset/base-weight/trained-weight/runtime redistribution terms before publishing affected artifacts. ROI-1555 has no declared licence in the model report; do not treat research/hackathon citation as permission. If terms remain unresolved, record that fact and use a justified artifact distribution/alternative-model plan; public submission must not claim a cleared open licence."
+    ],
+    "tests": [
+      "Cold start with network disabled -> typed spec -> scan -> lock -> fix -> saved evidence succeeds on all three loaners in the selected mode.",
+      "Office Kit transfer, approval, offline verification and replay tests pass on final APK or are explicitly marked not shipped. No unknown-signature state appears as approved.",
+      "Install/update behavior preserves or deliberately re-enrols identities; checksum and provenance match final assets; fresh-checkout build instructions work with documented dependencies."
+    ],
+    "phone": "One full final run on the exact submission APK, followed by a reboot/resume and verification of a stored signed record. Keep the previous APK and evidence backup.",
+    "fallback": "If deadlines threaten, submit the last proven build and list omissions. Never rebuild the product after feature freeze or claim deferred voice/ARCore features shipped.",
+    "refs": [
+      "notes/12-event/BUILD-PLAN.md",
+      "notes/12-event/EVAL-CARDS.md",
+      "notes/14-model/MODEL-V1.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review",
+    "refresh_note": "Package the existing v1 float model plus a tested compatible runtime/JIT cache strategy. AOT failed and is optional. Include model hash, runtime versions, exact provenance and cold/warm startup. The model report says ROI-1555 has no declared licence: citation alone does not establish redistribution/product permission; record verified terms/permission or a distribution choice that does not assume ungranted rights."
+  },
+  {
+    "id": "B21",
+    "title": "Import a confirmed drawing schedule through the Office Kit file picker",
+    "owner": "Melvin0070",
+    "phase": "Stretch",
+    "hours": 1.5,
+    "deps": [
+      "B14"
+    ],
+    "packages": "officekit/ BBS parser and import contract",
+    "outcome": "After the full loop is stable, the engineer can import a small schedule without retyping it.",
+    "tasks": [
+      "Support the documented JSON/CSV schema only. Select a file via Android document picker; validate member types, units, numeric ranges and duplicate IDs.",
+      "Show all imported fields for confirmation before creating new SpecRevisions. Old signed scans retain their original specs.",
+      "Add clear schema/example documentation and useful parse errors. OCR/drawing extraction is excluded."
+    ],
+    "tests": [
+      "Good JSON/CSV import matches typed fields; bad units, missing fields, duplicate IDs and malformed/oversized files cannot silently create defaults.",
+      "Cancel imports nothing and changing a spec does not mutate a signed record."
+    ],
+    "phone": "Transfer one schedule laptop -> P1 with Office Kit, select and confirm it; compare to the typed preset.",
+    "fallback": "Do not start before the release gate is stable or after feature freeze. Typed forms already complete the baseline product.",
+    "refs": [
+      "notes/05-feasibility/event-prompts.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review"
+  },
+  {
+    "id": "B22",
+    "title": "Probe optional ARCore anchoring without changing measurement scale",
+    "owner": "NarayanaSabari",
+    "phase": "Stretch",
+    "hours": 0.5,
+    "deps": [
+      "B10"
+    ],
+    "packages": "capture/ optional ARCore experiment in isolated branch",
+    "outcome": "ARCore is enabled only if it improves anchoring without compromising calibrated measurement or camera control.",
+    "tasks": [
+      "Timebox to 20 minutes. Check actual availability/session/camera configurations and Depth support separately; Play installation is not proof that the required session works.",
+      "Test supported shared-camera or explicit session switching; do not start two independent camera owners. Record the achievable analysis/still modes and transformations.",
+      "Use ARCore only for historical overlay/coverage anchoring. A lost card must invalidate new measurement; depth or ARCore distance never supplies the millimetre scale.",
+      "Do not merge without a card-only toggle and regression of the Lock/tape path."
+    ],
+    "tests": [
+      "Session failure or camera conflict returns cleanly to card-only. Lock still requires current card and valid calibrated image.",
+      "Retained off-card overlay is explicitly historical; the same near/far gates and tape error remain valid after any camera switch."
+    ],
+    "phone": "Move card out of frame, return it, Lock and tape; verify no current verdict is issued while the card is absent.",
+    "fallback": "Twenty minutes without a proven benefit: stop and keep card-only AR. No dependency from CP1/CP2 to this issue.",
+    "refs": [
+      "notes/13-ar-vision/AR-VISION.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review"
+  },
+  {
+    "id": "B23",
+    "title": "Add Kannada output or constrained LLM wording only after the core ships",
+    "owner": "AlwinSunil",
+    "phase": "Stretch",
+    "hours": 2,
+    "deps": [
+      "B15"
+    ],
+    "packages": "voice/ optional languages, llm/ bounded adapters",
+    "outcome": "Optional language polish preserves the deterministic numbers and remains fully usable without a model.",
+    "tasks": [
+      "Try Kannada offline output first if validated assets exist; keep subtitles and the Hindi path. Verify actual voice-pack licence and installed availability.",
+      "Only then consider Gemma wording/spec parsing behind the same structured schema. The LLM never calculates a measurement, rule verdict or correction count.",
+      "Validate every generated numeric token against allowed source fields and a short output schema, timebox latency/init, and fall back to templates on any error.",
+      "Record backend/model/asset availability truthfully. Do not delay signing, geometry or release for a large model download."
+    ],
+    "tests": [
+      "Malformed/hallucinated numbers, timeout and absent model all yield the deterministic template.",
+      "Human verifies language output against the exact finding; offline playback and cancel/retry work."
+    ],
+    "phone": "Use F2 and beam F3 plus an intentionally malformed candidate; confirm the same numbers and visible language fallback.",
+    "fallback": "Drop at feature freeze. No LLM is required for the baseline product; labels must say what actually runs.",
+    "refs": [
+      "notes/05-feasibility/speech-llm-ocr.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review"
+  },
+  {
+    "id": "B24",
+    "title": "Validate the product on real sites with an engineer before a pilot",
+    "owner": "Melvin0070",
+    "phase": "Post-event",
+    "hours": null,
+    "deps": [
+      "B20"
+    ],
+    "packages": "Product validation, evidence/rulebook documents; coordinate field and ML owners",
+    "outcome": "The working hackathon app gets an evidence-based path to a real inspection product.",
+    "tasks": [
+      "Recruit a practising engineer to review rule applicability, project tolerances, disclosure language and the manual-reading protocol. Record review status; do not imply endorsement before it occurs.",
+      "Run consented tape-ground-truth field trials across lighting, bar sizes, distances, planes and operators; separate calibration/training/holdout sets. Track false confident verdicts and abstentions, not only mean error.",
+      "Have Sabari assess domain shift/retraining and Alwin observe task completion, correction comprehension and repeated record use. Define acceptance criteria with the engineer before judging the field trial.",
+      "Document enrolled-device identity vs professional identity, revocation/replacement, duplicate policy, retention/deletion, image privacy/redaction and safe export before real customer data.",
+      "Test the paid-user hypothesis with brand technical engineers/builders; turn actual pilot findings into scoped follow-up issues. No invented partners or site-prevalence statistic.",
+      "Before product deployment, establish ROI-1555 data and derived-weight usage/redistribution terms or replace/retrain on appropriately licensed data. Public download and citation do not by themselves answer those rights questions."
+    ],
+    "tests": [
+      "A dated pilot protocol specifies consent, sample definitions, failure criteria and responsible engineer; real evidence is stored separately from demo fixtures.",
+      "Rule review and security/privacy gaps are tracked before external deployment; an honest pilot decision and unresolved risks are documented."
+    ],
+    "phone": "Observe a complete real engineer workflow only with site permission and independent manual verification; this is explicitly after the event.",
+    "fallback": "Do not stretch the event build into cloud dashboards, billing, lender integration or professional certification. Keep these as evidence-driven follow-ups.",
+    "refs": [
+      "notes/07-data-plan/data-and-props.md",
+      "notes/09-gtm/gtm.md",
+      "IDEA.md",
+      "notes/14-model/MODEL-V1.md"
+    ],
+    "agent": "Claude Code Opus 5.5 or Codex; use the other for the acceptance review",
+    "refresh_note": "Field validation must start from the real v1 model: trained on ROI-1555, not Bengaluru sites or the current props. The reported test split and segmentation scores are not field metrology validation. Resolve dataset/weight permissions before product use; test thin legs, shiny distractors and domain shift with disjoint field evaluation."
+  },
+  {
+    "id": "B25",
+    "title": "Integrate beam and signed review, then freeze CP2",
+    "owner": "Melvin0070",
+    "phase": "CP2",
+    "hours": 0.75,
+    "deps": [
+      "B10",
+      "B11",
+      "B12",
+      "B13",
+      "B14"
+    ],
+    "packages": "Integration wiring and CP2 acceptance log",
+    "outcome": "Beam and the two-key Office Kit review work together in one checkpoint APK.",
+    "tasks": [
+      "Merge the named owners' reviewed changes, verify actual dependency status and build one APK. Gated B15 voice input is included only if accepted; otherwise retain keypad and list voice input as deferred.",
+      "Use the control issue gate times: desk verdict by 17:30, candidate freeze 18:15, three 90-second rehearsals before CP2 at 19:00. Owners handle fixes in their packages; all three help rehearse.",
+      "Verify the engineer can enrol a key, inspect the correct captured record, cancel approval, request another view, then approve and return it. Record actual transcript/backend/mode and all omissions.",
+      "If the core is late, stop optional work. Keep capture-only/mesh fallback clearly labelled; do not report that missing trust or beam work has passed."
+    ],
+    "tests": [
+      "One integration APK completes typed/working-voice spec -> beam Lock -> deterministic fix -> Office Kit pack -> engineer review -> biometric approval -> operator verification.",
+      "Changes to a spec or image invalidate existing approval. No stale UI state or fixture data survives into the demonstration.",
+      "Attach commit/APK hash and results of three rehearsal runs; triage CP2 feedback afterward."
+    ],
+    "phone": "All three owners perform their demo roles on P1/P2/P3 using the same integration build.",
+    "fallback": "Present the proven mesh/capture-only flow and explicit omissions if the desk gate fails; transport alternatives remain subject to Red restrictions.",
+    "refs": [
+      "notes/12-event/BUILD-PLAN.md",
+      "notes/12-event/EVAL-CARDS.md"
+    ],
+    "agent": "Codex or Claude Code for focused seam review; owners fix their own packages"
+  },
+  {
+    "id": "B26",
+    "title": "Rehearse the final APK, verify submission and hand back loaners",
+    "owner": "NarayanaSabari",
+    "phase": "CP3",
+    "hours": 1.5,
+    "deps": [
+      "B20"
+    ],
+    "packages": "Device acceptance, final rehearsal and submission evidence; no feature work",
+    "outcome": "The exact submitted build has passed the real three-phone demo and its submission receipt is recorded.",
+    "tasks": [
+      "Sabari leads independent device QA; Alwin owns presentation assets and Melvin owns final submission/account actions. Use only the B20 candidate APK, not a branch build.",
+      "Run three consecutive full demos <=3:35 plus the listed critical failure drills. Test cold start, offline inference, Office Kit local-network disclosure, manual fallback, signature mismatch, cancelled fingerprint and duplicate approval.",
+      "Verify the backup recording/deck match shipped behavior; refresh the recording if necessary. Attach actual timed results and all cut features.",
+      "If a blocker is fixed, rebuild a new numbered candidate via Melvin, rerun the affected tests and a complete happy path. Do not add features.",
+      "Melvin submits all prepared assets by the control-issue cutoff and records receipt/URLs/checksums here; Alwin verifies the deck/video open. Export records before approved account cleanup on loaners. No tracker changes."
+    ],
+    "tests": [
+      "Three clean final-APK runs fit the pitch limit; on-device acceptance names the real backend, supported families and any manual mode.",
+      "P3 verifies the enrolled-key record offline; unknown signer and changed-byte packs cannot appear approved. Reimport does not count as a new scan.",
+      "Submission receipt, repo/asset links and checksum agree with the tested APK; exported evidence is backed up before loaner account removal."
+    ],
+    "phone": "Cold-jury run with randomized validated fault, tape check, engineer approval and duplicate test on the final phones.",
+    "fallback": "Submit the last verified candidate with an explicit scope list if a late fix threatens the cutoff. Recorded backup is visibly identified as recorded.",
+    "refs": [
+      "notes/12-event/TEAM-BUILD.md",
+      "notes/08-demo/demo-script.md"
+    ],
+    "agent": "Codex or Claude Code for a narrow release review; humans perform the actual device and presentation checks"
+  }
+]
