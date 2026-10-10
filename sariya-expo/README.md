@@ -27,11 +27,15 @@ card S / strip_300 pose by ChArUco/ArUco, bar mask by segmentation **model v2** 
 copied into the APK at build time), bars as one parallel family in card mm. Locks are `AUTO` with the model,
 accelerator and inference time recorded. "By hand" marking stays as the fallback.
 
-NPU (iQOO 15 / SM8850 only) needs four QAIRT **2.50.0.260828** libraries in
-`modules/sariya-vision/android/src/main/jniLibs/arm64-v8a/` (git-ignored, Qualcomm binaries):
-`libQnnHtp.so`, `libQnnHtpV81Stub.so`, `libQnnSystem.so` from `lib/aarch64-android/` and `libQnnHtpV81Skel.so`
-from `lib/hexagon-v81/unsigned/` of the QAIRT SDK zip. Without them the app falls back to GPU, then CPU; the
-readiness screen says which and why.
+NPU (iQOO 15 / SM8850 only) needs four QAIRT **2.50.0.260828** libraries (Qualcomm binaries, git-ignored). Fetch them
+once per laptop; the script reads only those files (~22 MB, ~30 s) out of Qualcomm's SDK zip and checks their hashes:
+
+```bash
+scripts/fetch-qnn.sh
+```
+
+Without them the app falls back to GPU, then CPU; the readiness screen says which and why. The same files serve every
+model round exported with QAIRT 2.50.
 
 Blurred frames are dropped (sharpness relative to the sharpest recent frame). Every lock stores a coverage map in card mm.
 Bars the model only partly sees (usually under the card) are reported as *partly seen*: dashed amber live and on
