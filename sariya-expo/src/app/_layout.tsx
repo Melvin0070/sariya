@@ -22,8 +22,9 @@ export default function RootLayout() {
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#fff' }, animation: 'slide_from_right' }}>
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="device-check" options={{ animation: 'fade', gestureEnabled: false }} />
+        <Stack.Screen name="setup" options={{ animation: 'fade' }} />
         <Stack.Screen name="inspect/scan" options={{ animation: 'fade', contentStyle: { backgroundColor: '#000' } }} />
+        <Stack.Screen name="qr" options={{ animation: 'fade', contentStyle: { backgroundColor: '#000' } }} />
       </Stack>
     </>
   );

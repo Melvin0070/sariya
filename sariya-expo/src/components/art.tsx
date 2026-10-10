@@ -1,6 +1,6 @@
 import Svg, { Circle, G, Line, Polygon, Rect } from 'react-native-svg';
 
-import type { MemberKind } from '@/lib/store';
+import type { MemberKind } from '@/lib/spec';
 
 // One isometric style for every member: a concrete pad, rust-coloured bars, the same scale and line weight.
 
@@ -76,62 +76,7 @@ function Beam() {
   );
 }
 
-// Column: four vertical bars with square ties, standing on a pad.
-function Column() {
-  const p = iso(50, 48, 5.4);
-  const H = 8;
-  const ties = [];
-  for (let z = 0.6; z < H; z += 1.1) ties.push(<Ring key={z} p={p} x0={0} y0={0} x1={2.4} y1={2.4} z0={z} z1={z} axis="z" />);
-  return (
-    <G>
-      <Block p={p} w={5} d={5} h={0.5} />
-      <G>
-        {ties}
-        <Bar a={p(0, 0, 0.3)} b={p(0, 0, H)} />
-        <Bar a={p(2.4, 0, 0.3)} b={p(2.4, 0, H)} />
-        <Bar a={p(2.4, 2.4, 0.3)} b={p(2.4, 2.4, H)} />
-        <Bar a={p(0, 2.4, 0.3)} b={p(0, 2.4, H)} />
-      </G>
-    </G>
-  );
-}
-
-// Footing: thick pad with a mesh and four starter bars for the column.
-function Footing() {
-  const p = iso(50, 44, 5.6);
-  const mesh = [];
-  for (let i = 1; i < 8; i += 1.4) {
-    mesh.push(<Bar key={`x${i}`} a={p(i, 0.3, 2.2)} b={p(i, 7.7, 2.2)} w={2} />);
-    mesh.push(<Bar key={`y${i}`} a={p(0.3, i, 2.4)} b={p(7.7, i, 2.4)} w={2} />);
-  }
-  return (
-    <G>
-      <Block p={p} w={8} d={8} h={2} />
-      {mesh}
-      {[3, 5].flatMap((x) => [3, 5].map((y) => <Bar key={`${x}${y}`} a={p(x, y, 2.4)} b={p(x, y, 8)} />))}
-    </G>
-  );
-}
-
-// Other: a short generic cage on a pad, for lintels, chajjas and stair waists.
-function Other() {
-  const p = iso(40, 40, 6.2);
-  const L = 6;
-  const rings = [];
-  for (let x = 0.4; x <= L; x += 1.4) rings.push(<Ring key={x} p={p} x0={x} y0={0} x1={x} y1={2} z0={0.4} z1={2.4} axis="x" />);
-  return (
-    <G>
-      <Block p={p} w={L + 0.6} d={2.6} h={0.4} />
-      {rings}
-      <Bar a={p(0, 0.1, 0.5)} b={p(L, 0.1, 0.5)} />
-      <Bar a={p(0, 1.9, 0.5)} b={p(L, 1.9, 0.5)} />
-      <Bar a={p(0, 0.1, 2.3)} b={p(L, 0.1, 2.3)} />
-      <Bar a={p(0, 1.9, 2.3)} b={p(L, 1.9, 2.3)} />
-    </G>
-  );
-}
-
-const ART: Record<MemberKind, () => React.JSX.Element> = { slab: Slab, beam: Beam, column: Column, footing: Footing, other: Other };
+const ART: Record<MemberKind, () => React.JSX.Element> = { slab: Slab, beam: Beam };
 
 export function MemberArt({ kind, size = 84 }: { kind: MemberKind; size?: number }) {
   const Art = ART[kind];

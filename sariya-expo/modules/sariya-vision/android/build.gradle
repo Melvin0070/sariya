@@ -1,0 +1,62 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.sariyavision'
+version = '0.1.0'
+
+// The model ships from the repo's models/ folder so the app never carries a second copy of the weights.
+// New round: ./gradlew assembleRelease -Psariya.model=v3 -Psariya.threshold=0.4 (or set both in gradle.properties).
+def sariyaModel = findProperty('sariya.model') ?: 'v2'
+def sariyaThreshold = findProperty('sariya.threshold') ?: '0.3'
+def modelDir = file("${projectDir}/../../../../models/seg/${sariyaModel}")
+def modelFile = new File(modelDir, 'unet_mbv3_1152.tflite')
+if (!modelFile.exists()) throw new GradleException("No unet_mbv3_1152.tflite in ${modelDir}")
+// Signed captures name the exact weights, not just the round.
+def modelSha = java.security.MessageDigest.getInstance('SHA-256').digest(modelFile.bytes).encodeHex().toString()
+def generatedAssets = layout.buildDirectory.dir("generated/sariya-models")
+
+def copyModels = tasks.register('copySariyaModels', Copy) {
+  from(modelDir) { include '*.tflite' }
+  inputs.property('model', sariyaModel)
+  into generatedAssets.map { it.dir('models') }
+}
+
+android {
+  namespace "expo.modules.sariyavision"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+    consumerProguardFiles 'consumer-rules.pro'
+    buildConfigField 'String', 'SARIYA_MODEL', "\"${sariyaModel}\""
+    buildConfigField 'float', 'SARIYA_THRESHOLD', "${sariyaThreshold}f"
+    buildConfigField 'String', 'SARIYA_MODEL_SHA', "\"${modelSha}\""
+  }
+  buildFeatures { buildConfig true }
+  sourceSets {
+    main.assets.srcDirs += generatedAssets.get().asFile
+  }
+}
+
+tasks.named('preBuild') { dependsOn copyModels }
+
+// LiteRT 2.3.0 ships Kotlin 2.4 metadata while Expo 57 / RN 0.86 compile with Kotlin 2.1. Only plain classes,
+// constructors and enums are used from it, so reading the newer metadata is safe for this module alone.
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+  compilerOptions.freeCompilerArgs.add('-Xskip-metadata-version-check')
+}
+tasks.matching { it.name.contains('Assets') }.configureEach { dependsOn copyModels }
+
+dependencies {
+  def camerax = '1.6.0'
+  implementation "androidx.camera:camera-core:${camerax}"
+  implementation "androidx.camera:camera-camera2:${camerax}"
+  implementation "androidx.camera:camera-lifecycle:${camerax}"
+  implementation "androidx.camera:camera-view:${camerax}"
+  implementation 'com.google.ai.edge.litert:litert:2.3.0'
+  implementation 'com.google.ai.edge.litert:litert-gpu:2.3.0'
+  implementation 'com.google.ai.edge.litert:litert-npu-runtime-qualcomm:2.3.0'
+  implementation 'org.opencv:opencv:4.10.0'
+  testImplementation 'junit:junit:4.13.2'
+}

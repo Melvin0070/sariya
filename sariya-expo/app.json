@@ -39,22 +39,15 @@
         }
       ],
       [
-        "@reactvision/react-viro",
-        {
-          "android": {
-            "xRMode": [
-              "AR"
-            ]
-          }
-        }
-      ],
-      [
         "expo-camera",
         {
           "cameraPermission": "Sariya uses the camera to measure steel bars against the printed card.",
           "recordAudioAndroid": false
         }
-      ]
+      ],
+      "expo-sharing",
+      "expo-secure-store",
+      "./modules/sariya-vision/app.plugin.js"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -5,15 +5,16 @@ import { FloatingTabBar } from '@/components/tab-bar';
 import { useStore } from '@/lib/store';
 
 export default function TabsLayout() {
-  const checked = useStore((s) => s.deviceChecked);
-  // First launch always passes through the ARCore device check.
-  if (!checked) return <Redirect href="/device-check" />;
+  const role = useStore((s) => s.role);
+  // First launch: choose what this phone does and check it is ready.
+  if (!role) return <Redirect href="/setup" />;
 
   return (
     <Tabs tabBar={(p) => <FloatingTabBar {...p} />} screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: '#fff' } }}>
       <Tabs.Screen name="index" />
       <Tabs.Screen name="records" />
-      <Tabs.Screen name="help" />
+      <Tabs.Screen name="numbers" />
+      <Tabs.Screen name="device" />
     </Tabs>
   );
 }

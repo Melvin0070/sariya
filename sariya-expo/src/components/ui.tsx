@@ -1,11 +1,11 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { ArrowLeft, Tag, type LucideIcon } from 'lucide-react-native';
+import { ArrowLeft, Check, ChevronRight, Circle, EyeOff, Minus, RotateCw, Ruler, Tag, X, type LucideIcon } from 'lucide-react-native';
 import type { ReactNode, RefObject } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, Text, View, type TextProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import type { Outcome } from '@/lib/store';
+import type { Outcome, Source } from '@/lib/rules';
 
 export const tap = () => Haptics.selectionAsync().catch(() => {});
 
@@ -79,13 +79,14 @@ export function Screen({
 }
 
 // Back arrow plus the persistent inspection name.
-export function TopBar({ name, sub, right }: { name?: string; sub?: string; right?: ReactNode }) {
+export function TopBar({ name, sub, right, onBack }: { name?: string; sub?: string; right?: ReactNode; onBack?: () => void }) {
   return (
     <View className="mb-5 flex-row items-center gap-3">
       <Pressable
         onPress={() => {
           tap();
-          router.back();
+          if (onBack) onBack();
+          else router.back();
         }}
         className="h-12 w-12 items-center justify-center rounded-full bg-pill active:opacity-70"
         hitSlop={8}
@@ -214,24 +215,105 @@ export function Button({
 
 // ---- results --------------------------------------------------------------------
 
-export const OUTCOME: Record<Outcome, { label: string; bg: string; fg: string; dot: string }> = {
-  within: { label: 'Within limits', bg: 'bg-pass-soft', fg: 'text-pass', dot: '#05944F' },
-  outside: { label: 'Outside limits', bg: 'bg-fail-soft', fg: 'text-fail', dot: '#E11900' },
-  rescan: { label: 'Re-scan required', bg: 'bg-warn-soft', fg: 'text-warn', dot: '#C77700' },
-  not_seen: { label: 'Not seen', bg: 'bg-warn-soft', fg: 'text-warn', dot: '#C77700' },
-  manual: { label: 'Manual reading needed', bg: 'bg-warn-soft', fg: 'text-warn', dot: '#C77700' },
-  pending: { label: 'Pending', bg: 'bg-pill', fg: 'text-ink-2', dot: '#8A8A8A' },
+// Five answers per check, plus "not checked yet" and measure-only. Never safe, PASS, certified or permit.
+// Status is always text plus an icon, never colour alone.
+export const OUTCOME: Record<Outcome, { label: string; bg: string; fg: string; color: string; icon: LucideIcon }> = {
+  within: { label: 'Within limits', bg: 'bg-pass-soft', fg: 'text-pass', color: '#05944F', icon: Check },
+  outside: { label: 'Outside limits', bg: 'bg-fail-soft', fg: 'text-fail', color: '#E11900', icon: X },
+  rescan: { label: 'Re-scan', bg: 'bg-warn-soft', fg: 'text-warn', color: '#C77700', icon: RotateCw },
+  tape: { label: 'Needs a tape reading', bg: 'bg-warn-soft', fg: 'text-warn', color: '#C77700', icon: Ruler },
+  not_seen: { label: 'Not seen', bg: 'bg-pill', fg: 'text-ink-2', color: '#5E5E5E', icon: EyeOff },
+  pending: { label: 'Not checked yet', bg: 'bg-pill', fg: 'text-ink-2', color: '#5E5E5E', icon: Circle },
+  measured: { label: 'Measured · no drawing', bg: 'bg-pill', fg: 'text-ink', color: '#000000', icon: Minus },
 };
 
-export function Chip({ outcome, small }: { outcome: Outcome; small?: boolean }) {
+export function Chip({ outcome, small, label }: { outcome: Outcome; small?: boolean; label?: string }) {
   const o = OUTCOME[outcome];
+  const Icon = o.icon;
   return (
     <View className={`flex-row items-center gap-1.5 self-start rounded-full ${o.bg} ${small ? 'px-2.5 py-1' : 'px-3 py-1.5'}`}>
-      <View className="h-2 w-2 rounded-full" style={{ backgroundColor: o.dot }} />
+      <Icon size={small ? 12 : 14} color={o.color} strokeWidth={3} />
       <T w="semibold" className={`${small ? 'text-[12px]' : 'text-[14px]'} ${o.fg}`}>
-        {o.label}
+        {label ?? o.label}
       </T>
     </View>
+  );
+}
+
+const SOURCE: Record<Source, { label: string; warn?: boolean }> = {
+  simulated: { label: 'SIMULATED', warn: true },
+  auto: { label: 'AUTO' },
+  manual: { label: 'MARKED BY HAND' },
+  tape: { label: 'TAPE' },
+  scale: { label: 'SCALE' },
+  template: { label: 'TEMPLATE' },
+};
+
+// Where a number came from. Simulated and hand-marked values always say so.
+export function SourceTag({ source }: { source: Source }) {
+  const s = SOURCE[source];
+  return (
+    <View className={`self-start rounded-md px-1.5 py-0.5 ${s.warn ? 'bg-warn-soft' : 'bg-pill'}`}>
+      <T w="bold" className={`text-[11px] tracking-wider ${s.warn ? 'text-warn' : 'text-ink-2'}`}>
+        {s.label}
+      </T>
+    </View>
+  );
+}
+
+const TONE = {
+  warn: { bg: 'bg-warn-soft', color: '#C77700' },
+  fail: { bg: 'bg-fail-soft', color: '#E11900' },
+  pass: { bg: 'bg-pass-soft', color: '#05944F' },
+  info: { bg: 'bg-tile', color: '#000000' },
+};
+
+export function Notice({ tone = 'info', title, children, className = '' }: { tone?: keyof typeof TONE; title?: string; children?: ReactNode; className?: string }) {
+  const t = TONE[tone];
+  return (
+    <View className={`rounded-card p-4 ${t.bg} ${className}`}>
+      {title ? (
+        <T w="semibold" className="text-[16px]" style={{ color: t.color }}>
+          {title}
+        </T>
+      ) : null}
+      {children ? (
+        <T className={`text-[15px] leading-[22px] ${title ? 'mt-1' : ''}`} style={{ color: title ? '#5E5E5E' : t.color }}>
+          {children}
+        </T>
+      ) : null}
+    </View>
+  );
+}
+
+// A tappable list row in the Uber "recent places" style.
+export function Row({ icon: Icon, title, sub, onPress, right, first }: { icon?: LucideIcon; title: string; sub?: string; onPress?: () => void; right?: ReactNode; first?: boolean }) {
+  return (
+    <Pressable
+      disabled={!onPress}
+      onPress={() => {
+        tap();
+        onPress?.();
+      }}
+      className={`flex-row items-center gap-4 px-4 py-4 active:bg-tile ${first ? '' : 'border-t border-line'}`}
+    >
+      {Icon ? (
+        <View className="h-12 w-12 items-center justify-center rounded-xl bg-tile">
+          <Icon size={22} color="#000" strokeWidth={1.8} />
+        </View>
+      ) : null}
+      <View className="flex-1">
+        <T w="semibold" className="text-[17px]" numberOfLines={1}>
+          {title}
+        </T>
+        {sub ? (
+          <T className="mt-0.5 text-[14px] text-ink-2" numberOfLines={2}>
+            {sub}
+          </T>
+        ) : null}
+      </View>
+      {right ?? (onPress ? <ChevronRight size={20} color="#8A8A8A" /> : null)}
+    </Pressable>
   );
 }
 

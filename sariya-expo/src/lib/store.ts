@@ -1,165 +1,150 @@
 import { useSyncExternalStore } from 'react';
 
-export type MemberKind = 'slab' | 'beam' | 'column' | 'footing' | 'other';
-export type Outcome = 'within' | 'outside' | 'rescan' | 'not_seen' | 'manual' | 'pending';
-export type CheckKind = 'count' | 'spacing' | 'stirrup' | 'cover' | 'diameter';
-export type Lang = 'en' | 'hi' | 'kn';
+import { loadDeviceKey, type DeviceKey } from './keys';
+import { FS } from './native';
+import type { CheckId, MemberKind, ReadingKind, Spec, TargetId } from './spec';
 
-export type Check = {
+export type Role = 'operator' | 'engineer' | 'verifier';
+export type Lang = 'hi' | 'kn' | 'en';
+export type LockSource = 'simulated' | 'auto' | 'manual';
+
+// Overlay geometry in evidence-image pixels, so the reviewer sees exactly what the operator locked.
+export type Overlay = { segs: number[][]; weak?: number[][]; labels: { x: number; y: number; text: string; hot?: boolean }[] };
+export type Evidence = { hash: string; file: string; w: number; h: number };
+// What the locked frame covered, in marker-plane mm: the frame's footprint, the card or strip, and the bar centrelines.
+export type Coverage = { kind: 'card' | 'strip'; frame: number[][]; marker: number[][]; bars: number[][]; weak: number[][] };
+export type Accel = 'NPU' | 'GPU' | 'CPU';
+
+export type Lock = {
   id: string;
-  kind: CheckKind;
-  label: string;
-  zone?: string;
-  drawing: number | null;
-  unit: 'mm' | 'bars';
-  tol: number;
-  measured?: number;
-  band?: number;
-  outcome: Outcome;
-  fixed?: boolean;
-  lockedAt?: number;
+  target: TargetId;
+  at: number;
+  source: LockSource;
+  positions: number[]; // bar centrelines along the measuring axis, mm in the marker plane
+  weak?: number[]; // partly seen bar candidates, mm: not counted, they make count and spacing re-scan
+  coverage?: Coverage;
+  band: number; // ± mm
+  frames: number;
+  engine?: string; // model, accelerator and inference time, for auto locks
+  image?: Evidence;
+  overlay: Overlay;
+  gate?: { reason: string; action: string };
+  superseded?: boolean;
 };
+
+export type Reading = { kind: ReadingKind; value?: number; massG?: number; lengthMm?: number; notSeen?: boolean; by: string; at: number };
+
+export type Peer = { name: string; role: Role; pub: string; fp: string };
+export type Signed<P> = { payload: P; sig: string; signer: Peer };
+export type ApprovalPayload = { k: 'approval'; h: string; r: string; v: number; n: string; t: number; e: string; f: string };
+export type RequestPayload = { k: 'request'; h: string; r: string; v: number; n: string; checks: CheckId[]; note: string; t: number; e: string; f: string };
+export type Capture = { hash: string; sig: string; signer: Peer; at: number; engine?: string };
 
 export type Inspection = {
+  key: string;
   id: string;
+  rev: number;
+  parent?: string; // capture hash of the revision this one replaces
   name: string;
-  kind: MemberKind;
+  member: MemberKind;
   createdAt: number;
-  status: 'draft' | 'sent' | 'signed';
-  checks: Check[];
-  hash?: string;
-  engineer?: string;
+  spec: Spec | null;
+  locks: Lock[]; // superseded locks stay as history
+  readings: Partial<Record<CheckId, Reading>>;
+  corrected: Partial<Record<CheckId, number>>;
+  notice?: string;
+  status: 'draft' | 'signed';
+  origin: 'local' | 'received';
+  capture?: Capture;
+  sentAt?: number;
+  approval?: Signed<ApprovalPayload>;
+  request?: Signed<RequestPayload>;
+  revised?: boolean; // a newer revision exists
+  receivedAt?: number;
+  trustedSigner?: boolean; // received packs only
 };
 
-// `id` tells apart two fields of the same kind (a slab mesh has a spacing each way). Defaults to `key`.
-export type SpecField = { key: CheckKind; id?: string; label: string; unit: 'mm' | 'bars'; hint: string; fallback: number };
-
-export const fieldId = (f: SpecField) => f.id ?? f.key;
-
-export const SPEC_FIELDS: Record<MemberKind, SpecField[]> = {
-  // Defaults are the half-scale stage mesh (BUILD-PLAN §7): 8 mm @ 50 c/c both ways, 5 bars a layer.
-  slab: [
-    { key: 'spacing', id: 'spacing_main', label: 'Main bar spacing', unit: 'mm', hint: 'Centre to centre, bars along the short span', fallback: 50 },
-    { key: 'spacing', id: 'spacing_dist', label: 'Distribution bar spacing', unit: 'mm', hint: 'Centre to centre, bars laid across the main bars', fallback: 50 },
-    { key: 'count', label: 'Bars per layer in the patch', unit: 'bars', hint: 'Each way, inside the area around the card', fallback: 5 },
-    { key: 'diameter', label: 'Bar diameter', unit: 'mm', hint: 'Close-up, or weigh a 20 cm offcut', fallback: 8 },
-    { key: 'cover', label: 'Bottom cover', unit: 'mm', hint: 'Tape reading under the bottom bars', fallback: 20 },
-  ],
-  beam: [
-    { key: 'count', label: 'Bottom bars', unit: 'bars', hint: 'Main bars in the bottom layer', fallback: 4 },
-    { key: 'stirrup', label: 'Stirrup spacing at ends', unit: 'mm', hint: 'Confinement zone near the column', fallback: 100 },
-    { key: 'cover', label: 'Clear cover', unit: 'mm', hint: 'Side and bottom', fallback: 25 },
-    { key: 'diameter', label: 'Main bar diameter', unit: 'mm', hint: 'Tag or tape reading', fallback: 12 },
-  ],
-  column: [
-    { key: 'count', label: 'Vertical bars', unit: 'bars', hint: 'All bars in the cage', fallback: 6 },
-    { key: 'stirrup', label: 'Tie spacing', unit: 'mm', hint: 'Ties near the beam joint', fallback: 100 },
-    { key: 'cover', label: 'Clear cover', unit: 'mm', hint: 'Outer face to ties', fallback: 40 },
-    { key: 'diameter', label: 'Bar diameter', unit: 'mm', hint: 'Tag or tape reading', fallback: 12 },
-  ],
-  footing: [
-    { key: 'spacing', label: 'Mesh spacing', unit: 'mm', hint: 'Both directions', fallback: 150 },
-    { key: 'cover', label: 'Clear cover', unit: 'mm', hint: 'Bottom cover on soil', fallback: 50 },
-    { key: 'diameter', label: 'Bar diameter', unit: 'mm', hint: 'Tag or tape reading', fallback: 12 },
-  ],
-  other: [
-    { key: 'spacing', label: 'Bar spacing', unit: 'mm', hint: 'Centre to centre', fallback: 150 },
-    { key: 'cover', label: 'Clear cover', unit: 'mm', hint: 'Tape reading', fallback: 25 },
-  ],
+export type BenchRow = {
+  id: string;
+  at: number;
+  record: string;
+  target: TargetId;
+  gap: number;
+  appMm: number;
+  band: number;
+  tapeMm: number;
+  source: LockSource;
+  by: string;
 };
 
-// v1 measures slabs only. Beam and column are shown greyed out.
-export const SUPPORTED: MemberKind[] = ['slab'];
-
-export const KIND_LABEL: Record<MemberKind, string> = {
-  slab: 'Slab',
-  beam: 'Beam',
-  column: 'Column',
-  footing: 'Footing',
-  other: 'Other',
-};
-
-// The camera can measure count and spacing. Cover and diameter need a tape or template reading.
-export const CAMERA_KINDS: CheckKind[] = ['count', 'spacing', 'stirrup'];
-
-const TOL: Record<CheckKind, number> = { count: 0, spacing: 15, stirrup: 15, cover: 5, diameter: 0 };
-
-export function judge(drawing: number, measured: number, band: number, tol: number): Outcome {
-  const off = Math.abs(measured - drawing);
-  if (off + band <= tol) return 'within';
-  if (off - band > tol) return 'outside';
-  return 'rescan';
-}
-
-// ---- tiny store -------------------------------------------------------------
+export type Verification = { at: number; ok: boolean; title: string; sub: string };
 
 type State = {
-  current: Inspection | null;
+  role: Role | null;
+  name: string;
+  me: DeviceKey | null;
+  trusted: Peer[];
   records: Inspection[];
+  draftKey: string | null;
+  processed: Record<string, { at: number; decision: 'approved' | 'requested'; key: string }>;
+  verifications: Verification[];
+  bench: BenchRow[];
+  timings: Record<Accel, number[]>; // model inference ms per live frame, newest last
   lang: Lang;
-  ar: 'unknown' | 'supported' | 'install' | 'unsupported';
-  deviceChecked: boolean;
+  seq: number;
 };
 
-const DAY = 86400000;
-const now = Date.now();
+// ---- persistence ------------------------------------------------------------
 
-const seed: Inspection[] = [
-  {
-    id: 'r-104',
-    name: 'Slab S1 · first floor',
-    kind: 'slab',
-    createdAt: now - DAY + 3600000 * 2,
-    status: 'signed',
-    engineer: 'Er. Melvin',
-    hash: '9f2c…e81a',
-    checks: [
-      { id: 'a', kind: 'count', label: 'Bar count', drawing: 7, unit: 'bars', tol: 0, measured: 7, band: 0, outcome: 'within' },
-      { id: 'b', kind: 'spacing', label: 'Bar spacing', drawing: 150, unit: 'mm', tol: 15, measured: 148, band: 6, outcome: 'within' },
-      { id: 'c', kind: 'cover', label: 'Clear cover', drawing: 20, unit: 'mm', tol: 5, measured: 20, band: 1, outcome: 'within' },
-    ],
-  },
-  {
-    id: 'r-103',
-    name: 'Beam B2 · grid C',
-    kind: 'beam',
-    createdAt: now - DAY * 2 + 3600000 * 5,
-    status: 'sent',
-    hash: '7d3e…a2f9',
-    checks: [
-      { id: 'a', kind: 'stirrup', label: 'Stirrup spacing', zone: 'Left end', drawing: 100, unit: 'mm', tol: 15, measured: 180, band: 8, outcome: 'outside', fixed: true },
-      { id: 'b', kind: 'count', label: 'Bottom bars', zone: 'Mid span', drawing: 4, unit: 'bars', tol: 0, measured: 4, band: 0, outcome: 'within' },
-      { id: 'c', kind: 'cover', label: 'Clear cover', zone: 'Left end', drawing: 25, unit: 'mm', tol: 5, outcome: 'manual' },
-    ],
-  },
-  {
-    id: 'r-102',
-    name: 'Column C4 · ground',
-    kind: 'column',
-    createdAt: now - DAY * 4,
-    status: 'signed',
-    engineer: 'Er. Alwin',
-    hash: '41b0…07cd',
-    checks: [
-      { id: 'a', kind: 'count', label: 'Vertical bars', zone: 'Full height', drawing: 6, unit: 'bars', tol: 0, measured: 6, band: 0, outcome: 'within' },
-      { id: 'b', kind: 'stirrup', label: 'Tie spacing', zone: 'Top joint', drawing: 100, unit: 'mm', tol: 15, measured: 104, band: 7, outcome: 'within' },
-    ],
-  },
-];
+const FILE = FS ? new FS.File(FS.Paths.document, 'sariya-state.json') : null;
+
+function load(): Partial<State> {
+  try {
+    if (FILE?.exists) return JSON.parse(FILE.textSync());
+  } catch {}
+  return {};
+}
+
+const MAX_TIMINGS = 5000;
+
+let saveTimer: ReturnType<typeof setTimeout> | undefined;
+function persist() {
+  if (!FILE) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      const { me: _me, ...rest } = state;
+      if (!FILE.exists) FILE.create();
+      FILE.write(JSON.stringify(rest));
+    } catch {}
+  }, 250);
+}
+
+export const persistent = !!FILE;
+
+// ---- store ----------------------------------------------------------------------
 
 let state: State = {
-  current: null,
-  records: seed,
-  lang: 'en',
-  ar: 'unknown',
-  deviceChecked: false,
+  role: null,
+  name: '',
+  trusted: [],
+  records: [],
+  draftKey: null,
+  processed: {},
+  verifications: [],
+  bench: [],
+  timings: { NPU: [], GPU: [], CPU: [] },
+  lang: 'hi',
+  seq: 0,
+  ...load(),
+  me: loadDeviceKey(),
 };
 
 const listeners = new Set<() => void>();
-const emit = () => listeners.forEach((l) => l());
 const set = (patch: Partial<State>) => {
   state = { ...state, ...patch };
-  emit();
+  persist();
+  for (const l of listeners) l();
 };
 
 export function useStore<T>(pick: (s: State) => T): T {
@@ -174,105 +159,190 @@ export function useStore<T>(pick: (s: State) => T): T {
 }
 
 export const getState = () => state;
+export const useDraft = () => useStore((s) => s.records.find((r) => r.key === s.draftKey) ?? null);
+export const useRecord = (key?: string) => useStore((s) => s.records.find((r) => r.key === key) ?? null);
+
+export const keyOf = (id: string, rev: number) => `${id}.r${rev}`;
+export const uid = () => Math.random().toString(36).slice(2, 10);
+
+export function activeLock(r: Inspection, target: TargetId) {
+  for (let i = r.locks.length - 1; i >= 0; i--) {
+    const l = r.locks[i];
+    if (l.target === target && !l.superseded) return l;
+  }
+  return undefined;
+}
+
+function update(key: string, fn: (r: Inspection) => Inspection) {
+  set({ records: state.records.map((r) => (r.key === key ? fn(r) : r)) });
+}
+
+function updateDraft(fn: (r: Inspection) => Inspection) {
+  if (state.draftKey) update(state.draftKey, fn);
+}
+
+const supersede = (locks: Lock[], targets: TargetId[]) => locks.map((l) => (targets.includes(l.target) ? { ...l, superseded: true } : l));
 
 export const actions = {
+  setup(role: Role, name: string) {
+    set({ role, name: name.trim() });
+  },
   setLang: (lang: Lang) => set({ lang }),
-  setAr: (ar: State['ar']) => set({ ar, deviceChecked: true }),
 
-  start(kind: MemberKind, name: string) {
-    set({
-      current: {
-        id: `r-${105 + state.records.length - seed.length}`,
-        name,
-        kind,
-        createdAt: Date.now(),
-        status: 'draft',
-        checks: [],
-      },
+  trust(peer: Peer) {
+    set({ trusted: [peer, ...state.trusted.filter((p) => p.fp !== peer.fp)] });
+  },
+  untrust(fp: string) {
+    set({ trusted: state.trusted.filter((p) => p.fp !== fp) });
+  },
+
+  newInspection(member: MemberKind, name: string) {
+    const seq = state.seq + 1;
+    const prefix = (state.me?.fp ?? 'XX').slice(0, 2);
+    const id = `R${prefix}-${seq}`;
+    const r: Inspection = {
+      key: keyOf(id, 1),
+      id,
+      rev: 1,
+      name,
+      member,
+      createdAt: Date.now(),
+      spec: null,
+      locks: [],
+      readings: {},
+      corrected: {},
+      status: 'draft',
+      origin: 'local',
+    };
+    set({ seq, records: [r, ...state.records], draftKey: r.key });
+    return r.key;
+  },
+
+  openDraft(key: string) {
+    set({ draftKey: key });
+  },
+
+  discard(key: string) {
+    set({ records: state.records.filter((r) => r.key !== key), draftKey: state.draftKey === key ? null : state.draftKey });
+  },
+
+  // A changed drawing clears fresh measurements; the old locks stay in the record as history.
+  setSpec(input: Omit<Spec, 'at'>) {
+    const spec: Spec = { ...input, at: Date.now() };
+    updateDraft((r) => {
+      const hadLocks = r.locks.some((l) => !l.superseded);
+      const changed = !!r.spec && JSON.stringify(r.spec.values) !== JSON.stringify(spec.values);
+      if (!(hadLocks && changed)) return { ...r, spec };
+      return {
+        ...r,
+        spec,
+        locks: r.locks.map((l) => ({ ...l, superseded: true })),
+        notice: `Drawing values changed to rev ${spec.rev}. Earlier scans are kept as history; scan again.`,
+      };
     });
   },
 
-  setSpec(values: Record<string, number | null>) {
-    const cur = state.current;
-    if (!cur) return;
-    const checks: Check[] = SPEC_FIELDS[cur.kind].map((f) => ({
-      id: fieldId(f),
-      kind: f.key,
-      label: f.label,
-      drawing: values[fieldId(f)] ?? f.fallback,
-      unit: f.unit,
-      tol: TOL[f.key],
-      outcome: 'pending',
-    }));
-    set({ current: { ...cur, checks } });
+  addLock(lock: Lock) {
+    updateDraft((r) => ({ ...r, notice: undefined, locks: [...supersede(r.locks, [lock.target]), lock] }));
   },
 
-  lock(id: string, measured: number, band: number, outcome?: Outcome) {
-    const cur = state.current;
-    if (!cur) return;
-    const checks = cur.checks.map((c) =>
-      c.id === id
-        ? {
-            ...c,
-            measured,
-            band,
-            lockedAt: Date.now(),
-            outcome: outcome ?? judge(c.drawing ?? measured, measured, band, c.tol),
-          }
-        : c,
-    );
-    set({ current: { ...cur, checks } });
+  rescan(target: TargetId) {
+    updateDraft((r) => ({ ...r, locks: supersede(r.locks, [target]) }));
   },
 
-  reset(id: string) {
-    const cur = state.current;
-    if (!cur) return;
-    set({ current: { ...cur, checks: cur.checks.map((c) => (c.id === id ? { ...c, outcome: 'pending' as const } : c)) } });
+  // The mason fixed it: the old value stays as history and the check goes back to the scanner.
+  corrected(check: CheckId, target?: TargetId) {
+    updateDraft((r) => {
+      const readings = { ...r.readings };
+      if (!target) delete readings[check];
+      return {
+        ...r,
+        readings,
+        locks: target ? supersede(r.locks, [target]) : r.locks,
+        corrected: { ...r.corrected, [check]: (r.corrected[check] ?? 0) + 1 },
+      };
+    });
   },
 
-  markFixed(id: string) {
-    const cur = state.current;
-    if (!cur) return;
-    set({ current: { ...cur, checks: cur.checks.map((c) => (c.id === id ? { ...c, fixed: true, outcome: 'pending' } : c)) } });
+  setReading(check: CheckId, reading: Reading) {
+    updateDraft((r) => ({ ...r, readings: { ...r.readings, [check]: reading } }));
   },
 
-  send(hash: string) {
-    const cur = state.current;
-    if (!cur) return;
-    const rec = { ...cur, status: 'sent' as const, hash };
-    set({ current: null, records: [rec, ...state.records.filter((r) => r.id !== rec.id)] });
-    return rec.id;
+  signDraft(capture: Capture) {
+    updateDraft((r) => ({ ...r, status: 'signed', capture, notice: undefined }));
+    set({ draftKey: null });
   },
 
-  engineerSign(id: string, engineer: string) {
-    set({ records: state.records.map((r) => (r.id === id ? { ...r, status: 'signed' as const, engineer } : r)) });
+  markSent(key: string) {
+    update(key, (r) => ({ ...r, sentAt: Date.now() }));
   },
 
-  saveDraft() {
-    const cur = state.current;
-    if (!cur) return;
-    set({ records: [cur, ...state.records.filter((r) => r.id !== cur.id)] });
+  // A requested view or a fresh scan of unchanged steel: a new revision; the signed one is never edited.
+  newRevision(key: string, reset: CheckId[], resetTargets: TargetId[]) {
+    const old = state.records.find((r) => r.key === key);
+    if (!old?.capture) return null;
+    const readings = { ...old.readings };
+    for (const c of reset) delete readings[c];
+    const rev = old.rev + 1;
+    const r: Inspection = {
+      ...old,
+      key: keyOf(old.id, rev),
+      rev,
+      parent: old.capture.hash,
+      createdAt: Date.now(),
+      spec: old.spec ? { ...old.spec } : null,
+      locks: old.locks.filter((l) => !l.superseded && !resetTargets.includes(l.target)),
+      readings,
+      corrected: {},
+      notice: old.request ? `Engineer asked: ${old.request.payload.note || 'another view'}` : undefined,
+      status: 'draft',
+      capture: undefined,
+      sentAt: undefined,
+      approval: undefined,
+      request: undefined,
+      revised: undefined,
+    };
+    set({
+      records: [r, ...state.records.map((x) => (x.key === key ? { ...x, revised: true } : x))],
+      draftKey: r.key,
+    });
+    return r.key;
   },
 
-  resume(id: string) {
-    const r = state.records.find((x) => x.id === id);
-    if (r) set({ current: r });
+  receive(r: Inspection) {
+    set({ records: [r, ...state.records.filter((x) => x.key !== r.key)] });
+  },
+
+  approve(key: string, approval: Signed<ApprovalPayload>) {
+    update(key, (r) => ({ ...r, approval }));
+    set({ processed: { ...state.processed, [approval.payload.h]: { at: approval.payload.t, decision: 'approved', key } } });
+  },
+
+  requestView(key: string, request: Signed<RequestPayload>) {
+    update(key, (r) => ({ ...r, request }));
+    set({ processed: { ...state.processed, [request.payload.h]: { at: request.payload.t, decision: 'requested', key } } });
+  },
+
+  attachApproval(key: string, approval: Signed<ApprovalPayload>) {
+    update(key, (r) => ({ ...r, approval }));
+  },
+
+  attachRequest(key: string, request: Signed<RequestPayload>) {
+    update(key, (r) => ({ ...r, request }));
+  },
+
+  addVerification(v: Verification) {
+    set({ verifications: [v, ...state.verifications].slice(0, 20) });
+  },
+
+  addTimings(add: Record<Accel, number[]>) {
+    const keep = (k: Accel) => [...state.timings[k], ...add[k]].slice(-MAX_TIMINGS);
+    set({ timings: { NPU: keep('NPU'), GPU: keep('GPU'), CPU: keep('CPU') } });
+  },
+  addBench(row: Omit<BenchRow, 'id' | 'at'>) {
+    set({ bench: [{ ...row, id: uid(), at: Date.now() }, ...state.bench] });
   },
 };
-
-// ---- derived ---------------------------------------------------------------
-
-export function tally(checks: Check[]) {
-  const n = (o: Outcome) => checks.filter((c) => c.outcome === o).length;
-  return {
-    done: n('within'),
-    outside: n('outside'),
-    rescan: n('rescan'),
-    manual: n('manual') + n('not_seen'),
-    pending: n('pending'),
-    total: checks.length,
-  };
-}
 
 export function when(ts: number) {
   const d = new Date(ts);
@@ -280,3 +350,5 @@ export function when(ts: number) {
   const time = d.toLocaleString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
   return `${d.getDate()} ${mon} · ${time}`;
 }
+
+export const ROLE_LABEL: Record<Role, string> = { operator: 'Operator', engineer: 'Engineer', verifier: 'Verifier' };
