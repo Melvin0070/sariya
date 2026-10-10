@@ -189,6 +189,25 @@ function physical(def: CheckDef, r: Inspection, spec: number | null): Finding {
   return { ...base, limit, outcome: 'within' };
 }
 
+// ---- live preview (before Lock) ---------------------------------------------------
+// The drawing's values for the zone on screen, so live gaps can be coloured with the same single-gap limit Lock uses.
+// Only a hint: the verdict is still the locked one, with its own band.
+export type LiveTone = 'within' | 'near' | 'outside';
+
+export function liveSpec(r: Inspection, t: TargetId): { count: number | null; spacingAt: (pos: number) => number | null } {
+  const val = (f: FieldId) => (r.spec?.noDrawing ? null : (r.spec?.values[f] ?? null));
+  if (t === 'main') return { count: val('main_count'), spacingAt: () => val('main_spacing') };
+  if (t === 'dist') return { count: val('dist_count'), spacingAt: () => val('dist_spacing') };
+  const L = val('end_length');
+  return { count: null, spacingAt: (pos) => (L == null ? null : pos < L ? val('end_spacing') : val('mid_spacing')) };
+}
+
+export function gapTone(gap: number, spec: number | null): LiveTone | null {
+  if (spec == null) return null;
+  const s = side(gap, FIELD_FLOOR_MM, limitLocal(spec));
+  return s === 'rescan' ? 'near' : s;
+}
+
 export function evaluate(r: Inspection): Finding[] {
   const val = (f: FieldId) => (r.spec?.noDrawing ? null : (r.spec?.values[f] ?? null));
   const lock = (t: TargetId) => activeLock(r, t);

@@ -17,6 +17,9 @@ object Pipeline {
 
   private const val MAX_POINTS = 12000
   private const val FOOTPRINT_MM = 2000.0
+  // Mask points further than this from the fiducial are not measured: they are outside the zone being checked, cost
+  // time in the bar search and are where cables, tools and far clutter sit.
+  private const val ZONE_MM = 400.0
   private val maskX = DoubleArray(MAX_POINTS)
   private val maskY = DoubleArray(MAX_POINTS)
   private val hits = IntArray(Segmenter.W * Segmenter.H)
@@ -41,8 +44,12 @@ object Pipeline {
     val w = rgba.cols()
     val h = rgba.rows()
     val sharp = sharpness(gray)
+    val luma = Core.mean(half).`val`[0] // mean brightness 0-255 on the half-size frame, for the torch hint
+    val tf = SystemClock.elapsedRealtime()
     val pose = try { Fiducial.detect(gray, cfg.marker) } catch (t: Throwable) { null }
+    val fidMs = SystemClock.elapsedRealtime() - tf
     var inferMs = -1L
+    var barsMs = -1L
     var result: BarResult? = null
     var modelError: String? = null
     if (pose != null) {
@@ -50,7 +57,9 @@ object Pipeline {
         val ti = SystemClock.elapsedRealtime()
         val prob = try { Segmenter.run(rgba) } catch (t: Throwable) { modelError = t.message; null }
         inferMs = SystemClock.elapsedRealtime() - ti
+        val tb = SystemClock.elapsedRealtime()
         if (prob != null) result = bars(prob, pose, w, h, cfg, seed)
+        barsMs = SystemClock.elapsedRealtime() - tb
       } else {
         modelError = Segmenter.error
       }
@@ -89,6 +98,11 @@ object Pipeline {
     payload["angle"] = result?.angleDeg
     payload["maskPts"] = result?.points ?: 0
     payload["sharp"] = sharp
+    payload["luma"] = luma
+    payload["fidMs"] = fidMs
+    payload["barsMs"] = barsMs
+    // Plane mm -> upright screen px, so the overlay can re-draw smoothed bars (kept in mm) with the newest pose.
+    payload["mmToUp"] = pose?.let { up.compose(it.mmToImg).toList() }
     return payload
   }
 
@@ -100,6 +114,10 @@ object Pipeline {
     val rnd = Random(seed)
     // Bars hide under the fiducial's edge; points there belong to the print, not to steel.
     val ex = Bars.expand(pose.outlineMm, 3.0)
+    val zx0 = pose.outlineMm.minOf { it[0] } - ZONE_MM
+    val zx1 = pose.outlineMm.maxOf { it[0] } + ZONE_MM
+    val zy0 = pose.outlineMm.minOf { it[1] } - ZONE_MM
+    val zy1 = pose.outlineMm.maxOf { it[1] } + ZONE_MM
     val keepAll = nHits <= MAX_POINTS
     var n = 0
     var k = 0
@@ -109,7 +127,7 @@ object Pipeline {
       val u = idx % Segmenter.W
       val v = idx / Segmenter.W
       val mm = Geo.apply(pose.imgToMm, (u + 0.5) * sx - 0.5, (v + 0.5) * sy - 0.5)
-      if (kotlin.math.abs(mm[0]) > 3000 || kotlin.math.abs(mm[1]) > 3000) continue
+      if (mm[0] < zx0 || mm[0] > zx1 || mm[1] < zy0 || mm[1] > zy1) continue
       if (Bars.inside(ex, mm[0], mm[1])) continue
       maskX[n] = mm[0]
       maskY[n] = mm[1]
@@ -129,5 +147,16 @@ class Upright(private val rot: Int, private val sw: Int, private val sh: Int) {
     180 -> listOf(sw - 1 - x, sh - 1 - y)
     270 -> listOf(y, sw - 1 - x)
     else -> listOf(x, y)
+  }
+
+  // The same rotation as a 3x3 matrix, applied after h (row-major): upright = R * h.
+  fun compose(h: DoubleArray): DoubleArray {
+    val r = when (rot) {
+      90 -> doubleArrayOf(0.0, -1.0, sh - 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+      180 -> doubleArrayOf(-1.0, 0.0, sw - 1.0, 0.0, -1.0, sh - 1.0, 0.0, 0.0, 1.0)
+      270 -> doubleArrayOf(0.0, 1.0, 0.0, -1.0, 0.0, sw - 1.0, 0.0, 0.0, 1.0)
+      else -> return h.copyOf()
+    }
+    return DoubleArray(9) { i -> val row = i / 3; val col = i % 3; (0 until 3).sumOf { k -> r[row * 3 + k] * h[k * 3 + col] } }
   }
 }

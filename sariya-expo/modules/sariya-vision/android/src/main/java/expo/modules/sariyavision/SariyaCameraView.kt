@@ -21,8 +21,8 @@ import expo.modules.kotlin.AppContext
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.viewevent.EventDispatcher
 import expo.modules.kotlin.views.ExpoView
-import org.opencv.android.Utils
 import org.opencv.core.Core
+import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.MatOfInt
 import org.opencv.imgcodecs.Imgcodecs
@@ -60,9 +60,10 @@ class SariyaCameraView(context: Context, appContext: AppContext) : ExpoView(cont
   private var bound = false
   private var released = false
 
-  private val rgba = Mat()
+  private var rgba = Mat()
   private val gray = Mat()
-  private val last = Mat()
+  private var last = Mat() // the newest analysed frame, swapped (not copied) with rgba for freeze()
+  private val lastLock = Any()
   private var lastRot = 0
   private var lastPayload: Map<String, Any?>? = null
   private var frameNo = 0L
@@ -159,19 +160,21 @@ class SariyaCameraView(context: Context, appContext: AppContext) : ExpoView(cont
     frameNo++
     val rot = image.imageInfo.rotationDegrees
     try {
-      val bmp = image.toBitmap()
+      // RGBA_8888 analysis output is one plane; wrap its buffer and copy once (no Bitmap, no second copy).
+      val plane = image.planes[0]
+      val wrapped = Mat(image.height, image.width, CvType.CV_8UC4, plane.buffer, plane.rowStride.toLong())
+      wrapped.copyTo(rgba)
+      wrapped.release()
       image.close()
-      Utils.bitmapToMat(bmp, rgba)
-      bmp.recycle()
     } catch (t: Throwable) {
       image.close()
       return
     }
     val payload = Pipeline.process(context, rgba, gray, rot, Pipeline.Config(marker, axis, barDia, minLenMm), frameNo)
     payload["frameMs"] = SystemClock.elapsedRealtime() - t0
-    if (frameNo % 30 == 0L) Log.i("SariyaVision", "frame rot $rot pose=${(payload["pose"] as Map<*, *>?)?.get("points")} bars=${(payload["bars"] as List<*>).size} ${payload["accel"]} infer=${payload["inferMs"]} total=${payload["frameMs"]}")
-    synchronized(last) {
-      rgba.copyTo(last)
+    if (frameNo % 30 == 0L) Log.i("SariyaVision", "frame rot $rot pose=${(payload["pose"] as Map<*, *>?)?.get("points")} bars=${(payload["bars"] as List<*>).size} ${payload["accel"]} fid=${payload["fidMs"]} infer=${payload["inferMs"]} bars=${payload["barsMs"]} total=${payload["frameMs"]}")
+    synchronized(lastLock) {
+      val t = last; last = rgba; rgba = t
       lastRot = rot
       lastPayload = payload
     }
@@ -184,7 +187,7 @@ class SariyaCameraView(context: Context, appContext: AppContext) : ExpoView(cont
       try {
         val out = Mat()
         val payload: Map<String, Any?>
-        synchronized(last) {
+        synchronized(lastLock) {
           if (last.empty() || lastPayload == null) {
             promise.reject("ERR_NO_FRAME", "No camera frame yet", null)
             return@execute

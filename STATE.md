@@ -19,6 +19,31 @@
 - **Not checked on the device:** the engineer Review, Received, Issue and verifier QR screens (no received pack on the phone). The phone's role and name were changed mid-session (Engineer/Operator "Melly"), not by the agents.
 - Nothing is committed yet.
 
+## Session note (10 Oct, ~11:40): live scan UX and speed (`e4b2f1d`, `1f2114c`)
+- **Native (sariya-vision):**
+  - only mask points within 400 mm of the card are measured, which cuts cables and far clutter;
+  - bar geometry no longer uses boxed numbers and tries at most 40 candidates;
+  - no per-frame Bitmap, and a buffer swap replaces the freeze copy;
+  - Aruco3 card search;
+  - the frame log has per-stage timings (`fid= infer= bars= total=`), and the payload adds `luma`, `fidMs`, `barsMs` and `mmToUp`.
+- **Scan screen:**
+  - a `LiveFeed` store means only the overlay and readout re-render per frame;
+  - bars are smoothed across frames in card mm and redrawn with the newest pose;
+  - gap labels are green, amber or red against the drawing, using the Lock limit;
+  - the headline reads "N of M bars · X mm widest";
+  - halos make lines and labels readable on steel;
+  - the header shows the real model, accelerator and ms.
+  - Test: `bun test src/lib/live.test.ts`.
+- **Measured on the iQOO (v3, 0.3):**
+  - with the card in view, 5 of 5 bars in 9 of 10 sampled frames;
+  - frame about 105 ms (bars 8 ms, model 20 ms), so the card search (70-80 ms) is now the bottleneck;
+  - 75 of 85 sampled frames had no card, so finding the card is the biggest UX loss.
+- **Open:**
+  - false bars on non-steel: raise the threshold to 0.5, add a width/straightness/persistence check per bar, and fine-tune on venue negatives only if needed;
+  - placement guide and auto-lock;
+  - A/B Aruco3 on/off for card detection;
+  - tape error table on the props.
+
 ## Status (10 Oct 2026, 09:55, model lane): v3 trained, in the app, recommended
 - **v3** is in `models/seg/v3/` (`8aa92ef`); report: `notes/14-model/MODEL-V3.md`. It was trained from v2 plus 2,500 synthetic stirrup scenes.
 
@@ -402,3 +427,5 @@ Workstream 2 (why-now evidence and news). It starts from the leads in VERDICT.md
 - 2026-10-10: Switched the default app model from v2 to v3 at threshold 0.3, per user request and MODEL-V3.md. Updated README and current spec; built and installed the release on iQOO `10BFAX1C230010U` in place and launched it. Verified both packaged model hashes against the v3 sources (float `26f6324ab4c4eaee`, NPU `02ea7d35912cbc98`); release build, typecheck and lint pass. Next: check live NPU readiness and detection on venue props; this installation does not establish prop accuracy.
 - 2026-10-10: At the user's explicit request, cleared Sariya's app data, uninstalled it, and freshly installed the latest v3 release on iQOO `10BFAX1C230010U`. Cleared data once more after installation to remove any restored state, then launched MainActivity successfully. Local records, settings and app keys reset; next step is fresh onboarding and key enrolment.
 - 2026-10-10: Publishing all current app, artwork, demo/deck, research and documentation changes to main at the user's request, including the UI refresh, pour inbox/fix loop and v3 default. Release build, typecheck and lint already passed for this working tree; changed-file secret-pattern and oversized-file checks found no flags. Integrating newer origin/main commits before pushing.
+
+- 2026-10-10: Main integration resolved overlapping scan changes by retaining the UI refresh alongside upstream LiveFeed isolation, smoothed overlays, gap colours, live engine readout and native speed improvements. Kept Bun-only tests outside the Expo application typecheck (they run separately with Bun). Both session histories retained.
