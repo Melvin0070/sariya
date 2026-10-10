@@ -102,7 +102,8 @@ class Tiles(Dataset):
     def __getitem__(self, i):
         n = self.names[i]
         img = cv2.cvtColor(cv2.imread(os.path.join(self.img_dir, n), cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
-        m = (cv2.imread(os.path.join(self.mask_dir, n), cv2.IMREAD_GRAYSCALE) > 127).astype(np.uint8)
+        mask = os.path.join(self.mask_dir, os.path.splitext(n)[0] + ".png")   # images may be .jpg, masks stay .png
+        m = (cv2.imread(mask, cv2.IMREAD_GRAYSCALE) > 127).astype(np.uint8)
         r = self.aug(image=img, mask=m)
         img, m = r["image"], r["mask"]
         x = ((img.astype(np.float32) / 255.0 - MEAN) / STD).transpose(2, 0, 1)

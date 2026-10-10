@@ -109,6 +109,8 @@ def prepare(roi_dir: str) -> str:
         for split in ("train", "val", "test"):
             for kind in ("images", "masks", "masks3"):
                 os.makedirs(f"{data}/{split}/{kind}", exist_ok=True)
+                if not os.path.isdir(f"{src}/{split}/{kind}"):     # uploaded stirrup tiles carry no masks3
+                    continue
                 for f in os.listdir(f"{src}/{split}/{kind}"):
                     dst = f if tag == "roi" else f"{tag}_{f}"   # COCO and stirrup both use 000000000123.jpg names
                     os.symlink(f"{src}/{split}/{kind}/{f}", f"{data}/{split}/{kind}/{dst}")
@@ -138,7 +140,7 @@ def recall(weights: str, tile_dir: str, build_model, split: str = "test") -> dic
     hit = tot = 0
     for n in sorted(os.listdir(f"{tile_dir}/{split}/images")):
         rgb = cv2.cvtColor(cv2.imread(f"{tile_dir}/{split}/images/{n}"), cv2.COLOR_BGR2RGB)
-        gt = cv2.imread(f"{tile_dir}/{split}/masks/{n}", cv2.IMREAD_GRAYSCALE) > 127
+        gt = cv2.imread(f"{tile_dir}/{split}/masks/{os.path.splitext(n)[0]}.png", cv2.IMREAD_GRAYSCALE) > 127
         x = torch.from_numpy(((rgb / 255.0 - mean) / std).astype(np.float32).transpose(2, 0, 1)[None]).to(dev)
         with torch.no_grad():
             p = (m(x) > 0)[0, 0].cpu().numpy()
