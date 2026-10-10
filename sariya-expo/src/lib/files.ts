@@ -100,6 +100,17 @@ export async function pickText(): Promise<{ name: string; text: string } | null>
   return { name: res.result.name, text: await res.result.text() };
 }
 
+// A file another app opened with Sariya; Android grants read access to this URI for this launch only.
+export async function readText(uri: string): Promise<{ name: string; text: string }> {
+  if (!FS) throw new Error('File storage is missing from this build.');
+  const f = new FS.File(uri);
+  let name = '';
+  try {
+    name = f.name;
+  } catch {}
+  return { name: name || decodeURIComponent(uri.split('/').pop() ?? ''), text: await f.text() };
+}
+
 export async function shareCsv(name: string, text: string) {
   if (!FS || !Sharing) throw new Error('Sharing is missing from this build.');
   const f = temp(name, text);

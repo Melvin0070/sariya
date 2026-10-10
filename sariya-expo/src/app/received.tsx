@@ -1,18 +1,18 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Check, FileInput, TriangleAlert, X } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import Animated, { ReduceMotion, ZoomIn } from 'react-native-reanimated';
 
 import { Button, C, Details, Enter, Illo, Screen, SHADOW, Sub, T, TextBtn, Title, TopBar, success } from '@/components/ui';
-import { pickText } from '@/lib/files';
+import { pickText, readText } from '@/lib/files';
 import { receive, type Received } from '@/lib/pack';
 import { getState, useStore, type Role } from '@/lib/store';
 import { openRecord } from '@/lib/status';
 
-async function load(role: Role): Promise<{ file: string; res: Received } | null> {
+async function load(role: Role, uri?: string): Promise<{ file: string; res: Received } | null> {
   try {
-    const f = await pickText();
+    const f = uri ? await readText(uri) : await pickText();
     if (!f) return null;
     return { file: f.name, res: await receive(f.text, role) };
   } catch (e) {
@@ -20,16 +20,17 @@ async function load(role: Role): Promise<{ file: string; res: Received } | null>
   }
 }
 
-// Opens one file the user picks from the system picker, then shows exactly what the checks found before anything else.
+// Opens one file, picked here or opened with Sariya from another app, then shows exactly what the checks found before anything else.
 export default function ReceivedFile() {
   const role = useStore((s) => s.role) ?? 'operator';
+  const { uri } = useLocalSearchParams<{ uri?: string }>();
   const [res, setRes] = useState<Received | null>(null);
   const [file, setFile] = useState('');
   const [busy, setBusy] = useState(true);
 
   const pick = useCallback(
-    () =>
-      load(role).then((out) => {
+    (from?: string) =>
+      load(role, from).then((out) => {
         setBusy(false);
         if (!out) {
           if (router.canGoBack()) router.back();
@@ -43,8 +44,8 @@ export default function ReceivedFile() {
   );
 
   useEffect(() => {
-    pick();
-  }, [pick]);
+    pick(uri);
+  }, [pick, uri]);
 
   const open = () => {
     const r = getState().records.find((x) => x.key === res?.key);

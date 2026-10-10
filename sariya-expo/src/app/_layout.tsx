@@ -8,6 +8,9 @@ import { useEffect } from 'react';
 
 SplashScreen.preventAutoHideAsync();
 
+// A cold "Open with Sariya" lands on /received; keep the tabs underneath so Back and "Open record" have somewhere to go.
+export const unstable_settings = { initialRouteName: '(tabs)' };
+
 export default function RootLayout() {
   const [loaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold });
 

@@ -1,5 +1,14 @@
 # Sariya session state
 
+## Session note (10 Oct): "Open with Sariya"
+- Android VIEW intent filter for `content://` files typed `application/json` or `application/octet-stream` (`app.json` → prebuild). `src/app/+native-intent.tsx` rewrites the URI to `/received?uri=…`, which reads it with `readText` and runs the same `receive()` checks; the root layout keeps `(tabs)` underneath for a cold open.
+- Release APK (v3 / 0.3) built from this tree, including the scan result drawer, and installed in place on the iQOO with data kept (Gradle needs `JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home`). `query-activities` lists Sariya for a JSON file. Not yet tried by hand from Files, WhatsApp or Office Kit (phone was locked). Any JSON file now offers Sariya; non-Sariya files get "Not a Sariya file".
+
+## Session note (10 Oct): scan result drawer
+- Replaced the bouncing spring entrance with a 280 ms cubic ease-out slide; dismissal and cancelled drags also use timing without bounce.
+- The fixed handle area now supports pulling down to re-scan, with a visible Re-scan button for every result. Both reopen the same target in place, reset the live feed and temporary tape UI, and supersede the old measurement while retaining history.
+- Typecheck, Expo lint and diff whitespace checks pass. No new dependencies or product scope change. Next: verify dragging, cancelled drags, findings scrolling and repeated locks on the iQOO; this session did not rebuild/install the APK or verify the gesture on hardware.
+
 ## Session note (10 Oct, ~14:40): UI/UX pass (Uber × Swiggy)
 - **Design system** in `sariya-expo/src/components/ui.tsx`:
   - New pieces: tokens (`C`, `SHADOW`, `SPRING`), `Num` (tabular numerals), `Press` (scale plus haptic, built on Animated.View responders because NativeWind won't style an animated Pressable), `Enter`, `Illo`, `Meter`, `Segmented`, `ActionBar` (the "View cart" bar), `Skeleton`, `Details`.
