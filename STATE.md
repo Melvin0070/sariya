@@ -438,3 +438,5 @@ Workstream 2 (why-now evidence and news). It starts from the leads in VERDICT.md
 - 2026-10-10: Publishing all current app, artwork, demo/deck, research and documentation changes to main at the user's request, including the UI refresh, pour inbox/fix loop and v3 default. Release build, typecheck and lint already passed for this working tree; changed-file secret-pattern and oversized-file checks found no flags. Integrating newer origin/main commits before pushing.
 
 - 2026-10-10: Main integration resolved overlapping scan changes by retaining the UI refresh alongside upstream LiveFeed isolation, smoothed overlays, gap colours, live engine readout and native speed improvements. Kept Bun-only tests outside the Expo application typecheck (they run separately with Bun). Both session histories retained.
+
+- 2026-10-10: Team sync check: local main and origin/main were already identical at d193cd1, with a clean working tree; pull confirmed no incoming changes. Publishing this session log to keep the shared history current. No product decisions changed; next: teammates pull main before continuing work. Device validation remains open.
