@@ -2,7 +2,7 @@ import { readEvidenceBase64, storeEvidence } from './files';
 import { canon, fingerprint, sha256Hex, signText, verifyText } from './keys';
 import { LIVE } from './measure';
 import { RULEBOOK } from './rules';
-import type { CheckId } from './spec';
+import { FIELDS, isSoon, KIND_LABEL, validate, type CheckId, type MemberKind, type Spec, type SpecPayload, type SpecValues } from './spec';
 import { actions, getState, keyOf, ROLE_LABEL, when, type ApprovalPayload, type Capture, type Inspection, type Peer, type RequestPayload, type Role, type Signed } from './store';
 
 // Packs move between phones as JSON files through Office Kit. The laptop only carries them; it holds no key.
@@ -10,6 +10,7 @@ import { actions, getState, keyOf, ROLE_LABEL, when, type ApprovalPayload, type 
 export const CAPTURE = 'sariya.capture/1';
 export const APPROVAL = 'sariya.approval/1';
 export const REQUEST = 'sariya.request/1';
+export const SPEC = 'sariya.spec/1';
 const QR_PREFIX = 'SARIYA1 ';
 export const KEY_PREFIX = 'SARIYA-KEY ';
 
@@ -77,6 +78,29 @@ export function makeApproval(r: Inspection) {
 export function makeRequest(r: Inspection, checks: CheckId[], note: string) {
   const s = getState();
   return sign<RequestPayload>({ k: 'request', h: r.capture!.hash, r: r.id, v: r.rev, n: r.name, checks, note: note.trim(), t: Date.now(), e: s.name, f: s.me!.fp });
+}
+
+export function makeSpec(m: MemberKind, n: string, values: SpecValues, hooks: boolean) {
+  const s = getState();
+  return sign<SpecPayload>({ k: 'spec', m, n, values, hooks: m === 'beam' && hooks, t: Date.now(), e: s.name, f: s.me!.fp });
+}
+
+export const specFile = (q: Signed<SpecPayload>) => JSON.stringify({ format: SPEC, ...q });
+export const specName = (p: SpecPayload) => `${p.n.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'member'}-drawing.sariya.json`;
+
+export type SpecOrigin = { kind: 'mine' | 'other' | 'changed' | 'typed' | 'none'; title: string; sub?: string };
+
+// Where the values this capture was checked against came from. Only 'mine' means the engineer set the bar themselves.
+export function specOrigin(spec: Spec | null, member: MemberKind, myFp?: string): SpecOrigin {
+  if (!spec || spec.noDrawing) return { kind: 'none', title: 'No drawing: measure only' };
+  const is = spec.issued;
+  if (!is) return { kind: 'typed', title: 'Drawing values typed on site', sub: 'The operator entered them. Check each one against your drawing before approving.' };
+  const p = is.payload;
+  const valid = verifyText(canon(p), is.sig, is.signer.pub) && p.f === fingerprint(is.signer.pub);
+  const same = p.m === member && canon(p.values) === canon(spec.values) && (p.m === 'beam' && p.hooks) === spec.hooks135;
+  if (!valid || !same) return { kind: 'changed', title: 'Drawing values differ from the issued ones', sub: `They no longer match what ${p.e} signed on ${when(p.t)}. Ask for a new scan against the issued values.` };
+  if (p.f !== myFp) return { kind: 'other', title: `Drawing values issued by ${p.e}, not by you`, sub: `Key ${p.f} · ${when(p.t)}. Check them against your drawing before approving.` };
+  return { kind: 'mine', title: 'Drawing values issued by you · unchanged', sub: `Signed ${when(p.t)} · key ${p.f}` };
 }
 
 export const approvalFile = (a: Signed<ApprovalPayload>) => JSON.stringify({ format: APPROVAL, ...a });
@@ -157,6 +181,20 @@ async function receiveSigned(p: Signed<ApprovalPayload | RequestPayload>): Promi
   return { ok: true, key: rec.key, title: 'Another view requested', sub: `${eng.name}: ${(payload as RequestPayload).note || 'scan the named zones again'}.` };
 }
 
+function receiveSpec(p: Signed<SpecPayload>): Received {
+  const { payload, sig, signer } = p;
+  const fields = payload && FIELDS[payload.m];
+  if (!fields || !payload.values || !sig || !signer?.pub) return fail('Damaged file', 'Parts of the file are missing.');
+  if (!verifyText(canon(payload), sig, signer.pub) || payload.f !== fingerprint(signer.pub)) return fail('Signature does not verify', 'This file was not signed by the key it names.');
+  const eng = trustedAs(signer.pub, 'engineer');
+  if (!eng) return fail('Unknown engineer key', `“${signer.name}” (${fingerprint(signer.pub)}) is not enrolled on this phone. Enrol the engineer’s phone first.`);
+  if (isSoon(payload.m)) return fail(`${KIND_LABEL[payload.m]} checks are coming soon`, 'This build checks slabs only. Ask the engineer to send slab values.');
+  const bad = fields.find((f) => payload.values[f.id] === undefined || (payload.values[f.id] != null && validate(f, payload.values[f.id]!)));
+  if (bad) return fail('Drawing values incomplete', `${bad.label} is missing or out of range. Ask the engineer to send them again.`);
+  const key = actions.fromIssuedSpec(p);
+  return { ok: true, key, title: 'Drawing values received', sub: `${payload.n} · ${KIND_LABEL[payload.m]} · signed by ${eng.name} on ${when(payload.t)}. Changing any value marks it as typed on site.` };
+}
+
 export async function receive(text: string, role: Role): Promise<Received> {
   let p: { format?: string };
   try {
@@ -167,6 +205,10 @@ export async function receive(text: string, role: Role): Promise<Received> {
   if (p.format === CAPTURE) {
     if (role !== 'engineer') return fail('This is a capture pack', `Open it on the engineer’s phone. This phone is set up as ${ROLE_LABEL[role]}.`);
     return receiveCapture(p as CapturePack);
+  }
+  if (p.format === SPEC) {
+    if (role !== 'operator') return fail('These are drawing values', `Open them on the operator’s phone. This phone is set up as ${ROLE_LABEL[role]}.`);
+    return receiveSpec(p as unknown as Signed<SpecPayload>);
   }
   if (p.format === APPROVAL || p.format === REQUEST) {
     if (role !== 'operator') return fail(p.format === APPROVAL ? 'This is an approval' : 'This is a review request', `Open it on the operator’s phone. This phone is set up as ${ROLE_LABEL[role]}.`);

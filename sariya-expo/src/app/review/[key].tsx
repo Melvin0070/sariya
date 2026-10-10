@@ -1,17 +1,17 @@
 import { Redirect, useLocalSearchParams } from 'expo-router';
-import { Check, Fingerprint, MessageSquareWarning, Send, Square, SquareCheck } from 'lucide-react-native';
+import { Check, KeyRound, MessageSquareWarning, Send, Square, SquareCheck } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 
 import { CoverageMap } from '@/components/coverage';
 import { Evidence } from '@/components/evidence';
 import { FindingRow } from '@/components/finding';
+import { PinPrompt } from '@/components/pin-prompt';
 import { QR } from '@/components/qr';
 import { Button, Group, H2, KV, Notice, Screen, SourceTag, Sub, T, TextBtn, Title, TopBar, tap } from '@/components/ui';
-import { confirmIdentity } from '@/lib/device';
 import { saveToFolder, shareFile } from '@/lib/files';
 import { short } from '@/lib/keys';
-import { approvalFile, makeApproval, makeRequest, packName, requestFile, signoffQr } from '@/lib/pack';
+import { approvalFile, makeApproval, makeRequest, packName, requestFile, signoffQr, specOrigin } from '@/lib/pack';
 import { evaluate, RULEBOOK, tally, tallyLine } from '@/lib/rules';
 import { checkName, FIELDS, KIND_LABEL, TARGETS, type CheckId } from '@/lib/spec';
 import { actions, getState, useRecord, useStore, when } from '@/lib/store';
@@ -23,11 +23,13 @@ export default function Review() {
   const role = useStore((s) => s.role);
   const myFp = useStore((s) => s.me?.fp);
   const [reviewed, setReviewed] = useState(false);
+  const [specOk, setSpecOk] = useState(false);
   const [asking, setAsking] = useState(false);
   const [pick, setPick] = useState<CheckId[]>([]);
   const [note, setNote] = useState('');
   const [msg, setMsg] = useState<{ tone: 'warn' | 'fail' | 'pass'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pinOpen, setPinOpen] = useState(false);
   if (!r || !r.capture) return <Redirect href="/" />;
 
   const fs = evaluate(r);
@@ -35,16 +37,14 @@ export default function Review() {
   const locks = r.locks.filter((l) => !l.superseded);
   const decided = !!r.approval || !!r.request;
   const sameKey = r.capture.signer.fp === myFp;
-  const blocked = !r.trustedSigner ? 'The capture key is not enrolled on this phone' : sameKey ? 'Captured with this phone’s key: approval needs a second phone' : role !== 'engineer' ? 'This phone is not set up as the engineer' : null;
+  const origin = specOrigin(r.spec, r.member, myFp);
+  // Values the operator typed (or another engineer issued) were set by someone other than the approver: confirm them explicitly.
+  const askSpec = origin.kind === 'typed' || origin.kind === 'other';
+  const blocked = origin.kind === 'changed' ? 'Drawing values were changed after they were issued' : !r.trustedSigner ? 'The capture key is not enrolled on this phone' : sameKey ? 'Captured with this phone’s key: approval needs a second phone' : role !== 'engineer' ? 'This phone is not set up as the engineer' : null;
   const unassessed = t.rescan + t.tape + t.notSeen + t.pending;
 
-  const approve = async () => {
-    setMsg(null);
-    const ok = await confirmIdentity(`Approve ${r.name} rev ${r.rev}`);
-    if (!ok.ok) {
-      setMsg({ tone: 'warn', text: ok.why });
-      return;
-    }
+  const approve = () => {
+    setPinOpen(false);
     // Replay guard: the same capture hash is never approved twice.
     if (getState().processed[r.capture!.hash]) {
       setMsg({ tone: 'fail', text: 'Already processed. Nothing was signed.' });
@@ -91,13 +91,30 @@ export default function Review() {
           I reviewed all {fs.length} checks and the photos
         </T>
       </Pressable>
-      <Button label="Approve with fingerprint" icon={Fingerprint} disabled={!reviewed || !!blocked} onPress={approve} />
+      {askSpec ? (
+        <Pressable onPress={() => (tap(), setSpecOk(!specOk))} disabled={!!blocked} className="mb-3 flex-row items-center gap-3">
+          {specOk ? <SquareCheck size={24} color="#000" /> : <Square size={24} color={blocked ? '#BDBDBD' : '#000'} />}
+          <T w="medium" className={`flex-1 text-[15px] ${blocked ? 'text-ink-3' : ''}`}>
+            The drawing values match my drawing
+          </T>
+        </Pressable>
+      ) : null}
+      <Button
+        label="Approve with PIN"
+        icon={KeyRound}
+        disabled={!reviewed || (askSpec && !specOk) || !!blocked}
+        onPress={() => {
+          setMsg(null);
+          setPinOpen(true);
+        }}
+      />
       <TextBtn label="Ask for another view" disabled={!!blocked} onPress={() => setAsking(true)} />
     </>
   );
 
   return (
     <Screen footer={footer}>
+      <PinPrompt title={`Approve ${r.name} rev ${r.rev}`} visible={pinOpen} onCancel={() => setPinOpen(false)} onOk={approve} />
       <TopBar name={`Rev ${r.rev}`} sub={`${KIND_LABEL[r.member]} · received ${when(r.receivedAt ?? r.createdAt)}`} />
       <Title>{r.name}</Title>
       <Sub>{tallyLine(fs)}</Sub>
@@ -111,7 +128,12 @@ export default function Review() {
           “{r.capture.signer.name}” ({r.capture.signer.fp}) is not enrolled here. Enrol that phone, then open the pack again.
         </Notice>
       )}
-      {blocked && r.trustedSigner && !decided ? <Notice tone="warn" className="mt-3" title={blocked} /> : null}
+      {origin.kind === 'none' ? null : (
+        <Notice tone={origin.kind === 'mine' ? 'pass' : origin.kind === 'changed' ? 'fail' : 'warn'} className="mt-3" title={origin.title}>
+          {origin.sub}
+        </Notice>
+      )}
+      {blocked && r.trustedSigner && !decided && origin.kind !== 'changed' ? <Notice tone="warn" className="mt-3" title={blocked} /> : null}
       {msg ? <Notice tone={msg.tone} className="mt-3" title={msg.text} /> : null}
 
       {r.approval ? (

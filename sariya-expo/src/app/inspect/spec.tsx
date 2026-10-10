@@ -5,7 +5,7 @@ import { Pressable, Switch, View } from 'react-native';
 
 import { Badge, Button, Group, Hairline, Notice, Row, Screen, Sub, T, TextBtn, Title, TopBar, tap } from '@/components/ui';
 import { FIELDS, KIND_LABEL, PRESET, validate, type FieldId } from '@/lib/spec';
-import { actions, useDraft } from '@/lib/store';
+import { actions, useDraft, when } from '@/lib/store';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
 
@@ -180,7 +180,7 @@ export default function Spec() {
   const confirm = () => {
     const values: Partial<Record<FieldId, number | null>> = {};
     for (const f of fields) values[f.id] = noDrawing || vals[f.id] == null ? null : Number(vals[f.id]);
-    actions.setSpec({ rev, values, hooks135: cur.member === 'beam' && hooks, preset, noDrawing });
+    actions.setSpec({ rev, values, hooks135: cur.member === 'beam' && hooks, preset, noDrawing, issued: same ? existing?.issued : undefined });
     if (existing) {
       router.back();
       return;
@@ -199,6 +199,18 @@ export default function Spec() {
         {preset ? <Badge>DEMO</Badge> : null}
       </View>
       <Sub>{noDrawing ? 'Values with their bands, no verdict.' : 'Tap a value to change it.'}</Sub>
+
+      {existing?.issued ? (
+        same ? (
+          <Notice tone="pass" className="mt-4" title={`From ${existing.issued.payload.e}’s drawing · signed ${when(existing.issued.payload.t)}`}>
+            Changing a value marks the drawing values as typed on site, and the engineer sees that in review.
+          </Notice>
+        ) : (
+          <Notice tone="warn" className="mt-4" title="No longer the engineer’s values">
+            Saving keeps your values, marked as typed on site. The engineer is asked to check them against the drawing.
+          </Notice>
+        )
+      ) : null}
 
       {existing && rev > existing.rev && cur.locks.some((l) => !l.superseded) ? (
         <Notice tone="warn" className="mt-4" title={`Saving makes drawing rev ${rev}`}>

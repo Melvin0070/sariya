@@ -1,13 +1,14 @@
 import * as Device from 'expo-device';
 import { useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
-import { Camera, Check, Cpu, Fingerprint, HardDrive, KeyRound, Loader, TriangleAlert, Volume2, X, type LucideIcon } from 'lucide-react-native';
+import { Camera, Check, Cpu, HardDrive, KeyRound, Loader, LockKeyhole, TriangleAlert, Volume2, X, type LucideIcon } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { Button, Group, H2, Hairline, Screen, Sub, T, Tile, Title, TopBar } from '@/components/ui';
-import { biometric, BIOMETRIC_COPY, voices, type Biometric, type Voices } from '@/lib/device';
+import { voices, type Voices } from '@/lib/device';
 import { PROTECTION } from '@/lib/keys';
+import { hasPin, pinProblem, savePin } from '@/lib/pin';
 import { visionStatus, type VisionStatus } from '../../modules/sariya-vision';
 import { actions, persistent, ROLE_LABEL, useStore, type Role } from '@/lib/store';
 
@@ -49,7 +50,7 @@ function Row({ icon: Icon, label, note, state, action, first }: { icon: LucideIc
 
 const ROLES: { role: Role; body: string }[] = [
   { role: 'operator', body: 'Scans the steel and signs the capture' },
-  { role: 'engineer', body: 'Reviews packs and approves with a fingerprint' },
+  { role: 'engineer', body: 'Reviews packs and approves with their PIN' },
   { role: 'verifier', body: 'Checks a sign-off QR, offline' },
 ];
 
@@ -76,35 +77,37 @@ export default function Setup() {
   const [name, setName] = useState(savedName);
   const [cam, requestCam] = useCameraPermissions();
   const [v, setV] = useState<Voices | null>(null);
-  const [bio, setBio] = useState<Biometric | null>(null);
+  const [pinSet] = useState(hasPin);
+  const [pin, setPin] = useState('');
+  const [pin2, setPin2] = useState('');
   const [vis, setVis] = useState<VisionStatus | null | 'missing'>(null);
   const scroll = useRef<ScrollView>(null);
 
   useEffect(() => {
     voices().then(setV);
-    biometric().then(setBio);
     visionStatus()
       .then((s) => setVis(s ?? 'missing'))
       .catch((e: Error) => setVis({ ok: false, opencv: false, model: 'v2', modelSha: '', threshold: 0, accel: 'none', loadMs: 0, inferMs: -1, error: e.message }));
   }, []);
 
   const phone = [Device.brand, Device.modelName].filter(Boolean).join(' ') || 'This phone';
-  const ready = !!role && name.trim().length > 0;
+  const pinErr = pinSet ? null : (pinProblem(pin) ?? (pin === pin2 ? null : 'The two PINs differ'));
+  const ready = !!role && name.trim().length > 0 && !pinErr;
 
   const camState: RowState = !cam ? 'wait' : cam.granted ? 'ok' : 'bad';
   const camAction = cam && !cam.granted ? (cam.canAskAgain ? { label: 'Allow camera', onPress: requestCam } : { label: 'Open settings', onPress: () => Linking.openSettings() }) : undefined;
   const voiceState = (ok?: boolean): RowState => (v == null ? 'wait' : ok ? 'ok' : 'warn');
-  const bioState: RowState = bio == null ? 'wait' : bio === 'enrolled' ? 'ok' : bio === 'missing' ? 'bad' : 'warn';
 
   const save = () => {
     if (!role) return;
+    if (!pinSet) savePin(pin);
     actions.setup(role, name);
     if (first) router.replace({ pathname: '/keys', params: { first: '1' } });
     else router.back();
   };
 
   return (
-    <Screen scrollRef={scroll} footer={<Button label={!role ? 'Choose what this phone does' : !name.trim() ? 'Enter your name' : first ? 'Next: enrol phones' : 'Save'} disabled={!ready} onPress={save} />}>
+    <Screen scrollRef={scroll} footer={<Button label={!role ? 'Choose what this phone does' : !name.trim() ? 'Enter your name' : pinErr ? 'Set your PIN' : first ? 'Next: enrol phones' : 'Save'} disabled={!ready} onPress={save} />}>
       {first ? null : <TopBar />}
       <Title className={first ? 'mt-10' : ''}>{first ? 'Set up this phone' : 'This phone'}</Title>
       <Sub>
@@ -137,13 +140,37 @@ export default function Setup() {
         />
       </View>
 
+      {pinSet ? null : (
+        <>
+          <H2 className="mt-8">Your PIN</H2>
+          <T className="mt-1 text-[14px] text-ink-2">Asked before this phone approves a record or trusts another phone</T>
+          {[
+            { v: pin, set: setPin, ph: 'PIN, 4 to 6 digits' },
+            { v: pin2, set: setPin2, ph: 'Same PIN again' },
+          ].map((f) => (
+            <View key={f.ph} className="mt-3 h-14 justify-center rounded-xl bg-tile px-4">
+              <TextInput
+                value={f.v}
+                onChangeText={(t) => f.set(t.replace(/\D/g, '').slice(0, 6))}
+                placeholder={f.ph}
+                placeholderTextColor="#8A8A8A"
+                secureTextEntry
+                keyboardType="number-pad"
+                className="font-medium text-[18px] text-ink"
+              />
+            </View>
+          ))}
+          {pin && pinErr ? <T className="mt-2 text-[14px] text-fail">{pinErr}</T> : null}
+        </>
+      )}
+
       <H2 className="mt-8">Readiness</H2>
       <Group className="mt-3">
         <Row first icon={Camera} label="Camera" note={!cam ? 'Checking access' : cam.granted ? 'Allowed' : 'Needed to scan steel and QR codes'} state={camState} action={camAction} />
         <Row icon={Cpu} label="Bar model" note={visionNote(vis)} state={visionState(vis)} />
         <Row icon={Volume2} label="Hindi voice" note={v == null ? 'Checking' : v.hi ? 'Installed, works offline' : 'Not installed: fixes show as subtitles only. Add it in Settings › Text-to-speech.'} state={voiceState(v?.hi)} />
         <Row icon={Volume2} label="Kannada voice" note={v == null ? 'Checking' : v.kn ? 'Installed' : 'Not installed: subtitles only'} state={voiceState(v?.kn)} />
-        <Row icon={Fingerprint} label="Fingerprint" note={bio == null ? 'Checking' : `${BIOMETRIC_COPY[bio]}. The engineer needs it to approve.`} state={bioState} />
+        <Row icon={LockKeyhole} label="PIN" note={pinSet ? 'Set · asked before approving or trusting a phone' : 'Not set yet: choose one above'} state={pinSet ? 'ok' : 'warn'} />
         <Row icon={KeyRound} label="Signing key" note={me ? `${me.fp} · ${PROTECTION}` : 'Could not create a key: this build lacks secure storage'} state={me ? 'ok' : 'bad'} />
         <Row icon={HardDrive} label="Storage" note={persistent ? 'Records are kept on this phone across restarts' : 'This build cannot save: records are lost on restart'} state={persistent ? 'ok' : 'bad'} />
       </Group>

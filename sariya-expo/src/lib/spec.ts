@@ -1,5 +1,7 @@
 // Members, drawing fields, scan targets and checks. The drawing comes first: every verdict compares against these values.
 
+import type { Signed } from './store';
+
 export type MemberKind = 'slab' | 'beam';
 
 export type FieldId =
@@ -58,16 +60,25 @@ export function validate(f: Field, v: number): string | null {
   return null;
 }
 
+export type SpecValues = Partial<Record<FieldId, number | null>>;
+
+// Drawing values signed by the engineer and sent to the operator, so the person being checked does not set the bar.
+export type SpecPayload = { k: 'spec'; m: MemberKind; n: string; values: SpecValues; hooks: boolean; t: number; e: string; f: string };
+
 export type Spec = {
   rev: number;
   at: number;
-  values: Partial<Record<FieldId, number | null>>;
+  values: SpecValues;
   hooks135: boolean;
   preset: boolean;
   noDrawing: boolean;
+  issued?: Signed<SpecPayload>; // dropped as soon as the operator changes a value
 };
 
 export const KIND_LABEL: Record<MemberKind, string> = { slab: 'Slab', beam: 'Beam' };
+// Shown but not selectable until the strip and zone checks are validated on the props.
+export const COMING_SOON: MemberKind[] = ['beam'];
+export const isSoon = (k: MemberKind) => COMING_SOON.includes(k);
 export const KIND_HINT: Record<MemberKind, string> = { slab: 'Count and spacing both ways, cover', beam: 'Ring spacing by zone, cover' };
 
 // ---- scan targets: one Lock measures one family of bars ---------------------------

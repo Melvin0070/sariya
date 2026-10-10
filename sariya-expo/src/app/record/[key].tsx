@@ -98,7 +98,7 @@ export default function Record() {
           done={!!r.approval}
           warn={!!req && !r.approval}
           title={r.approval ? `Approved · ${r.approval.payload.e}` : req ? `Another view requested · ${req.e}` : 'Engineer approval'}
-          sub={r.approval ? `${when(r.approval.payload.t)} · fingerprint on their phone · key ${r.approval.payload.f}` : req ? `${when(req.t)} · ${req.note || 'see below'}` : 'Waiting for their reply'}
+          sub={r.approval ? `${when(r.approval.payload.t)} · PIN on their phone · key ${r.approval.payload.f}` : req ? `${when(req.t)} · ${req.note || 'see below'}` : 'Waiting for their reply'}
         />
       </View>
 

@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 
 import { loadDeviceKey, type DeviceKey } from './keys';
 import { FS } from './native';
-import type { CheckId, MemberKind, ReadingKind, Spec, TargetId } from './spec';
+import type { CheckId, MemberKind, ReadingKind, Spec, SpecPayload, TargetId } from './spec';
 
 export type Role = 'operator' | 'engineer' | 'verifier';
 export type Lang = 'hi' | 'kn' | 'en';
@@ -196,7 +196,7 @@ export const actions = {
     set({ trusted: state.trusted.filter((p) => p.fp !== fp) });
   },
 
-  newInspection(member: MemberKind, name: string) {
+  newInspection(member: MemberKind, name: string, spec: Spec | null = null) {
     const seq = state.seq + 1;
     const prefix = (state.me?.fp ?? 'XX').slice(0, 2);
     const id = `R${prefix}-${seq}`;
@@ -207,7 +207,7 @@ export const actions = {
       name,
       member,
       createdAt: Date.now(),
-      spec: null,
+      spec,
       locks: [],
       readings: {},
       corrected: {},
@@ -216,6 +216,15 @@ export const actions = {
     };
     set({ seq, records: [r, ...state.records], draftKey: r.key });
     return r.key;
+  },
+
+  // Opening the same spec file twice returns the inspection it already started.
+  fromIssuedSpec(issued: Signed<SpecPayload>): string {
+    const p = issued.payload;
+    const had = state.records.find((r) => r.origin === 'local' && r.spec?.issued?.sig === issued.sig);
+    if (had) return had.key;
+    const spec: Spec = { rev: 1, at: Date.now(), values: p.values, hooks135: p.m === 'beam' && p.hooks, preset: false, noDrawing: false, issued };
+    return actions.newInspection(p.m, p.n, spec);
   },
 
   openDraft(key: string) {

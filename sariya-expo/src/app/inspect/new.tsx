@@ -4,7 +4,7 @@ import { TextInput, View } from 'react-native';
 
 import { MemberArt } from '@/components/art';
 import { Button, Screen, T, Tile, Title, TopBar } from '@/components/ui';
-import { KIND_LABEL, type MemberKind } from '@/lib/spec';
+import { isSoon, KIND_LABEL, type MemberKind } from '@/lib/spec';
 import { actions } from '@/lib/store';
 
 const KINDS: MemberKind[] = ['slab', 'beam'];
@@ -13,7 +13,7 @@ const EXAMPLE: Record<MemberKind, string> = { slab: 'Slab S1, first floor', beam
 // Home picks slab or beam, so this screen is usually just the name.
 export default function NewInspection() {
   const p = useLocalSearchParams<{ kind?: MemberKind }>();
-  const [kind, setKind] = useState<MemberKind>(p.kind && KINDS.includes(p.kind) ? p.kind : 'slab');
+  const [kind, setKind] = useState<MemberKind>(p.kind && KINDS.includes(p.kind) && !isSoon(p.kind) ? p.kind : 'slab');
   const [name, setName] = useState('');
   const ready = name.trim().length > 0;
   const go = () => {
@@ -29,11 +29,12 @@ export default function NewInspection() {
 
       <View className="mt-6 flex-row gap-3">
         {KINDS.map((k) => (
-          <Tile key={k} on={kind === k} onPress={() => setKind(k)} className="flex-1 items-center pb-3 pt-2">
+          <Tile key={k} on={kind === k} onPress={isSoon(k) ? undefined : () => setKind(k)} className={`flex-1 items-center pb-3 pt-2 ${isSoon(k) ? 'opacity-50' : ''}`}>
             <MemberArt kind={k} size={84} />
             <T w="semibold" className="text-[16px]">
               {KIND_LABEL[k]}
             </T>
+            {isSoon(k) ? <T className="text-[13px] text-ink-2">Coming soon</T> : null}
           </Tile>
         ))}
       </View>

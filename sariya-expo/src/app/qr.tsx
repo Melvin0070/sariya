@@ -1,14 +1,14 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Check, Fingerprint, X } from 'lucide-react-native';
+import { Check, KeyRound, X } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { SlideInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Notice, T, tap } from '@/components/ui';
-import { confirmIdentity } from '@/lib/device';
+import { PinPrompt } from '@/components/pin-prompt';
+import { Button, T, tap } from '@/components/ui';
 import { parseKeyQr, verifyQr } from '@/lib/pack';
 import { actions, getState, ROLE_LABEL, type Peer } from '@/lib/store';
 
@@ -20,7 +20,7 @@ export default function QrScan() {
   const { mode } = useLocalSearchParams<{ mode: 'enrol' | 'verify' }>();
   const [perm, request] = useCameraPermissions();
   const [result, setResult] = useState<Result | null>(null);
-  const [why, setWhy] = useState('');
+  const [pinFor, setPinFor] = useState<Peer | null>(null);
   const busy = useRef(false);
 
   const onScan = (data: string) => {
@@ -41,22 +41,18 @@ export default function QrScan() {
 
   const again = () => {
     setResult(null);
-    setWhy('');
     busy.current = false;
   };
 
-  const trust = async (peer: Peer) => {
-    const ok = await confirmIdentity(`Trust ${peer.name} (${ROLE_LABEL[peer.role]})`);
-    if (!ok.ok) {
-      setWhy(ok.why.replace('Nothing was signed.', 'Nothing was trusted.'));
-      return;
-    }
+  const trust = (peer: Peer) => {
+    setPinFor(null);
     actions.trust(peer);
     router.back();
   };
 
   return (
     <View className="flex-1 bg-black">
+      <PinPrompt title={pinFor ? `Trust ${pinFor.name} (${ROLE_LABEL[pinFor.role]})` : ''} visible={!!pinFor} onCancel={() => setPinFor(null)} onOk={() => pinFor && trust(pinFor)} />
       {perm?.granted ? (
         <CameraView style={StyleSheet.absoluteFill} facing="back" barcodeScannerSettings={{ barcodeTypes: ['qr'] }} onBarcodeScanned={result ? undefined : (e) => onScan(e.data)} />
       ) : null}
@@ -109,10 +105,9 @@ export default function QrScan() {
               <T w="medium" className="mt-1 text-[17px] tracking-wider">
                 {result.peer.fp}
               </T>
-              <T className="mt-2 text-[15px] leading-[22px] text-ink-2">Check that the same fingerprint shows on that phone. Its signatures will be trusted on this phone.</T>
-              {why ? <Notice tone="warn" className="mt-3" title={why} /> : null}
+              <T className="mt-2 text-[15px] leading-[22px] text-ink-2">Check that the same key code shows on that phone. Its signatures will be trusted on this phone.</T>
               <View className="mt-5 gap-2">
-                <Button label="Trust with fingerprint" icon={Fingerprint} onPress={() => trust(result.peer)} />
+                <Button label="Trust with PIN" icon={KeyRound} onPress={() => setPinFor(result.peer)} />
                 <Button label="Scan again" kind="secondary" onPress={again} />
               </View>
             </>

@@ -6,5 +6,5 @@ export const STEPS = [
   { title: 'Scan and lock', body: 'Torch on, about 30 cm away. Live numbers start with ~. Hold still and Lock: only a locked value gets a verdict.' },
   { title: 'Readings by hand', body: 'Cover with a tape, a 200 mm offcut on a kitchen scale, hooks against the 135° template.' },
   { title: 'Fix and re-scan', body: 'Play the fix to the mason in Hindi or Kannada. After the fix, scan that zone again.' },
-  { title: 'Sign and send', body: 'Sign the capture, send the pack by Office Kit. The engineer approves on their own phone with a fingerprint.' },
+  { title: 'Sign and send', body: 'Sign the capture, send the pack by Office Kit. The engineer approves on their own phone with their PIN.' },
 ];

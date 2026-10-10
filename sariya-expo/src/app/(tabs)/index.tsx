@@ -1,6 +1,6 @@
 import { router, useIsFocused, type Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ChevronRight, Clock, FileInput, MessageSquareWarning, Plus, QrCode, Send, ShieldCheck, ShieldX, type LucideIcon } from 'lucide-react-native';
+import { ChevronRight, Clock, FileInput, FileText, MessageSquareWarning, Plus, QrCode, Send, ShieldCheck, ShieldX, type LucideIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,7 +8,7 @@ import Svg, { Defs, Line, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { CardArt, MemberArt, PhoneArt, TapeArt } from '@/components/art';
 import { Group, H2, Notice, Row, T, tap } from '@/components/ui';
-import { KIND_HINT, KIND_LABEL, type MemberKind } from '@/lib/spec';
+import { isSoon, KIND_HINT, KIND_LABEL, type MemberKind } from '@/lib/spec';
 import { openRecord, statusOf } from '@/lib/status';
 import { ROLE_LABEL, useStore, when, type Inspection, type Role } from '@/lib/store';
 
@@ -103,17 +103,21 @@ function Operator() {
       <H2 className="mt-8">Check a member</H2>
       <View className="mt-3 flex-row gap-3">
         {(['slab', 'beam'] as MemberKind[]).map((k) => (
-          <Pressable key={k} onPress={() => start(k)} className="flex-1 rounded-card bg-tile px-4 pb-4 pt-3 active:opacity-80">
+          <Pressable key={k} disabled={isSoon(k)} onPress={() => start(k)} className={`flex-1 rounded-card bg-tile px-4 pb-4 pt-3 active:opacity-80 ${isSoon(k) ? 'opacity-50' : ''}`}>
             <View className="items-center">
               <MemberArt kind={k} size={110} />
             </View>
             <T w="bold" className="mt-1 text-[19px]">
               {KIND_LABEL[k]}
             </T>
-            <T className="mt-0.5 text-[13px] leading-[18px] text-ink-2">{KIND_HINT[k]}</T>
+            <T className="mt-0.5 text-[13px] leading-[18px] text-ink-2">{isSoon(k) ? 'Coming soon' : KIND_HINT[k]}</T>
           </Pressable>
         ))}
       </View>
+
+      <Group className="mt-4">
+        <Row first icon={FileText} title="Drawing values from the engineer" sub="Open the signed spec sent through Office Kit" onPress={() => router.push('/received')} />
+      </Group>
 
       <List
         title="In progress"
@@ -150,6 +154,9 @@ function Engineer() {
   return (
     <>
       <Primary icon={FileInput} label="Open a received pack" href="/received" />
+      <Group className="mt-4">
+        <Row first icon={FileText} title="Send drawing values" sub="Sign the spec from your drawing for the operator" onPress={() => router.push('/issue')} />
+      </Group>
       {noOperator ? (
         <Pressable onPress={() => router.push('/keys')} className="mt-4">
           <Notice tone="warn" title="Enrol the operator’s phone">

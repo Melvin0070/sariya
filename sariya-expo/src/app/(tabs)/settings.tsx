@@ -43,7 +43,7 @@ export default function SettingsTab() {
           onPress={() => router.push('/keys')}
           right={!trusted.length ? <View className="h-2.5 w-2.5 rounded-full bg-accent" /> : undefined}
         />
-        <Row icon={ShieldCheck} title="Readiness" sub="Camera, model, voices, fingerprint" onPress={() => router.push('/setup')} />
+        <Row icon={ShieldCheck} title="Readiness" sub="Camera, model, voices, PIN" onPress={() => router.push('/setup')} />
         <Row icon={BarChart3} title="Numbers" sub="Error table and model timings" onPress={() => router.push('/numbers')} />
         <Row icon={BookOpen} title="How to check steel" onPress={() => router.push('/guide')} />
       </Group>
