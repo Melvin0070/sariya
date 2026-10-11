@@ -112,24 +112,56 @@ tr.pick td:first-child { color: var(--accent-ink); }
 .chip.ok::before { content: "● "; color: var(--pass); }
 .chip.no::before { content: "○ "; color: var(--ink-3); }
 
-/* chart */
-.chart { display: grid; grid-template-columns: auto 1fr; gap: .8cqw 1.4cqw; align-items: center; position: relative; }
-.chart .lbl { font-size: 1.2cqw; color: var(--ink-2); text-align: right; white-space: nowrap; }
-.chart .lbl b { display: block; font-size: 1.3cqw; }
-.track { position: relative; height: 2.2cqw; }
-.bar { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink-3); border-radius: 0 .4cqw .4cqw 0; opacity: .55; }
-.bar.npu { background: var(--ink); opacity: 1; }
-.bar.best { background: var(--accent); opacity: 1; }
-.val { position: absolute; top: 50%; transform: translateY(-50%); font: 700 1.15cqw/1 var(--mono); padding-left: .6cqw; white-space: nowrap; color: var(--ink); }
-.overlay { grid-column: 2; grid-row: 1 / 7; position: relative; pointer-events: none; align-self: stretch; }
+/* chart: fixed label column so every bar starts at the same x; the 33 ms line overlays the track column */
+.chart { --lw: 12cqw; --cg: 1.4cqw; --vw: 6.5cqw; position: relative; display: flex; flex-direction: column; justify-content: center; gap: 1.1cqw; padding-top: 1.6cqw; min-width: 0; }
+.crow { display: grid; grid-template-columns: var(--lw) 1fr var(--vw); gap: var(--cg); align-items: center; }
+.chart .lbl { font-size: 1.1cqw; color: var(--ink-2); text-align: right; line-height: 1.2; }
+.chart .lbl b { display: block; font-size: 1.3cqw; color: var(--ink); }
+.track { position: relative; height: 2.6cqw; background: var(--tile); border-radius: .4cqw; }
+.bar { position: absolute; left: 0; top: 0; bottom: 0; min-width: 3px; background: var(--ink-3); border-radius: .4cqw; }
+.bar.npu { background: var(--ink); }
+.bar.npu.dim { background: var(--ink-3); }
+.bar.best { background: var(--accent); }
+.val { font: 700 1.2cqw/1 var(--mono); white-space: nowrap; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+.axis { display: flex; justify-content: space-between; font: 500 .9cqw/1 var(--mono); color: var(--ink-3); }
+.overlay { position: absolute; top: 0; bottom: 2cqw; left: calc(var(--lw) + var(--cg)); right: calc(var(--vw) + var(--cg)); pointer-events: none; }
 .frame { position: absolute; top: 0; bottom: 0; border-left: 1.5px dashed var(--fail); }
-.frame span { position: absolute; top: -1.3cqw; left: .4cqw; font: 500 .9cqw/1 var(--mono); color: var(--fail); white-space: nowrap; }
-.axis { display: flex; justify-content: space-between; font: 500 .9cqw/1 var(--mono); color: var(--ink-3); grid-column: 2; }
+.frame span { position: absolute; top: 0; left: .5cqw; font: 500 .9cqw/1 var(--mono); color: var(--fail); white-space: nowrap; }
 .stats { display: grid; gap: .8cqw; align-content: start; }
 .stat { border-left: 3px solid var(--line); padding-left: 1.2cqw; }
 .stat .n { font: 800 2.4cqw/1 var(--display); letter-spacing: -0.02em; }
 .stat .n.a { color: var(--accent-ink); }
 .stat p { font-size: 1.15cqw; color: var(--ink-2); line-height: 1.4; margin-top: .35cqw; }
+
+table.mini { font-size: 1.1cqw; align-self: start; }
+table.mini th { font-size: .8cqw; padding-bottom: .5cqw; }
+table.mini td { padding: .42cqw .8cqw .42cqw 0; }
+table.mini td.best { color: var(--accent-ink); font-weight: 700; }
+
+/* learnings: one feature card with an inbox sketch, three learned → changed rows */
+.learn { display: grid; grid-template-columns: 1.05fr 1fr; gap: 2.4cqw; flex: 1; min-height: 0; }
+.feature { background: var(--tile); border-radius: 1cqw; padding: 1.8cqw; display: flex; flex-direction: column; gap: 1.1cqw; min-width: 0; }
+.feature .k, .row .k { font: 700 .9cqw/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.feature h3, .row h3 { font: 700 1.6cqw/1.2 var(--display); margin: 0; letter-spacing: -0.01em; }
+.feature p, .row p { font-size: 1.15cqw; line-height: 1.42; color: var(--ink-2); }
+.feature p b, .row p b { color: var(--ink); }
+.inbox { background: var(--slide); border-radius: .9cqw; padding: 1cqw; display: grid; gap: .8cqw; box-shadow: 0 1px 0 var(--line); }
+.inbox .hero { background: #0B0B0B; color: #FFFFFF; border-radius: .7cqw; padding: .9cqw 1.1cqw; display: grid; gap: .3cqw; }
+.inbox .hero small { font: 600 .8cqw/1 var(--body); letter-spacing: .06em; text-transform: uppercase; color: rgb(255 255 255 / .6); }
+.inbox .hero strong { color: #FFFFFF; font: 700 1.35cqw/1.2 var(--body); }
+.inbox .hero span { font-size: .95cqw; color: rgb(255 255 255 / .75); }
+.inbox .site { display: grid; gap: .25cqw; }
+.inbox .site > div:first-child { display: flex; justify-content: space-between; font: 700 1.05cqw/1.2 var(--body); }
+.inbox .site > div:first-child span { font-weight: 500; color: var(--ink-2); }
+.inbox .it { display: flex; justify-content: space-between; gap: 1cqw; font-size: .95cqw; color: var(--ink-2); border-top: 1px solid var(--line); padding-top: .3cqw; }
+.inbox .it i { font-style: normal; font-weight: 600; }
+.inbox .it i.r { color: var(--accent-ink); }
+.inbox .it i.w { color: var(--ink-3); }
+.inbox .it i.ok { color: var(--pass); }
+.inbox .ex { font: 500 .8cqw/1 var(--mono); color: var(--ink-3); text-align: right; }
+.rows { display: grid; gap: 1.2cqw; align-content: start; }
+.row { display: grid; gap: .45cqw; border-top: 3px solid var(--ink); padding-top: .9cqw; }
+.row.now { border-top-color: var(--accent); }
 
 /* fine-tune: three rounds side by side, rows aligned across columns */
 .rounds { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: auto auto auto 1fr; column-gap: 2.2cqw; row-gap: 1.1cqw; flex: 1; min-height: 0; }
@@ -169,7 +201,17 @@ tr.pick td:first-child { color: var(--accent-ink); }
   .cols3, .cols2, .rounds, .loop { grid-template-columns: 1fr; }
   .rounds { grid-template-rows: none; row-gap: 24px; }
   .round { grid-template-rows: none; grid-row: auto; display: flex; flex-direction: column; gap: 10px; padding-top: 10px; }
-  .todo li, .metric span { font-size: 14px; }
+  .todo li, .metric span, table.mini, .feature p, .row p, .inbox .it, .inbox .hero span { font-size: 14px; }
+  .learn { grid-template-columns: 1fr; }
+  .feature { padding: 16px; gap: 12px; }
+  .feature h3, .row h3 { font-size: 18px; }
+  .feature .k, .row .k, .inbox .hero small, .inbox .ex, table.mini th { font-size: 11px; }
+  .inbox { padding: 10px; gap: 10px; }
+  .inbox .hero { padding: 10px 12px; }
+  .inbox .hero strong { font-size: 17px; }
+  .inbox .site > div:first-child { font-size: 15px; }
+  table.mini td { padding: 5px 10px 5px 0; }
+  .row { padding-top: 10px; gap: 6px; }
   .todo li { grid-template-columns: 16px 1fr; }
   .metric .n { font-size: 26px; }
   .shots figcaption { font-size: 11px; }
@@ -184,11 +226,12 @@ tr.pick td:first-child { color: var(--accent-ink); }
   .motto { font-size: 22px; }
   .verdict { font-size: 18px; flex-wrap: wrap; }
   .verdict small { font-size: 12px; margin-left: 0; text-align: left; max-width: none; }
-  .track { height: 18px; }
+  .track { height: 20px; }
+  .chart { --lw: 96px; --cg: 10px; --vw: 64px; gap: 10px; padding-top: 18px; }
+  .overlay { bottom: 22px; }
   .val { font-size: 12px; }
   .stat .n { font-size: 24px; }
   .chip { padding: 4px 10px; }
-  .chart { gap: 10px 12px; }
 }
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 </style>
@@ -209,7 +252,7 @@ tr.pick td:first-child { color: var(--accent-ink); }
       <div><b>Sabari</b>Vision and AI</div>
       <div><b>Melvin</b>Rules, trust, integration</div>
     </div>
-    <div class="foot"><span>Bengaluru · 10 Oct 2026</span><span>1 / 7</span></div>
+    <div class="foot"><span>Bengaluru · 10 Oct 2026</span><span>1 / 8</span></div>
   </div>
 </section>
 
@@ -238,7 +281,7 @@ tr.pick td:first-child { color: var(--accent-ink); }
     </div>
     <div class="verdict">The rule is right; the check is missing. Sariya is that check, and it sends the engineer the evidence.
       <small>One site, first-hand. We do not quote it as a statistic.</small></div>
-    <div class="foot"><span>Sariya · why this problem</span><span>2 / 7</span></div>
+    <div class="foot"><span>Sariya · why this problem</span><span>2 / 8</span></div>
   </div>
 </section>
 
@@ -261,7 +304,7 @@ tr.pick td:first-child { color: var(--accent-ink); }
         </tbody>
       </table>
     </div>
-    <div class="foot"><span>Sariya · validation for free</span><span>3 / 7</span></div>
+    <div class="foot"><span>Sariya · validation for free</span><span>3 / 8</span></div>
   </div>
 </section>
 
@@ -288,14 +331,15 @@ tr.pick td:first-child { color: var(--accent-ink); }
         <div class="k">Status</div>
         <div class="chips">
           <span class="chip ok">Slab mesh, end to end</span>
-          <span class="chip ok">Model live on the NPU</span>
+          <span class="chip ok">Model V3 live on the NPU</span>
           <span class="chip ok">Signed engineer loop</span>
+          <span class="chip ok">Pour inbox across sites</span>
           <span class="chip no">Beam stirrups: next</span>
           <span class="chip no">Tape gate on real steel: today</span>
         </div>
       </div>
     </div>
-    <div class="foot"><span>Sariya · the product</span><span>4 / 7</span></div>
+    <div class="foot"><span>Sariya · the product</span><span>4 / 8</span></div>
   </div>
 </section>
 
@@ -328,7 +372,7 @@ tr.pick td:first-child { color: var(--accent-ink); }
         <p class="cap" style="margin-top:1cqw">Voice of India benchmark, Apr 2026. Language model researched: Gemma 4 E2B on the GPU, since no SM8850 NPU build exists. Card pose, lines, mm and verdicts are plain maths, so they never hallucinate.</p>
       </div>
     </div>
-    <div class="foot"><span>Sariya · model choice</span><span>5 / 7</span></div>
+    <div class="foot"><span>Sariya · model choice</span><span>5 / 8</span></div>
   </div>
 </section>
 
@@ -337,17 +381,17 @@ tr.pick td:first-child { color: var(--accent-ink); }
   <div class="tape"></div>
   <div class="in">
     <div class="eyebrow">Benchmark · iQOO 15 · Snapdragon 8 Elite Gen 5 · one 1152 × 640 frame</div>
-    <h2>The NPU runs our model 19× faster than the CPU.</h2>
+    <h2>On the NPU our model runs 19× faster than on the CPU.</h2>
     <div class="cols2" style="grid-template-columns: 1.7fr 1fr; flex: 1;">
       <div class="chart" role="img" aria-label="Milliseconds per frame: CPU 234.6, NPU default 73.3, GPU 19.8, NPU high performance 16.9, NPU burst 12.2, NPU pre-compiled 11.6">
-        <div class="lbl"><b>CPU</b>XNNPACK</div><div class="track"><div class="bar" style="width:93.84%"></div><span class="val" style="left:93.84%">234.6</span></div>
-        <div class="lbl"><b>NPU</b>default mode</div><div class="track"><div class="bar npu" style="width:29.32%;opacity:.45"></div><span class="val" style="left:29.32%">73.3</span></div>
-        <div class="lbl"><b>GPU</b>OpenCL</div><div class="track"><div class="bar" style="width:7.92%"></div><span class="val" style="left:7.92%">19.8</span></div>
-        <div class="lbl"><b>NPU</b>high performance</div><div class="track"><div class="bar npu" style="width:6.76%"></div><span class="val" style="left:6.76%">16.9</span></div>
-        <div class="lbl"><b>NPU</b>burst</div><div class="track"><div class="bar best" style="width:4.88%"></div><span class="val" style="left:4.88%">12.2</span></div>
-        <div class="lbl"><b>NPU</b>pre-compiled</div><div class="track"><div class="bar best" style="width:4.64%"></div><span class="val" style="left:4.64%">11.6</span></div>
-        <div class="overlay" aria-hidden="true"><div class="frame" style="left:13.33%"><span>33 ms = one camera frame at 30 fps</span></div></div>
-        <div></div><div class="axis"><span>0</span><span>50</span><span>100</span><span>150</span><span>200</span><span>250 ms</span></div>
+        <div class="crow"><div class="lbl"><b>CPU</b>XNNPACK</div><div class="track"><div class="bar " style="width:93.84%"></div></div><span class="val">234.6 ms</span></div>
+        <div class="crow"><div class="lbl"><b>NPU</b>default mode</div><div class="track"><div class="bar npu dim" style="width:29.32%"></div></div><span class="val">73.3 ms</span></div>
+        <div class="crow"><div class="lbl"><b>GPU</b>OpenCL</div><div class="track"><div class="bar " style="width:7.92%"></div></div><span class="val">19.8 ms</span></div>
+        <div class="crow"><div class="lbl"><b>NPU</b>high performance</div><div class="track"><div class="bar npu" style="width:6.76%"></div></div><span class="val">16.9 ms</span></div>
+        <div class="crow"><div class="lbl"><b>NPU</b>burst</div><div class="track"><div class="bar best" style="width:4.88%"></div></div><span class="val">12.2 ms</span></div>
+        <div class="crow"><div class="lbl"><b>NPU</b>pre-compiled file</div><div class="track"><div class="bar best" style="width:4.64%"></div></div><span class="val">11.6 ms</span></div>
+        <div class="crow axisrow"><div></div><div class="axis"><span>0</span><span>50</span><span>100</span><span>150</span><span>200</span><span>250</span></div><div></div></div>
+        <div class="overlay" aria-hidden="true"><div class="frame" style="left:13.33%"><span>33 ms: one camera frame at 30 fps</span></div></div>
       </div>
       <div class="stats">
         <div class="stat"><div class="n a num">160 / 160</div><p>layers on the Hexagon NPU, one partition, float model, no quantisation yet</p></div>
@@ -356,7 +400,7 @@ tr.pick td:first-child { color: var(--accent-ink); }
         <div class="stat"><div class="n num">~65 ms</div><p>whole frame in the app: camera, card pose, model, geometry</p></div>
       </div>
     </div>
-    <div class="foot"><span>Sariya · LiteRT 2.3 · QAIRT 2.50</span><span>6 / 7</span></div>
+    <div class="foot"><span>Model V1 shown · V3 runs 12.1 ms in burst · LiteRT 2.3 · QAIRT 2.50</span><span>6 / 8</span></div>
   </div>
 </section>
 
@@ -365,7 +409,7 @@ tr.pick td:first-child { color: var(--accent-ink); }
   <div class="tape"></div>
   <div class="in">
     <div class="eyebrow">Fine-tuning · Kaggle T4 · timestamped logs and dataset hashes</div>
-    <h2>Three rounds of fine-tuning.</h2>
+    <h2>Three rounds of fine-tuning. V3 is the best of both.</h2>
     <div class="rounds">
       <div class="round">
         <h3><em>V1 · DONE</em>ImageNet start, tuned on 1,555 real rebar photos</h3>
@@ -373,7 +417,7 @@ tr.pick td:first-child { color: var(--accent-ink); }
           <figure><img src="{{MESH}}" alt="Mesh on a green floor, every bar marked green"><figcaption>Mesh: IoU 0.94</figcaption></figure>
           <figure><img src="{{STIR}}" alt="Stirrups seen side-on, parts missed in blue"><figcaption>Thin stirrups: IoU 0.65</figcaption></figure>
         </div>
-        <div class="metric"><span class="n a num">0.847</span><span>test IoU on scenes never seen in training (F1 0.917)</span></div>
+        <div class="metric"><span class="n num">0.846</span><span>test IoU on scenes never seen in training</span></div>
         <p>10,481 labelled bars, 50 epochs. The exported phone model matches PyTorch on 100% of mask pixels.</p>
       </div>
       <div class="round">
@@ -382,21 +426,70 @@ tr.pick td:first-child { color: var(--accent-ink); }
           <figure><img src="{{V1}}" alt="V1 on a desk with no rebar: cables, keyboard and screen text marked as bars"><figcaption>V1: cables read as bars</figcaption></figure>
           <figure><img src="{{V2}}" alt="V2 on the same desk: nothing marked"><figcaption>V2: nothing marked</figcaption></figure>
         </div>
-        <div class="metric"><span class="n a num">80% → 0%</span><span>false alarms on images with no rebar</span></div>
+        <div class="metric"><span class="n num">80% → 0%</span><span>false alarms on images with no rebar</span></div>
         <p>Cables, keyboards and rooms as negatives. The cost: recall fell from 0.93 to 0.85, and it misses rusty bars on wood.</p>
       </div>
       <div class="round now">
-        <h3><em>V3 · TRAINING NOW</em>Win back recall, keep the false alarms at zero</h3>
-        <ul class="todo">
-          <li>Our own bar photos, rusty bars on wood and concrete</li>
-          <li>The printed card lying on the bars, labelled to its edge</li>
-          <li>Synthetic stirrups for the thin legs V1 misses</li>
-        </ul>
-        <div class="metric"><span class="n num">11.6 ms</span><span>V1 and V2 per frame on the NPU; V3 keeps the same network and file format</span></div>
-        <p>The app swaps rounds with one build setting, so V3 drops in without code changes.</p>
+        <h3><em>V3 · IN THE APP</em>Added 2,500 synthetic stirrup scenes</h3>
+        <table class="mini">
+          <thead><tr><th>Same test sets</th><th>V1</th><th>V2</th><th>V3</th></tr></thead>
+          <tbody>
+            <tr><td>IoU</td><td class="num">0.846</td><td class="num">0.811</td><td class="num best">0.851</td></tr>
+            <tr><td>Precision</td><td class="num">0.876</td><td class="num">0.930</td><td class="num">0.921</td></tr>
+            <tr><td>Recall</td><td class="num">0.951</td><td class="num">0.870</td><td class="num">0.919</td></tr>
+            <tr><td>False alarms</td><td class="num">80%</td><td class="num">0%</td><td class="num best">0%</td></tr>
+            <tr><td>Stirrup recall</td><td class="num">–</td><td class="num">0.873</td><td class="num best">0.910</td></tr>
+          </tbody>
+        </table>
+        <div class="metric"><span class="n a num">0.851</span><span>best IoU yet, with false alarms still at zero</span></div>
+        <p>Varied colour, light and clutter won back recall. 12.1 ms on the NPU; now the app default. Still to check on the venue props.</p>
       </div>
     </div>
-    <div class="foot"><span>Sariya · the model</span><span>7 / 7</span></div>
+    <div class="foot"><span>Sariya · the model</span><span>7 / 8</span></div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="slide" tabindex="-1" aria-label="Learnings">
+  <div class="tape"></div>
+  <div class="in">
+    <div class="eyebrow">Learnings · what we learned, and what we changed</div>
+    <h2>Each thing we learned changed the product.</h2>
+    <div class="learn">
+      <div class="feature">
+        <div class="k">Learned on site → new feature</div>
+        <h3>One engineer covers many sites and can't be at every pour.</h3>
+        <div class="inbox" aria-label="Example of the engineer's pour inbox">
+          <div class="hero"><small>Pour inbox · 3 sites</small><strong>2 to review before the pour</strong><span>Next: Plot 14, HSR · Slab S2 · pour in 14 h</span></div>
+          <div class="site"><div>Plot 14, HSR<span>pour in 14 h</span></div>
+            <div class="it">Slab S2<i class="r">Review · 1 outside limits</i></div>
+            <div class="it">Slab S1<i class="ok">Approved</i></div></div>
+          <div class="site"><div>Kumar house, Yelahanka<span>tomorrow</span></div>
+            <div class="it">Slab S1<i class="r">Review</i></div>
+            <div class="it">Slab S3<i class="w">Values sent · waiting for scan</i></div></div>
+          <div class="ex">Example data</div>
+        </div>
+        <p><b>Pour inbox.</b> Every check carries its site and planned pour time. The engineer's home groups them by site: decisions first, then the soonest pour, plus sites still waiting for a scan.</p>
+      </div>
+      <div class="rows">
+        <div class="row now">
+          <div class="k">Learned from V2 → V3</div>
+          <h3>Removing false alarms cost us real bars.</h3>
+          <p>V3 added <b>varied</b> data, not more epochs: 2,500 stirrup scenes in new colours, light and clutter. IoU <b>0.851</b>, recall <b>0.92</b>, false alarms still <b>0%</b>.</p>
+        </div>
+        <div class="row">
+          <div class="k">Learned from the roles</div>
+          <h3>The operator was typing the values they were checked against.</h3>
+          <p>The engineer now signs and sends the drawing values. Editing one drops the signature, and the review shows it.</p>
+        </div>
+        <div class="row">
+          <div class="k">Learned from the benchmark</div>
+          <h3>The NPU's mode mattered more than the chip.</h3>
+          <p>73 ms in default mode, <b>12 ms in burst</b>; a 53 s compile at start-up. Burst runs only while scanning, and a pre-compiled file loads in 133 ms.</p>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>Sariya · learnings</span><span>8 / 8</span></div>
   </div>
 </section>
 
