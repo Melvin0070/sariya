@@ -14,10 +14,17 @@ def modelDir = file("${projectDir}/../../../../models/seg/${sariyaModel}")
 def modelFile = new File(modelDir, 'unet_mbv3_1152.tflite')
 if (!modelFile.exists()) throw new GradleException("No unet_mbv3_1152.tflite in ${modelDir}")
 // Signed captures name the exact weights, not just the round.
-def modelSha = java.security.MessageDigest.getInstance('SHA-256').digest(modelFile.bytes).encodeHex().toString()
+def sha256 = { File f -> java.security.MessageDigest.getInstance('SHA-256').digest(f.bytes).encodeHex().toString() }
+def modelSha = sha256(modelFile)
+// The NPU file is pulled from the phone's JIT cache per round (notes/14-model/MODEL-V1.md); without it the app runs on GPU.
+def npuFile = new File(modelDir, 'unet_mbv3_1152_sm8850_qairt250.tflite')
+def npuSha = npuFile.exists() ? sha256(npuFile) : ''
+if (!npuFile.exists()) logger.warn("sariya: ${sariyaModel} has no ${npuFile.name}; the app will run the model on GPU, not NPU")
 def generatedAssets = layout.buildDirectory.dir("generated/sariya-models")
 
-def copyModels = tasks.register('copySariyaModels', Copy) {
+// Sync, not Copy: Copy leaves the previous round's files behind, so a round without an NPU file would have run the
+// old round's NPU weights.
+def copyModels = tasks.register('copySariyaModels', Sync) {
   from(modelDir) { include '*.tflite' }
   inputs.property('model', sariyaModel)
   into generatedAssets.map { it.dir('models') }
@@ -32,6 +39,7 @@ android {
     buildConfigField 'String', 'SARIYA_MODEL', "\"${sariyaModel}\""
     buildConfigField 'float', 'SARIYA_THRESHOLD', "${sariyaThreshold}f"
     buildConfigField 'String', 'SARIYA_MODEL_SHA', "\"${modelSha}\""
+    buildConfigField 'String', 'SARIYA_NPU_SHA', "\"${npuSha}\""
   }
   buildFeatures { buildConfig true }
   sourceSets {

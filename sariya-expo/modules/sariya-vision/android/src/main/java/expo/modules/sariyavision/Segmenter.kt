@@ -20,6 +20,7 @@ object Segmenter {
   const val MODEL = BuildConfig.SARIYA_MODEL
   const val THRESHOLD = BuildConfig.SARIYA_THRESHOLD
   const val MODEL_SHA = BuildConfig.SARIYA_MODEL_SHA
+  const val NPU_SHA = BuildConfig.SARIYA_NPU_SHA // empty when the round shipped no NPU file
   private const val NPU_FILE = "models/unet_mbv3_1152_sm8850_qairt250.tflite"
   private const val FLOAT_FILE = "models/unet_mbv3_1152.tflite"
 
@@ -43,6 +44,8 @@ object Segmenter {
   // Why the NPU was skipped, so the readiness screen can say it instead of silently showing GPU.
   var npuError: String? = null
     private set
+  // Signed locks name the weights that actually ran: the NPU file is a separate compiled binary, not the float one.
+  val sha: String get() = if (accelerator == "NPU") NPU_SHA else MODEL_SHA
 
   @Synchronized
   fun load(context: Context): Boolean {
@@ -72,6 +75,7 @@ object Segmenter {
       inBuf = m.createInputBuffers()
       outBuf = m.createOutputBuffers()
       accelerator = acc
+      checkContract()
       loadMs = System.currentTimeMillis() - t0
       error = null
       true
@@ -81,6 +85,18 @@ object Segmenter {
       close()
       false
     }
+  }
+
+  // A new round must keep this build's contract: [1, 640, 1152, 3] raw RGB in, [1, 640, 1152, 1] sigmoid out. A model
+  // with another size or one that returns logits would otherwise measure garbage without any error; refusing it
+  // makes the scan say "Model not running".
+  private fun checkContract() {
+    java.util.Arrays.fill(rgb, 128f)
+    inBuf[0].writeFloat(rgb)
+    model!!.run(inBuf, outBuf)
+    val out = outBuf[0].readFloat()
+    check(out.size == W * H) { "Model $MODEL gives ${out.size} outputs, this build expects $W x $H" }
+    check(out.all { it in 0f..1f }) { "Model $MODEL does not output probabilities (sigmoid missing from the export?)" }
   }
 
   // rgba: the full camera frame in sensor orientation. Returns the probability map, row-major W x H.

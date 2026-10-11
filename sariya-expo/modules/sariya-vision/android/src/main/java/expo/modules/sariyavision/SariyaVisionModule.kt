@@ -5,6 +5,7 @@ import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import org.opencv.android.OpenCVLoader
+import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.Scalar
@@ -38,7 +39,7 @@ class SariyaVisionModule : Module() {
         "ok" to ok,
         "opencv" to cv,
         "model" to Segmenter.MODEL,
-        "modelSha" to Segmenter.MODEL_SHA.take(12),
+        "modelSha" to Segmenter.sha.take(12),
         "threshold" to Segmenter.THRESHOLD.toDouble(),
         "accel" to if (ok) Segmenter.accelerator else "none",
         "loadMs" to Segmenter.loadMs,
@@ -56,9 +57,13 @@ class SariyaVisionModule : Module() {
       if (bgr.empty()) throw IllegalArgumentException("Could not read $path")
       val rgba = Mat()
       Imgproc.cvtColor(bgr, rgba, Imgproc.COLOR_BGR2RGBA)
+      // The model takes a landscape frame, as the camera sensor gives it. A portrait photo would be squashed 3x into
+      // 1152x640, so it is turned back to sensor orientation and reported upright with rot 90, as live frames are.
+      val rot = if (rgba.rows() > rgba.cols()) 90 else 0
+      if (rot == 90) Mat().also { Core.rotate(rgba, it, Core.ROTATE_90_COUNTERCLOCKWISE); it.copyTo(rgba); it.release() }
       val gray = Mat()
       val t0 = SystemClock.elapsedRealtime()
-      val payload = Pipeline.process(ctx, rgba, gray, 0, Pipeline.Config(marker, axis, barDia, minLenMm), 0)
+      val payload = Pipeline.process(ctx, rgba, gray, rot, Pipeline.Config(marker, axis, barDia, minLenMm), 0)
       payload["frameMs"] = SystemClock.elapsedRealtime() - t0
       bgr.release(); rgba.release(); gray.release()
       if (Segmenter.views.get() <= 0) Segmenter.close()

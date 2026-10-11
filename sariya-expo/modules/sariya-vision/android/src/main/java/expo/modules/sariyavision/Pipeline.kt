@@ -10,7 +10,7 @@ import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 import java.util.Random
 
-// One frame through the whole chain: fiducial pose -> model v2 mask -> bar family in plane mm. Shared by the live camera
+// One frame through the whole chain: fiducial pose -> bar mask -> bar family in plane mm. Shared by the live camera
 // and by photo replay, so a replayed photo is measured exactly as the live scan would measure it.
 object Pipeline {
   class Config(val marker: String, val axis: String, val barDia: Double, val minLenMm: Double)
@@ -69,7 +69,7 @@ object Pipeline {
     payload["w"] = up.w
     payload["h"] = up.h
     payload["model"] = Segmenter.MODEL
-    payload["modelSha"] = Segmenter.MODEL_SHA.take(12)
+    payload["modelSha"] = Segmenter.sha.take(12)
     payload["accel"] = Segmenter.accelerator
     payload["inferMs"] = inferMs
     payload["modelError"] = modelError

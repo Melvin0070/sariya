@@ -6,11 +6,13 @@ import { FIELD_FLOOR_MM, gapsOf } from './rules';
 import { MARKERS, type MemberKind, type Spec, type Target } from './spec';
 import { actions, uid, type Accel, type Coverage, type Lock, type Overlay } from './store';
 
-// The live engine: segmentation model v2 on the phone (NPU, else GPU, else CPU) finds the bars, the printed card or
+// The live engine: the on-phone segmentation model (NPU, else GPU, else CPU) finds the bars, the printed card or
 // strip gives the mm scale. Locks from it carry source 'auto'. Older records may still hold 'simulated' locks.
+// Each lock names the exact model round and sha; captures signed as 'seg-v2' before rounds changed still verify,
+// because verification reads the engine stored with the capture.
 export const LIVE = {
   source: 'auto' as const,
-  engine: 'seg-v2',
+  engine: 'seg',
   title: 'On-phone model',
   note: 'Bars are found by the on-phone segmentation model and scaled by the printed card or strip. If it cannot see the bars, use By hand.',
 };

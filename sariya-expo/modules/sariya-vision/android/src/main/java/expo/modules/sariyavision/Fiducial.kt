@@ -1,6 +1,7 @@
 package expo.modules.sariyavision
 
 import org.opencv.calib3d.Calib3d
+import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.MatOfPoint2f
@@ -11,10 +12,11 @@ import org.opencv.objdetect.ArucoDetector
 import org.opencv.objdetect.CharucoBoard
 import org.opencv.objdetect.CharucoDetector
 import org.opencv.objdetect.DetectorParameters
+import org.opencv.objdetect.Dictionary
 import org.opencv.objdetect.Objdetect
 import kotlin.math.hypot
 
-// The printed fiducials (prep/ref_pipeline/fiducials.py), all DICT_5X5_1000:
+// The printed fiducials (prep/ref_pipeline/fiducials.py), all DICT_5X5_1000 codes:
 //   card S     6x6 ChArUco, 15 mm squares, 11 mm markers, ids 360..377, 5 mm margin
 //   strip_300  12 markers of 20 mm at 25 mm pitch on a 300 x 30 mm band, ids 450..461
 // Plane frame: x right, y down on the print, mm; origin at the chess pattern's top-left (card) or the band's 0 end (strip).
@@ -29,19 +31,29 @@ class Pose(
 )
 
 object Fiducial {
-  private val dict by lazy { Objdetect.getPredefinedDictionary(Objdetect.DICT_5X5_1000) }
+  // Only the 30 printed markers, not all of DICT_5X5_1000: matching every candidate against 1000 codes was most of
+  // the card search time (synthetic 1080p: 25 ms -> 4 ms, same corners found) and gave more chances of a false id.
+  // Here card S is ids 0..17 and strip_300 ids 18..29.
+  private const val STRIP_ID0 = 18
+  private val dict by lazy {
+    val full = Objdetect.getPredefinedDictionary(Objdetect.DICT_5X5_1000)
+    val bytes = Mat()
+    Core.vconcat(listOf(full.get_bytesList().rowRange(360, 378), full.get_bytesList().rowRange(450, 462)), bytes)
+    Dictionary(bytes, full.get_markerSize(), full.get_maxCorrectionBits())
+  }
   private val params by lazy {
     DetectorParameters().apply {
       set_cornerRefinementMethod(Objdetect.CORNER_REFINE_SUBPIX)
       set_cornerRefinementWinSize(5)
-      // 0.03 of 1920 px = 14 px marker sides: still finds card S well beyond the "move closer" gate (~22 px at
-      // 1080p), while skipping the smallest candidates. Aruco3 searches on a downscaled image first.
+      // 0.03 of 1920 px = 14 px marker sides: finds card S down to the "move closer" gate (~22 px at 1080p).
+      // Aruco3 stays off: it ignores this rate and drops every marker under minSideLengthCanonicalImg (32 px), and it
+      // only downscales when minMarkerLengthRatioOriginalImg is set. Card S's 11 mm markers fall under 32 px beyond
+      // ~40 cm, so with it on the card vanished long before the gate (synthetic 1080p: lost below 4 px/mm, found at 2).
       set_minMarkerPerimeterRate(0.03)
-      set_useAruco3Detection(true)
     }
   }
   private val cardBoard by lazy {
-    val ids = Mat(18, 1, CvType.CV_32S).apply { put(0, 0, IntArray(18) { 360 + it }) }
+    val ids = Mat(18, 1, CvType.CV_32S).apply { put(0, 0, IntArray(18) { it }) }
     CharucoBoard(Size(6.0, 6.0), 15f, 11f, dict, ids)
   }
   private val cardCorners by lazy { MatOfPoint3f(cardBoard.chessboardCorners).toArray() }
@@ -86,7 +98,7 @@ object Fiducial {
     val c = FloatArray(8)
     for (i in 0 until mIds.rows()) {
       mIds.get(i, 0, id)
-      val k = id[0] - 450
+      val k = id[0] - STRIP_ID0
       if (k !in 0 until 12) continue
       mCorners[i].get(0, 0, c)
       val x0 = k * 25.0 + 2.5
