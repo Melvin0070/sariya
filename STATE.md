@@ -1,5 +1,16 @@
 # Sariya session state
 
+## Session note (11 Oct): vision audit, card detector fix, v4 guards (uncommitted, not on the phone yet)
+- **Card range regression fixed (`Fiducial.kt`):** Aruco3 (on since `e4b2f1d`) ignores `minMarkerPerimeterRate` and drops markers under 32 px, and it never downscaled (ratio left at 0). Synthetic 1080p A/B: card S lost below 4 px/mm (marker under ~44 px), so between the "move closer" gate (22 px) and ~40 cm the card was simply "not found". Likely cause of the 75/85 no-card frames. Aruco3 is off again.
+- **Card search ~6x faster:** a dictionary of only the 30 printed markers (card ids 0..17, strip 18..29) instead of all 1000; matching against 1000 codes was most of the time. Synthetic: 25 ms to 4 ms, same corners from 1.8 to 6 px/mm. Crop-tracking was tried and dropped (it saved little once the dictionary was cut).
+- **v4 guards:** at load the model must output 640x1152 values in 0..1, or it is refused ("Model not running") instead of measuring garbage. Gradle `Sync` instead of `Copy` (a round with no NPU file used to keep running the old round's NPU weights), warns when the NPU file is missing, and locks now report the sha of the file that ran (NPU or float). The capture's `liveEngine` is now 'seg', since each lock names the round; old 'seg-v2' captures still verify.
+- **Photo replay:** portrait photos are rotated to sensor orientation before the model (they were squashed 3x into 1152x640).
+- **Verified:** module compiles, Bars JVM tests, tsc, lint and the bun tests pass. **Not run on the iQOO**: rebuild the release APK and check card pickup distance, `fid=` ms in logcat, and a lock on the prop.
+- **Open (accuracy, not done):** bars sit below the card plane, so spacing under-reads by about z/D (8 mm bars at 35 cm: top layer ~1 %, lower layer ~3.4 %), biased toward "within"; needs camera distance from intrinsics plus pose. The app's band omits the out-of-plane, lens and extrapolation terms that `prep/ref_pipeline/error_band.py` has. No lens undistortion. Strip poses from 2 adjacent markers extrapolate to 300 mm.
+- **Card beside the member:** works only if the card is level with the bars (homography is the card's plane). On formwork beside a slab the bars sit ~24 mm above it, so spacing over-reads ~7 % at 35 cm (150 reads ~161); on a table beside the 8 mm prop rods it's ~1 %, fine. Proper fix: a "card height" option plus the same z/D correction as the out-of-plane item.
+- **New launcher icon:** white viewfinder brackets over three dark rebars on #FF6A13 (Codex image gen; concepts in `notes/15-ui/logo-concepts.jpg`). The old one's checkmark implied "approved". Prebuild done locally; needs an APK rebuild to show on the phone.
+- **v4 asks for the model lane:** keep the contract; ship the NPU file from the JIT cache; add 90-degree rotations to augmentation and turn portrait photos landscape before tiling (the app feeds sensor-orientation frames, never letterboxed portrait).
+
 ## Session note (11 Oct, ~00:30): beam live end to end, 8 mm x 200 mm prop
 - **Beam un-gated:** `COMING_SOON = []`.
   - The operator and engineer member pickers now allow beam, and a received beam spec is no longer refused.
@@ -473,3 +484,20 @@ Workstream 2 (why-now evidence and news). It starts from the leads in VERDICT.md
 - 2026-10-11: Wedge review (user asked whether to widen scope to inventory management). Decision: **keep the wedge, no generic inventory**. Reasons: (1) generic site material/inventory is crowded and already won in India (Powerplay, 35,000 contractors, material module; Onsite; BuildNext/Brick&Bolt in-house apps), it is not phone-first CV, and it dilutes "steel visible for a day, then hidden for good"; (2) the wedge's weakness is the business (red team: payer/repeat use 4/10), not the wedge, and generic inventory does not fix who pays; (3) Finale day: no build changes. Adjacent expansion worth one roadmap line or slide only: **steel from truck to pour** on the same camera and card: count bar ends in a delivered bundle, weigh-test against the invoice (already built), rib-mark brand check, then BBS planned vs placed at the pour. It serves the steel-brand payer (counterfeits) and builders (theft, wastage), and adds a second touchpoint per pour. Not added to IDEA.md as a feature; roadmap only.
 
 - 2026-10-11: Replaced every spring animation with eased timing (`EASE` = out-cubic, `SMOOTH` = 240 ms in `ui.tsx`): QR result drawer slide-in, press release, tab-bar and segmented pills, and the pass/approval badge zoom. The scan result sheet now shares the same `EASE`. Rebuilt the release APK from main (`558fe0a` plus this change) and installed it on the iQOO (`10BFAX1C230010U`); it launches. Typecheck and lint pass. Not yet checked by eye on the phone after a QR scan.
+
+- 2026-10-11: One-pass audit of `Sariya · Grand Finale.pptx` (15 slides; rendered via Keynote, DM Sans not installed here so render used a fallback). Findings, not yet applied: the 3:30 final pitch can carry ~4 slides, so slides 6-14 become appendix/Q&A backup; factual/consistency fixes: slide 4 mason line says "add one bar" for an 80 mm gap (the app's own rule calls that a moved bar), slide 6 "0 bytes leave the phone" contradicts the Office Kit file transfer (already fixed once on 5 Oct), slide 7 example (72 ± 5 vs 65 is outside, not re-scan), "one phone" vs two/three phones, pilot size 50 (slide 15) vs 60 (demo script) vs 40-60 (slide 13), slide 8 "our data" vs public datasets, slide 9 title wrap and label over the CPU bar, slide 14 "agentic AI" kicker. Content gaps: no app screenshots anywhere, no site photo on slide 3, four payers instead of one.
+- 2026-10-11: Audit fixes applied, original deck untouched. `Sariya · Grand Finale v2.pptx` keeps the full 15-slide order (reading deck). `Sariya · Grand Finale LIVE.pptx` holds 5 live slides (title, one-day window, demo map, NPU benchmark, ask), then backups B1-B10 for Q&A. Both pass validation and were checked by eye in a Keynote render. Text changes:
+  - slide 1 subtitle rewritten (no "one iQOO 15");
+  - slide 2 adds "Fixed tonight, or never … jackhammer";
+  - slide 4: new title, and the mason line now uses the app's real add-in-gap sentence;
+  - slide 6: "Offline / no cloud calls";
+  - slide 7: 68/72 example;
+  - slide 8: "public datasets";
+  - slide 9: one-line title, 30 fps label moved under the bars;
+  - slide 12: steel brands first, plus the ₹5-10k anchor;
+  - pilots unified at 60 pours from November;
+  - slide 14: "agentic" removed;
+  - slide 15: repo link.
+
+  Still missing: app screenshots and a site photo. New run sheet: `notes/08-demo/FINAL-PITCH-2026-10-11.md` (3:20 target; supersedes demo-script §2 for today; PIN, not fingerprint; uses the app's move-bar fix as the peak; Q&A mapped to the backup slides).
+- 2026-10-11: Deck copies consolidated (user's call): one file, `Sariya · Grand Finale.pptx`, which is the live cut (5 live slides + B1-B10). The pre-fix original, the full-order v2 and the fallback-font PDF were moved to the macOS Trash, not deleted. `deck/Sariya check the steel … v2.pptx` (the 5 Oct submission deck, tracked in git) was left alone.
