@@ -1,12 +1,10 @@
 import { useEffect, type ReactNode } from 'react';
 import { Keyboard, PanResponder, View, useWindowDimensions } from 'react-native';
-import Animated, { cancelAnimation, Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { SHADOW, TextBtn } from '@/components/ui';
-
-const EASE = Easing.out(Easing.cubic);
+import { EASE, SHADOW, TextBtn } from '@/components/ui';
 
 export function ScanResultSheet({ onRescan, children }: { onRescan: () => void; children: (rescan: () => void) => ReactNode }) {
   const { height } = useWindowDimensions();

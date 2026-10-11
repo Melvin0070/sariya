@@ -2,10 +2,10 @@ import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { ClipboardCheck, ClipboardList, QrCode, ScanLine, Settings, type LucideIcon } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { Pressable, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { SHADOW, SPRING, T, tap } from './ui';
+import { SHADOW, SMOOTH, T, tap } from './ui';
 import { useStore, type Role } from '@/lib/store';
 
 type Item = { label: string; icon: LucideIcon };
@@ -37,7 +37,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
   // The grey pill slides under the tabs instead of jumping between them.
   const x = useSharedValue(at * (TAB_W + GAP));
   useEffect(() => {
-    x.value = withSpring(at * (TAB_W + GAP), SPRING);
+    x.value = withTiming(at * (TAB_W + GAP), SMOOTH);
   }, [at, x]);
   const pill = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
   return (

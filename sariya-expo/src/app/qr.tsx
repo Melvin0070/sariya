@@ -3,11 +3,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Check, KeyRound, X } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
-import Animated, { SlideInDown } from 'react-native-reanimated';
+import Animated, { ReduceMotion, SlideInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PinPrompt } from '@/components/pin-prompt';
-import { Button, IconBtn, Illo, Sub, T, TextBtn, success } from '@/components/ui';
+import { Button, EASE, IconBtn, Illo, Sub, T, TextBtn, success } from '@/components/ui';
 import { parseKeyQr, verifyQr } from '@/lib/pack';
 import { actions, getState, ROLE_LABEL, type Peer } from '@/lib/store';
 
@@ -103,7 +103,7 @@ export default function QrScan() {
       )}
 
       {result ? (
-        <Animated.View entering={SlideInDown.springify().damping(18)} className="absolute inset-x-0 bottom-0 rounded-t-sheet bg-paper px-5 pt-3" style={{ paddingBottom: i.bottom + 10 }}>
+        <Animated.View entering={SlideInDown.duration(280).easing(EASE).reduceMotion(ReduceMotion.System)} className="absolute inset-x-0 bottom-0 rounded-t-sheet bg-paper px-5 pt-3" style={{ paddingBottom: i.bottom + 10 }}>
           <View className="mb-4 h-1.5 w-10 self-center rounded-full bg-line" />
           {result.kind === 'peer' ? (
             <>

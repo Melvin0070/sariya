@@ -6,7 +6,7 @@ import Animated, { ReduceMotion, ZoomIn } from 'react-native-reanimated';
 import { CoverageMap } from '@/components/coverage';
 import { Evidence } from '@/components/evidence';
 import { QR } from '@/components/qr';
-import { Chip, Details, Enter, Group, Illo, KV, Meter, Num, SHADOW, SourceTag, T, success, type IlloName } from '@/components/ui';
+import { Chip, Details, EASE, Enter, Group, Illo, KV, Meter, Num, SHADOW, SourceTag, T, success, type IlloName } from '@/components/ui';
 import { signoffQr } from '@/lib/pack';
 import { tally, type Finding, type Outcome } from '@/lib/rules';
 import { FIELDS, TARGETS } from '@/lib/spec';
@@ -66,7 +66,7 @@ export function SuccessMark({ illo = 'send' }: { illo?: IlloName }) {
   return (
     <View className="mt-4 h-[180px] w-[180px] self-center">
       <Illo name={illo} size={180} />
-      <Animated.View entering={ZoomIn.springify().damping(12).stiffness(220).reduceMotion(ReduceMotion.System)} className="absolute bottom-0 right-0 h-16 w-16 items-center justify-center rounded-full border-4 border-paper bg-pass" style={SHADOW.float}>
+      <Animated.View entering={ZoomIn.duration(220).easing(EASE).reduceMotion(ReduceMotion.System)} className="absolute bottom-0 right-0 h-16 w-16 items-center justify-center rounded-full border-4 border-paper bg-pass" style={SHADOW.float}>
         <Check size={32} color="#fff" strokeWidth={3.2} />
       </Animated.View>
     </View>

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import Animated, { ReduceMotion, ZoomIn } from 'react-native-reanimated';
 
-import { Button, C, Details, Enter, Illo, Screen, SHADOW, Sub, T, TextBtn, Title, TopBar, success } from '@/components/ui';
+import { Button, C, Details, EASE, Enter, Illo, Screen, SHADOW, Sub, T, TextBtn, Title, TopBar, success } from '@/components/ui';
 import { pickText, readText } from '@/lib/files';
 import { receive, type Received } from '@/lib/pack';
 import { getState, useStore, type Role } from '@/lib/store';
@@ -93,7 +93,7 @@ export default function ReceivedFile() {
         <Enter className="mt-6 items-center">
           <View className="h-[180px] w-[180px]">
             <Illo name={res.ok ? 'verify' : 'empty'} size={180} />
-            <Animated.View entering={ZoomIn.springify().damping(12).stiffness(220).reduceMotion(ReduceMotion.System)} className={`absolute bottom-0 right-0 h-16 w-16 items-center justify-center rounded-full border-4 border-paper ${mark.bg}`} style={SHADOW.float}>
+            <Animated.View entering={ZoomIn.duration(220).easing(EASE).reduceMotion(ReduceMotion.System)} className={`absolute bottom-0 right-0 h-16 w-16 items-center justify-center rounded-full border-4 border-paper ${mark.bg}`} style={SHADOW.float}>
               <Mark size={30} color="#fff" strokeWidth={3} />
             </Animated.View>
           </View>

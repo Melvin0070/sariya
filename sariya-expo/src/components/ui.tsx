@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { ArrowLeft, ArrowRight, Check, ChevronRight, Circle, EyeOff, Minus, RotateCw, Ruler, Tag, X, type LucideIcon } from 'lucide-react-native';
 import { useEffect, useState, type ReactNode, type RefObject } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, Text, View, type AccessibilityRole, type AccessibilityState, type TextProps } from 'react-native';
-import Animated, { FadeInDown, ReduceMotion, useAnimatedStyle, useSharedValue, withRepeat, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, FadeInDown, ReduceMotion, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { Outcome, Source } from '@/lib/rules';
@@ -32,8 +32,9 @@ export const SHADOW = {
   float: { shadowColor: '#000', shadowOpacity: 0.14, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 10 },
 };
 
-// Snappy, never bouncy: press feedback lands in ~100 ms, entrances in ~250 ms.
-export const SPRING = { damping: 22, stiffness: 320, mass: 0.7 };
+// Eased timings, never springs: even a well-damped spring overshoots, which reads as a wobble on sheets and pills.
+export const EASE = Easing.out(Easing.cubic);
+export const SMOOTH = { duration: 240, easing: EASE };
 const PRESS_IN = { duration: 90 };
 
 export const tap = () => Haptics.selectionAsync().catch(() => {});
@@ -149,11 +150,11 @@ export function Press({
         s.set(withTiming(scale, PRESS_IN));
       }}
       onResponderRelease={() => {
-        s.set(withSpring(1, SPRING));
+        s.set(withTiming(1, SMOOTH));
         fire();
       }}
       onResponderTerminate={() => {
-        s.set(withSpring(1, SPRING));
+        s.set(withTiming(1, SMOOTH));
       }}
     >
       {children}
@@ -336,7 +337,7 @@ export function Segmented<K extends string>({ items, value, onChange }: { items:
   const seg = w ? (w - 8) / items.length : 0;
   const x = useSharedValue(at * seg);
   useEffect(() => {
-    x.set(withSpring(at * seg, SPRING));
+    x.set(withTiming(at * seg, SMOOTH));
   }, [at, seg, x]);
   const a = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
   return (
